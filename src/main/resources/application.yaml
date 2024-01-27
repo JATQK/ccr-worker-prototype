@@ -20,6 +20,8 @@ spring:
   #    mode: always
   #    platform: postgresql
 
+worker:
+  commits-per-iteration: 100
 
 server:
   port: 28099
