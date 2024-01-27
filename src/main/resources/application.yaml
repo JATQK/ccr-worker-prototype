@@ -1,11 +1,25 @@
 spring:
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none # validate
+    #defer-datasource-initialization: true
   datasource:
     url: jdbc:postgresql://localhost:5432/gitrdfdb
     username: root
     password: example # temporary for prototyping
+  flyway:
+    baseline-on-migrate: true
+    locations: 'classpath:db/migration'
+    #locations: 'classpath:org/springframework/integration/jdbc'
+    validate-migration-naming: true
+
+
+
+  #sql:
+  #  init:
+  #    mode: always
+  #    platform: postgresql
+
 
 server:
   port: 28099

@@ -26,5 +26,5 @@ public class GitRepositoryOrderEntityLobs {
 
     @Lob
     //@Column(columnDefinition = "CLOB")
-    private Clob rdfFile;
+    private Blob rdfFile;
 }
