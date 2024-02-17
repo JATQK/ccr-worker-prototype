@@ -22,6 +22,24 @@ spring:
 
 worker:
   commits-per-iteration: 100
+  task:
+    rdf-git-repo:
+      enabled: ${WORKER_TASK_RDFGITREPO_ENABLED:true}
+    rdf-github-repo:
+      enabled: ${WORKER_TASK_RDFGITHUBREPO_ENABLED:true}
+
+github:
+  login:
+    jwt-token: ${GITHUB_LOGIN_JWT_TOKEN}
+    key: ${GITHUB_LOGIN_KEY}
+    app:
+      id: ${GITHUB_LOGIN_APP_ID}
+      installation:
+        id: ${GITHUB_LOGIN_APP_INSTALLATION_ID}
+    system:
+      user:
+        name: ${GITHUB_LOGIN_SYSTEM_USER_NAME}
+        personal-access-token: ${GITHUB_LOGIN_SYSTEM_USER_PERSONALACCESSTOKEN}
 
 server:
   port: 28099

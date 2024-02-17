@@ -3,6 +3,8 @@ package de.leipzig.htwk.gitrdf.worker.service.impl;
 import de.leipzig.htwk.gitrdf.worker.database.entity.GitRepositoryOrderEntity;
 import de.leipzig.htwk.gitrdf.worker.database.entity.enums.GitRepositoryOrderStatus;
 import de.leipzig.htwk.gitrdf.worker.database.entity.lob.GitRepositoryOrderEntityLobs;
+import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
 import jakarta.persistence.EntityManager;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
@@ -56,10 +58,10 @@ public class GitRdfConversionTransactionService {
 
         GitRepositoryOrderEntity gitRepositoryOrderEntity = entityManager.find(GitRepositoryOrderEntity.class, id);
 
-        File tempGitRepositoryParentFile = extractZip(gitRepositoryOrderEntityLobs.getGitZipFile());
+        File tempGitRepositoryParentFile = ZipUtils.extractZip(gitRepositoryOrderEntityLobs.getGitZipFile());
 
         File gitFile
-                = getDotGitFileFromParentDirectoryFileAndThrowExceptionIfNoOrMoreThanOneExists(tempGitRepositoryParentFile);
+                = GitUtils.getDotGitFileFromParentDirectoryFileAndThrowExceptionIfNoOrMoreThanOneExists(tempGitRepositoryParentFile);
 
         // set Ascii stream is not supported -> use ClobProxy instead, wrap outputstream in reader?
         //writeRdf(gitFile, gitRepositoryOrderEntityLobs.getRdfFile().setAsciiStream(POSITION_START));
@@ -69,87 +71,6 @@ public class GitRdfConversionTransactionService {
         gitRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.DONE);
 
         return needsToBeClosedOutsideOfTransaction;
-    }
-
-    private File extractZip(Blob blob) throws SQLException, IOException {
-
-        File gitRepositoryTempDirectory = Files.createTempDirectory("GitRepositoryTempDirectory").toFile();
-
-        byte[] buffer = new byte[1024];
-
-        try (ZipInputStream zipStream = new ZipInputStream(blob.getBinaryStream())) {
-
-            ZipEntry zipEntry = zipStream.getNextEntry();
-
-            while (zipEntry != null) {
-
-                File newFile = newFile(gitRepositoryTempDirectory, zipEntry);
-
-                if (zipEntry.isDirectory()) {
-
-                    if (!newFile.isDirectory() && !newFile.mkdirs()) {
-                        throw new IOException("Failed to create directory: " + newFile);
-                    }
-
-                } else {
-
-                    File parent = newFile.getParentFile();
-
-                    if (!parent.isDirectory() && !parent.mkdirs()) {
-                        throw new IOException("Failed to create directory: " + parent);
-                    }
-
-                    // write file content
-                    try (FileOutputStream fileOutputStream = new FileOutputStream(newFile)) {
-
-                        int len;
-
-                        while ((len = zipStream.read(buffer)) > 0) {
-                            fileOutputStream.write(buffer, 0, len);
-                        }
-                    }
-
-                }
-
-                zipEntry = zipStream.getNextEntry();
-
-            }
-
-            zipStream.closeEntry();
-        }
-
-        return gitRepositoryTempDirectory;
-
-    }
-
-    private File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {
-
-        File destFile = new File(destinationDir, zipEntry.getName());
-
-        String destDirPath = destinationDir.getCanonicalPath();
-        String destFilePath = destFile.getCanonicalPath();
-
-        // Protect against a ZIP-Slip
-        if (!destFilePath.startsWith(destDirPath + File.separator)) {
-            throw new IOException("Entry is outside of the target directory: " + zipEntry.getName());
-        }
-
-        return destFile;
-    }
-
-    private File getDotGitFileFromParentDirectoryFileAndThrowExceptionIfNoOrMoreThanOneExists(File parentDirectoryFile) {
-
-        File[] files = parentDirectoryFile.listFiles((dir, name) -> name.equals(".git"));
-
-        if (files.length < 1) {
-            throw new RuntimeException("Expected git repository parent directory file doesn't contain '.git' directory");
-        }
-
-        if (files.length > 1) {
-            throw new RuntimeException("Expected git repository parent directory file contains more than a single '.git' directory");
-        }
-
-        return files[0];
     }
 
     //private void writeRdf(File gitFile, OutputStream targetOutputStream) throws GitAPIException, IOException {

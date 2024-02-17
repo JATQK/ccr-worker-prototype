@@ -25,6 +25,9 @@
 		<org.ecplise.jgit.version>3.5.0.201409260305-r</org.ecplise.jgit.version>
 		<org.apache.commons.commons-rdf-api.version>0.5.0</org.apache.commons.commons-rdf-api.version>
 		<org.apache.commons.commons-rdf-jena.version>0.5.0</org.apache.commons.commons-rdf-jena.version>
+		<kohsuke.github-api.version>1.318</kohsuke.github-api.version>
+		<jjwt.version>0.12.5</jjwt.version>
+		<bouncycastle.bcpkix-jdk18on.version>1.77</bouncycastle.bcpkix-jdk18on.version>
 	</properties>
 
 	<dependencies>
@@ -126,6 +129,40 @@
 			<artifactId>commons-rdf-jena</artifactId>
 			<version>${org.apache.commons.commons-rdf-jena.version}</version>
 		</dependency>
+
+		<!-- Github -->
+		<dependency>
+			<groupId>org.kohsuke</groupId>
+			<artifactId>github-api</artifactId>
+			<version>${kohsuke.github-api.version}</version>
+		</dependency>
+
+		<!-- JWT -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>${jjwt.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>${jjwt.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId> <!-- or jjwt-gson if Gson is preferred -->
+			<version>${jjwt.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- Cryptography -->
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcpkix-jdk18on</artifactId>
+			<version>${bouncycastle.bcpkix-jdk18on.version}</version>
+		</dependency>
+
 
 	</dependencies>
 
