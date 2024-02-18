@@ -39,6 +39,12 @@ public class GithubRdfConversionTransactionService {
 
     public static final String GIT_NAMESPACE = "git";
 
+    public static final String GITHUB_COMMIT_NAMESPACE = "githubcommit";
+
+    public static final String XSD_SCHEMA_NAMESPACE = "xsd";
+
+    public static final String XSD_SCHEMA_URI = "http://www.w3.org/2001/XMLSchema#";
+
     private final GithubHandlerService githubHandlerService;
 
     private final GithubConfig githubConfig;
@@ -264,11 +270,18 @@ public class GithubRdfConversionTransactionService {
             GithubRepositoryOrderEntityLobs entityLobs,
             File rdfTempFile) throws GitAPIException, IOException {
 
+        String owner = entity.getOwnerName();
+        String repository = entity.getRepositoryName();
+
+        String githubCommitPrefixValue = getGithubCommitBaseUri(owner, repository);
+
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(rdfTempFile))) {
 
             StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE_BLOCKS);
-            //writer.prefix(GIT_NAMESPACE, GIT_URI);
-            //writer.prefix("xsd", ""); TODO (ccr): eventuell xsd präfix hinzufügen, wenn das apache jena nicht von selbst macht
+
+            writer.prefix(GIT_NAMESPACE, GIT_URI);
+            writer.prefix(GITHUB_COMMIT_NAMESPACE, githubCommitPrefixValue);
+            writer.prefix(XSD_SCHEMA_NAMESPACE, XSD_SCHEMA_URI);
 
             for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
@@ -286,7 +299,7 @@ public class GithubRdfConversionTransactionService {
 
                     String gitHash = commit.getId().name();
 
-                    String commitUri = getGithubCommitUri(entity.getOwnerName(), entity.getRepositoryName(), gitHash);
+                    String commitUri = getGithubCommitUri(owner, repository, gitHash);
 
                     writer.triple(RdfCommitUtils.createCommitHashProperty(commitUri, gitHash));
 
@@ -349,8 +362,12 @@ public class GithubRdfConversionTransactionService {
         return (int) skips;
     }
 
+    private String getGithubCommitBaseUri(String owner, String repository) {
+        return "https://github.com/" + owner + "/" + repository + "/commit/";
+    }
+
     private String getGithubCommitUri(String owner, String repository, String commitHash) {
-        return "https://github.com/" + owner + "/" + repository + "/commit/" + commitHash;
+        return getGithubCommitBaseUri(owner, repository) + commitHash;
     }
 
 }
