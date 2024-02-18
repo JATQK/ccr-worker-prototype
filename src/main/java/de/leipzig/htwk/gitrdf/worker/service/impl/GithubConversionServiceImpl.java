@@ -18,13 +18,13 @@ public class GithubConversionServiceImpl {
     }
 
     //@Override
-    public void performGithubRepoToRdfConversion(long id) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
+    public void performGithubRepoToRdfConversion(long id) throws IOException, GitAPIException {
 
         InputStream needsToBeClosed = null;
 
         try {
             needsToBeClosed
-                    = githubRdfConversionTransactionService.performGithubRepoToRdfConversionAndReturnCloseableInputStream(id);
+                    = githubRdfConversionTransactionService.performGithubRepoToRdfConversionWithGitCloningLogicAndReturnCloseableInputStream(id);
         } finally {
             if (needsToBeClosed != null) {
                 needsToBeClosed.close();

@@ -63,8 +63,8 @@ public class GithubConfig {
             @Value("${github.login.key}") String pemPrivateBase64Key,
             @Value("${github.login.app.id}") String githubAppId,
             @Value("${github.login.app.installation.id}") String githubAppInstallationId,
-            @Value("${github.login.sytem.user.name}") String githubSystemUserName,
-            @Value("${github.login.sytem.user.personal-access-token}") String githubSystemUserPersonalAccessToken) {
+            @Value("${github.login.system.user.name}") String githubSystemUserName,
+            @Value("${github.login.system.user.personal-access-token}") String githubSystemUserPersonalAccessToken) {
 
         if (StringUtils.isBlank(pemPrivateBase64Key)) throw NoGithubPrivateKeyGiven;
         if (StringUtils.isBlank(githubAppInstallationId)) throw NoGithubAppInstallationIdGiven;

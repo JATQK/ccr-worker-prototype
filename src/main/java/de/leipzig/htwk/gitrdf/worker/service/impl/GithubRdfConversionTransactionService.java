@@ -1,12 +1,13 @@
 package de.leipzig.htwk.gitrdf.worker.service.impl;
 
+import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
 import de.leipzig.htwk.gitrdf.worker.database.entity.GithubRepositoryOrderEntity;
 import de.leipzig.htwk.gitrdf.worker.database.entity.enums.GitRepositoryOrderStatus;
-import de.leipzig.htwk.gitrdf.worker.database.entity.lob.GitRepositoryOrderEntityLobs;
 import de.leipzig.htwk.gitrdf.worker.database.entity.lob.GithubRepositoryOrderEntityLobs;
 import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
 import jakarta.persistence.EntityManager;
+import org.apache.commons.io.FileUtils;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
@@ -15,13 +16,13 @@ import org.apache.jena.riot.system.StreamRDF;
 import org.apache.jena.riot.system.StreamRDFWriter;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.hibernate.engine.jdbc.BlobProxy;
-import org.kohsuke.github.*;
+import org.kohsuke.github.GHRepository;
+import org.kohsuke.github.GitHub;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,11 +30,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.*;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.List;
 
 @Service
 public class GithubRdfConversionTransactionService {
@@ -46,6 +45,8 @@ public class GithubRdfConversionTransactionService {
 
     private final GithubHandlerService githubHandlerService;
 
+    private final GithubConfig githubConfig;
+
     private final EntityManager entityManager;
 
     private final int commitsPerIteration;
@@ -53,9 +54,11 @@ public class GithubRdfConversionTransactionService {
     public GithubRdfConversionTransactionService(
             GithubHandlerService githubHandlerService,
             EntityManager entityManager,
+            GithubConfig githubConfig,
             @Value("${worker.commits-per-iteration}") int commitsPerIteration) throws IOException {
 
         this.githubHandlerService = githubHandlerService;
+        this.githubConfig = githubConfig;
         this.entityManager = entityManager;
         this.commitsPerIteration = commitsPerIteration;
     }
@@ -67,7 +70,7 @@ public class GithubRdfConversionTransactionService {
         GitHub gitHubHandle = githubHandlerService.getGithubHandle();
 
         // du kriegst die .git nicht als Teil der Zip ->
-        gitHubHandle.getRepository("").listCommits()
+        //gitHubHandle.getRepository("").listCommits()
 
         GithubRepositoryOrderEntityLobs githubRepositoryOrderEntityLobs
                 = entityManager.find(GithubRepositoryOrderEntityLobs.class, id);
@@ -78,7 +81,7 @@ public class GithubRdfConversionTransactionService {
         String owner = githubRepositoryOrderEntity.getOwnerName();
         String repo = githubRepositoryOrderEntity.getRepositoryName();
 
-        GHRepository targetRepo = getGithubRepositoryHandle(owner, repo, gitHubHandler);
+        GHRepository targetRepo = getGithubRepositoryHandle(owner, repo, gitHubHandle);
 
         File gitFile = getDotGitFileFromGithubRepositoryHandle(targetRepo, id, owner, repo);
 
@@ -89,15 +92,9 @@ public class GithubRdfConversionTransactionService {
         return needsToBeClosedOutsideOfTransaction;
     }
 
-    // TODO (ccr): use git cloning logic
-    @Transactional(rollbackFor = {IOException.class, GitAPIException.class, URISyntaxException.class, InterruptedException.class}) // Runtime-Exceptions are rollbacked by default; Checked-Exceptions not
+    @Transactional(rollbackFor = {IOException.class, GitAPIException.class}) // Runtime-Exceptions are rollbacked by default; Checked-Exceptions not
     public InputStream performGithubRepoToRdfConversionWithGitCloningLogicAndReturnCloseableInputStream(
-            long id) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
-
-        GitHub gitHubHandle = githubHandlerService.getGithubHandle();
-
-        // du kriegst die .git nicht als Teil der Zip ->
-        gitHubHandle.getRepository("").listCommits()
+            long id) throws IOException, GitAPIException {
 
         GithubRepositoryOrderEntityLobs githubRepositoryOrderEntityLobs
                 = entityManager.find(GithubRepositoryOrderEntityLobs.class, id);
@@ -107,28 +104,35 @@ public class GithubRdfConversionTransactionService {
 
         String owner = githubRepositoryOrderEntity.getOwnerName();
         String repo = githubRepositoryOrderEntity.getRepositoryName();
-
-        GHRepository targetRepo = getGithubRepositoryHandle(owner, repo, gitHubHandler);
-
-        File gitFile = getDotGitFileFromGithubRepositoryHandle(targetRepo, id, owner, repo);
-
-        InputStream needsToBeClosedOutsideOfTransaction = writeRdf(gitFile, githubRepositoryOrderEntityLobs);
-
-        githubRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.DONE);
-
-        return needsToBeClosedOutsideOfTransaction;
-    }
-
-    private Git performGitClone(String ownerName, String repositoryName) throws IOException, GitAPIException {
 
         File gitWorkingDirectory = Files.createTempDirectory("git-working-directory").toFile();
+
+        Git git = performGitClone(owner, repo, gitWorkingDirectory);
+
+        //GHRepository targetRepo = getGithubRepositoryHandle(owner, repo, gitHubHandler);
+
+        //File gitFile = getDotGitFileFromGithubRepositoryHandle(targetRepo, id, owner, repo);
+
+        InputStream needsToBeClosedOutsideOfTransaction = writeRdf(git, githubRepositoryOrderEntityLobs);
+
+        githubRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.DONE);
+
+        git.close();
+        FileUtils.deleteQuietly(gitWorkingDirectory);
+
+        return needsToBeClosedOutsideOfTransaction;
+    }
+
+    private Git performGitClone(String ownerName, String repositoryName, File gitWorkingDirectory) throws IOException, GitAPIException {
 
         String gitRepoTargetUrl = String.format("https://github.com/%s/%s.git", ownerName, repositoryName);
 
         return Git.cloneRepository()
                 .setURI(gitRepoTargetUrl)
                 .setDirectory(gitWorkingDirectory)
-                //.setCredentialsProvider(new UsernamePasswordCredentialsProvider()) // ---> maybe we dont even need this for public repositories?
+                .setCredentialsProvider(new UsernamePasswordCredentialsProvider(
+                        githubConfig.getGithubSystemUserName(),
+                        githubConfig.getGithubSystemUserPersonalAccessToken())) // ---> maybe we dont even need this for public repositories?
                 .call();
 
     }
@@ -244,16 +248,20 @@ public class GithubRdfConversionTransactionService {
     // TODO (ccr): duplicate code -> change that!
     private InputStream writeRdf(File gitFile, GithubRepositoryOrderEntityLobs entityLobs) throws GitAPIException, IOException {
 
+        Repository gitRepository = new FileRepositoryBuilder().setGitDir(gitFile).build();
+        Git gitHandler = new Git(gitRepository);
+
+        return writeRdf(gitHandler, entityLobs);
+    }
+
+    private InputStream writeRdf(Git gitHandler, GithubRepositoryOrderEntityLobs entityLobs) throws GitAPIException, IOException {
+
         File tempFile = Files.createTempFile("temp-rdf-write-file", ".dat").toFile();
 
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
 
             StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE_BLOCKS);
             writer.prefix(GIT_NAMESPACE, GIT_URI);
-
-            Repository gitRepository = new FileRepositoryBuilder().setGitDir(gitFile).build();
-
-            Git gitHandler = new Git(gitRepository);
 
             for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
