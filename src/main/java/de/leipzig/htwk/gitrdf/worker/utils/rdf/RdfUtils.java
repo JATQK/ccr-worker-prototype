@@ -11,11 +11,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfUtils {
 
-    public static Node literal(String value) {
-        //NodeFactory.createLiteral("fda", XSDDatatype.)
-        return NodeFactory.createLiteral(value);
-    }
-
     public static Node stringLiteral(String value) {
         return NodeFactory.createLiteral(value, XSDDatatype.XSDstring);
     }

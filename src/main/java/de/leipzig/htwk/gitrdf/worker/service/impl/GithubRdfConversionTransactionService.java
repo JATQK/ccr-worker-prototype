@@ -289,28 +289,22 @@ public class GithubRdfConversionTransactionService {
                     String commitUri = getGithubCommitUri(entity.getOwnerName(), entity.getRepositoryName(), gitHash);
 
                     writer.triple(RdfCommitUtils.createCommitHashProperty(commitUri, gitHash));
-                    //writer.triple(createAuthorNameProperty(gitHash, commit.getAuthorIdent().getName()));
+
                     writer.triple(RdfCommitUtils.createAuthorNameProperty(commitUri, commit.getAuthorIdent().getName()));
 
-                    //writer.triple(createAuthorEmailProperty(gitHash, commit.getAuthorIdent().getEmailAddress()));
                     writer.triple(RdfCommitUtils.createAuthorEmailProperty(commitUri, commit.getAuthorIdent().getEmailAddress()));
 
                     Instant instant = Instant.ofEpochSecond(commit.getCommitTime());
                     LocalDateTime commitDateTime = instant.atZone(ZoneId.of("Europe/Berlin")).toLocalDateTime();
 
-                    //writer.triple(createAuthorDateProperty(gitHash, commitDateTime.toString()));
                     writer.triple(RdfCommitUtils.createAuthorDateProperty(commitUri, commitDateTime));
 
-                    //writer.triple(createCommitDateProperty(gitHash, commitDateTime.toString()));
                     writer.triple(RdfCommitUtils.createCommitDateProperty(commitUri, commitDateTime));
 
-                    //writer.triple(createCommitterNameProperty(gitHash, commit.getCommitterIdent().getName()));
                     writer.triple(RdfCommitUtils.createCommitterNameProperty(commitUri, commit.getCommitterIdent().getName()));
 
-                    //writer.triple(createCommitterEmailProperty(gitHash, commit.getCommitterIdent().getEmailAddress()));
                     writer.triple(RdfCommitUtils.createCommitterEmailProperty(commitUri, commit.getCommitterIdent().getEmailAddress()));
 
-                    //writer.triple(createCommitMessageProperty(gitHash, commit.getFullMessage()));
                     writer.triple(RdfCommitUtils.createCommitMessageProperty(commitUri, commit.getFullMessage()));
 
                     // No possible solution found yet for merge commits -> maybe traverse to parent? Maybe both
@@ -359,42 +353,4 @@ public class GithubRdfConversionTransactionService {
         return "https://github.com/" + owner + "/" + repository + "/commit/" + commitHash;
     }
 
-    /*
-    private static Node literal(String value) {
-        return NodeFactory.createLiteral(value);
-    }
-
-    private static Node uri(String value) {
-        return NodeFactory.createURI(value);
-    }
-
-    private Triple createAuthorNameProperty(String gitHash, String authorNameValue) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "AuthorName"), literal(authorNameValue));
-    }
-
-    private Triple createAuthorEmailProperty(String gitHash, String authorEmailValue) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "AuthorEmail"), literal(authorEmailValue));
-    }
-
-    private Triple createAuthorDateProperty(String gitHash, String authorDateValue) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "AuthorDate"), literal(authorDateValue));
-    }
-
-    private Triple createCommitDateProperty(String gitHash, String commitDateValue) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitDate"), literal(commitDateValue));
-    }
-
-    private Triple createCommitterNameProperty(String gitHash, String committerNameValue) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitterName"), literal(committerNameValue));
-    }
-
-    private Triple createCommitterEmailProperty(String gitHash, String committerEmailValue) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitterEmail"), literal(committerEmailValue));
-    }
-
-    private Triple createCommitMessageProperty(String gitHash, String commitMessageValue) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitMessage"), literal(commitMessageValue));
-    }
-
-     */
 }
