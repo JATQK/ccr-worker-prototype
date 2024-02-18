@@ -7,7 +7,6 @@ import de.leipzig.htwk.gitrdf.worker.database.entity.lob.GithubRepositoryOrderEn
 import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
 import jakarta.persistence.EntityManager;
-import org.apache.commons.io.FileUtils;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
@@ -29,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -63,9 +61,10 @@ public class GithubRdfConversionTransactionService {
         this.commitsPerIteration = commitsPerIteration;
     }
 
+    // TODO (ccr): Refactor -> code is currently not in use -> maybe delete or refactor to a cleaner state
     @Transactional(rollbackFor = {IOException.class, GitAPIException.class, URISyntaxException.class, InterruptedException.class}) // Runtime-Exceptions are rollbacked by default; Checked-Exceptions not
     public InputStream performGithubRepoToRdfConversionAndReturnCloseableInputStream(
-            long id) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
+            long id, File rdfTempFile) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
 
         GitHub gitHubHandle = githubHandlerService.getGithubHandle();
 
@@ -85,7 +84,7 @@ public class GithubRdfConversionTransactionService {
 
         File gitFile = getDotGitFileFromGithubRepositoryHandle(targetRepo, id, owner, repo);
 
-        InputStream needsToBeClosedOutsideOfTransaction = writeRdf(gitFile, githubRepositoryOrderEntityLobs);
+        InputStream needsToBeClosedOutsideOfTransaction = writeRdf(gitFile, githubRepositoryOrderEntityLobs, rdfTempFile);
 
         githubRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.DONE);
 
@@ -94,33 +93,36 @@ public class GithubRdfConversionTransactionService {
 
     @Transactional(rollbackFor = {IOException.class, GitAPIException.class}) // Runtime-Exceptions are rollbacked by default; Checked-Exceptions not
     public InputStream performGithubRepoToRdfConversionWithGitCloningLogicAndReturnCloseableInputStream(
-            long id) throws IOException, GitAPIException {
+            long id, File gitWorkingDirectory, File rdfTempFile) throws IOException, GitAPIException {
 
-        GithubRepositoryOrderEntityLobs githubRepositoryOrderEntityLobs
-                = entityManager.find(GithubRepositoryOrderEntityLobs.class, id);
+        Git gitHandler = null;
 
-        GithubRepositoryOrderEntity githubRepositoryOrderEntity
-                = entityManager.find(GithubRepositoryOrderEntity.class, id);
+        try {
 
-        String owner = githubRepositoryOrderEntity.getOwnerName();
-        String repo = githubRepositoryOrderEntity.getRepositoryName();
+            GithubRepositoryOrderEntityLobs githubRepositoryOrderEntityLobs
+                    = entityManager.find(GithubRepositoryOrderEntityLobs.class, id);
 
-        File gitWorkingDirectory = Files.createTempDirectory("git-working-directory").toFile();
+            GithubRepositoryOrderEntity githubRepositoryOrderEntity
+                    = entityManager.find(GithubRepositoryOrderEntity.class, id);
 
-        Git git = performGitClone(owner, repo, gitWorkingDirectory);
+            String owner = githubRepositoryOrderEntity.getOwnerName();
+            String repo = githubRepositoryOrderEntity.getRepositoryName();
 
-        //GHRepository targetRepo = getGithubRepositoryHandle(owner, repo, gitHubHandler);
+            gitHandler = performGitClone(owner, repo, gitWorkingDirectory);
 
-        //File gitFile = getDotGitFileFromGithubRepositoryHandle(targetRepo, id, owner, repo);
+            InputStream needsToBeClosedOutsideOfTransaction
+                    = writeRdf(gitHandler, githubRepositoryOrderEntityLobs, rdfTempFile);
 
-        InputStream needsToBeClosedOutsideOfTransaction = writeRdf(git, githubRepositoryOrderEntityLobs);
+            githubRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.DONE);
 
-        githubRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.DONE);
+            return needsToBeClosedOutsideOfTransaction;
 
-        git.close();
-        FileUtils.deleteQuietly(gitWorkingDirectory);
+        } finally {
 
-        return needsToBeClosedOutsideOfTransaction;
+            if (gitHandler != null) gitHandler.close();
+
+        }
+
     }
 
     private Git performGitClone(String ownerName, String repositoryName, File gitWorkingDirectory) throws IOException, GitAPIException {
@@ -134,7 +136,6 @@ public class GithubRdfConversionTransactionService {
                         githubConfig.getGithubSystemUserName(),
                         githubConfig.getGithubSystemUserPersonalAccessToken())) // ---> maybe we dont even need this for public repositories?
                 .call();
-
     }
 
     private void throwExceptionIfThereIsNotExactlyOneFileInTheExtractedZipDirectory(
@@ -246,19 +247,20 @@ public class GithubRdfConversionTransactionService {
     }
 
     // TODO (ccr): duplicate code -> change that!
-    private InputStream writeRdf(File gitFile, GithubRepositoryOrderEntityLobs entityLobs) throws GitAPIException, IOException {
+    private InputStream writeRdf(File gitFile, GithubRepositoryOrderEntityLobs entityLobs, File rdfTempFile) throws GitAPIException, IOException {
 
         Repository gitRepository = new FileRepositoryBuilder().setGitDir(gitFile).build();
         Git gitHandler = new Git(gitRepository);
 
-        return writeRdf(gitHandler, entityLobs);
+        return writeRdf(gitHandler, entityLobs, rdfTempFile);
     }
 
-    private InputStream writeRdf(Git gitHandler, GithubRepositoryOrderEntityLobs entityLobs) throws GitAPIException, IOException {
+    private InputStream writeRdf(
+            Git gitHandler,
+            GithubRepositoryOrderEntityLobs entityLobs,
+            File rdfTempFile) throws GitAPIException, IOException {
 
-        File tempFile = Files.createTempFile("temp-rdf-write-file", ".dat").toFile();
-
-        try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
+        try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(rdfTempFile))) {
 
             StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE_BLOCKS);
             writer.prefix(GIT_NAMESPACE, GIT_URI);
@@ -312,9 +314,9 @@ public class GithubRdfConversionTransactionService {
 
         }
 
-        BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(tempFile));
+        BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(rdfTempFile));
 
-        entityLobs.setRdfFile(BlobProxy.generateProxy(bufferedInputStream, tempFile.length()));
+        entityLobs.setRdfFile(BlobProxy.generateProxy(bufferedInputStream, rdfTempFile.length()));
 
         return bufferedInputStream;
     }
