@@ -6,10 +6,8 @@ import de.leipzig.htwk.gitrdf.worker.database.entity.enums.GitRepositoryOrderSta
 import de.leipzig.htwk.gitrdf.worker.database.entity.lob.GithubRepositoryOrderEntityLobs;
 import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import jakarta.persistence.EntityManager;
-import org.apache.jena.graph.Node;
-import org.apache.jena.graph.NodeFactory;
-import org.apache.jena.graph.Triple;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.StreamRDF;
 import org.apache.jena.riot.system.StreamRDFWriter;
@@ -84,7 +82,8 @@ public class GithubRdfConversionTransactionService {
 
         File gitFile = getDotGitFileFromGithubRepositoryHandle(targetRepo, id, owner, repo);
 
-        InputStream needsToBeClosedOutsideOfTransaction = writeRdf(gitFile, githubRepositoryOrderEntityLobs, rdfTempFile);
+        InputStream needsToBeClosedOutsideOfTransaction
+                = writeRdf(gitFile, githubRepositoryOrderEntity, githubRepositoryOrderEntityLobs, rdfTempFile);
 
         githubRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.DONE);
 
@@ -111,7 +110,7 @@ public class GithubRdfConversionTransactionService {
             gitHandler = performGitClone(owner, repo, gitWorkingDirectory);
 
             InputStream needsToBeClosedOutsideOfTransaction
-                    = writeRdf(gitHandler, githubRepositoryOrderEntityLobs, rdfTempFile);
+                    = writeRdf(gitHandler, githubRepositoryOrderEntity, githubRepositoryOrderEntityLobs, rdfTempFile);
 
             githubRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.DONE);
 
@@ -247,23 +246,29 @@ public class GithubRdfConversionTransactionService {
     }
 
     // TODO (ccr): duplicate code -> change that!
-    private InputStream writeRdf(File gitFile, GithubRepositoryOrderEntityLobs entityLobs, File rdfTempFile) throws GitAPIException, IOException {
+    private InputStream writeRdf(
+            File gitFile,
+            GithubRepositoryOrderEntity entity,
+            GithubRepositoryOrderEntityLobs entityLobs,
+            File rdfTempFile) throws GitAPIException, IOException {
 
         Repository gitRepository = new FileRepositoryBuilder().setGitDir(gitFile).build();
         Git gitHandler = new Git(gitRepository);
 
-        return writeRdf(gitHandler, entityLobs, rdfTempFile);
+        return writeRdf(gitHandler, entity, entityLobs, rdfTempFile);
     }
 
     private InputStream writeRdf(
             Git gitHandler,
+            GithubRepositoryOrderEntity entity,
             GithubRepositoryOrderEntityLobs entityLobs,
             File rdfTempFile) throws GitAPIException, IOException {
 
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(rdfTempFile))) {
 
             StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE_BLOCKS);
-            writer.prefix(GIT_NAMESPACE, GIT_URI);
+            //writer.prefix(GIT_NAMESPACE, GIT_URI);
+            //writer.prefix("xsd", ""); TODO (ccr): eventuell xsd präfix hinzufügen, wenn das apache jena nicht von selbst macht
 
             for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
@@ -281,18 +286,32 @@ public class GithubRdfConversionTransactionService {
 
                     String gitHash = commit.getId().name();
 
-                    writer.triple(createAuthorNameProperty(gitHash, commit.getAuthorIdent().getName()));
-                    writer.triple(createAuthorEmailProperty(gitHash, commit.getAuthorIdent().getEmailAddress()));
+                    String commitUri = getGithubCommitUri(entity.getOwnerName(), entity.getRepositoryName(), gitHash);
+
+                    writer.triple(RdfCommitUtils.createCommitHashProperty(commitUri, gitHash));
+                    //writer.triple(createAuthorNameProperty(gitHash, commit.getAuthorIdent().getName()));
+                    writer.triple(RdfCommitUtils.createAuthorNameProperty(commitUri, commit.getAuthorIdent().getName()));
+
+                    //writer.triple(createAuthorEmailProperty(gitHash, commit.getAuthorIdent().getEmailAddress()));
+                    writer.triple(RdfCommitUtils.createAuthorEmailProperty(commitUri, commit.getAuthorIdent().getEmailAddress()));
 
                     Instant instant = Instant.ofEpochSecond(commit.getCommitTime());
                     LocalDateTime commitDateTime = instant.atZone(ZoneId.of("Europe/Berlin")).toLocalDateTime();
 
-                    writer.triple(createAuthorDateProperty(gitHash, commitDateTime.toString()));
-                    writer.triple(createCommitDateProperty(gitHash, commitDateTime.toString()));
+                    //writer.triple(createAuthorDateProperty(gitHash, commitDateTime.toString()));
+                    writer.triple(RdfCommitUtils.createAuthorDateProperty(commitUri, commitDateTime));
 
-                    writer.triple(createCommitterNameProperty(gitHash, commit.getCommitterIdent().getName()));
-                    writer.triple(createCommitterEmailProperty(gitHash, commit.getCommitterIdent().getEmailAddress()));
-                    writer.triple(createCommitMessageProperty(gitHash, commit.getFullMessage()));
+                    //writer.triple(createCommitDateProperty(gitHash, commitDateTime.toString()));
+                    writer.triple(RdfCommitUtils.createCommitDateProperty(commitUri, commitDateTime));
+
+                    //writer.triple(createCommitterNameProperty(gitHash, commit.getCommitterIdent().getName()));
+                    writer.triple(RdfCommitUtils.createCommitterNameProperty(commitUri, commit.getCommitterIdent().getName()));
+
+                    //writer.triple(createCommitterEmailProperty(gitHash, commit.getCommitterIdent().getEmailAddress()));
+                    writer.triple(RdfCommitUtils.createCommitterEmailProperty(commitUri, commit.getCommitterIdent().getEmailAddress()));
+
+                    //writer.triple(createCommitMessageProperty(gitHash, commit.getFullMessage()));
+                    writer.triple(RdfCommitUtils.createCommitMessageProperty(commitUri, commit.getFullMessage()));
 
                     // No possible solution found yet for merge commits -> maybe traverse to parent? Maybe both
                     //Property mergeCommitProperty = rdfModel.createProperty(gitUri + "MergeCommit");
@@ -336,6 +355,11 @@ public class GithubRdfConversionTransactionService {
         return (int) skips;
     }
 
+    private String getGithubCommitUri(String owner, String repository, String commitHash) {
+        return "https://github.com/" + owner + "/" + repository + "/commit/" + commitHash;
+    }
+
+    /*
     private static Node literal(String value) {
         return NodeFactory.createLiteral(value);
     }
@@ -371,4 +395,6 @@ public class GithubRdfConversionTransactionService {
     private Triple createCommitMessageProperty(String gitHash, String commitMessageValue) {
         return Triple.create(literal(gitHash), uri(GIT_URI + "CommitMessage"), literal(commitMessageValue));
     }
+
+     */
 }
