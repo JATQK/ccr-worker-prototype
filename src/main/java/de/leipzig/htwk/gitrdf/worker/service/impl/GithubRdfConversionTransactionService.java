@@ -125,7 +125,7 @@ public class GithubRdfConversionTransactionService {
 
     }
 
-    private Git performGitClone(String ownerName, String repositoryName, File gitWorkingDirectory) throws IOException, GitAPIException {
+    private Git performGitClone(String ownerName, String repositoryName, File gitWorkingDirectory) throws GitAPIException {
 
         String gitRepoTargetUrl = String.format("https://github.com/%s/%s.git", ownerName, repositoryName);
 
