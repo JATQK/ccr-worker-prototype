@@ -11,7 +11,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class GithubRepositoryOrderEntity {
 
-    public static GithubRepositoryOrderEntity newOrder(String ownerName, String repositoryName) {
+    public static GithubRepositoryOrderEntity newOrder(
+            String ownerName,
+            String repositoryName,
+            GithubRepositoryFilter githubRepositoryFilter) {
 
         GithubRepositoryOrderEntity githubRepositoryOrderEntity = new GithubRepositoryOrderEntity();
 
@@ -19,6 +22,7 @@ public class GithubRepositoryOrderEntity {
         githubRepositoryOrderEntity.setRepositoryName(repositoryName);
         githubRepositoryOrderEntity.setNumberOfTries(0);
         githubRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.RECEIVED);
+        githubRepositoryOrderEntity.setGithubRepositoryFilter(githubRepositoryFilter);
 
         return githubRepositoryOrderEntity;
     }
@@ -38,4 +42,8 @@ public class GithubRepositoryOrderEntity {
 
     @Column(nullable = false)
     private int numberOfTries;
+
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "githubrepositoryfilter_id")
+    private GithubRepositoryFilter githubRepositoryFilter;
 }

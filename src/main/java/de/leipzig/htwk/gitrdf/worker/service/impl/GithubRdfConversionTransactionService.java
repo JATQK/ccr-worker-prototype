@@ -1,6 +1,7 @@
 package de.leipzig.htwk.gitrdf.worker.service.impl;
 
 import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
+import de.leipzig.htwk.gitrdf.worker.database.entity.GitCommitRepositoryFilter;
 import de.leipzig.htwk.gitrdf.worker.database.entity.GithubRepositoryOrderEntity;
 import de.leipzig.htwk.gitrdf.worker.database.entity.enums.GitRepositoryOrderStatus;
 import de.leipzig.htwk.gitrdf.worker.database.entity.lob.GithubRepositoryOrderEntityLobs;
@@ -273,6 +274,9 @@ public class GithubRdfConversionTransactionService {
         String owner = entity.getOwnerName();
         String repository = entity.getRepositoryName();
 
+        GitCommitRepositoryFilter gitCommitRepositoryFilter
+                = entity.getGithubRepositoryFilter().getGitCommitRepositoryFilter();
+
         String githubCommitPrefixValue = getGithubCommitBaseUri(owner, repository);
 
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(rdfTempFile))) {
@@ -301,24 +305,46 @@ public class GithubRdfConversionTransactionService {
 
                     String commitUri = getGithubCommitUri(owner, repository, gitHash);
 
-                    writer.triple(RdfCommitUtils.createCommitHashProperty(commitUri, gitHash));
+                    if (gitCommitRepositoryFilter.isEnableCommitHash()) {
+                        writer.triple(RdfCommitUtils.createCommitHashProperty(commitUri, gitHash));
+                    }
 
-                    writer.triple(RdfCommitUtils.createAuthorNameProperty(commitUri, commit.getAuthorIdent().getName()));
+                    if (gitCommitRepositoryFilter.isEnableAuthorName()) {
+                        writer.triple(RdfCommitUtils.createAuthorNameProperty(commitUri, commit.getAuthorIdent().getName()));
+                    }
 
-                    writer.triple(RdfCommitUtils.createAuthorEmailProperty(commitUri, commit.getAuthorIdent().getEmailAddress()));
+                    if (gitCommitRepositoryFilter.isEnableAuthorEmail()) {
+                        writer.triple(RdfCommitUtils.createAuthorEmailProperty(commitUri, commit.getAuthorIdent().getEmailAddress()));
+                    }
 
-                    Instant instant = Instant.ofEpochSecond(commit.getCommitTime());
-                    LocalDateTime commitDateTime = instant.atZone(ZoneId.of("Europe/Berlin")).toLocalDateTime();
+                    boolean isAuthorDateEnabled = gitCommitRepositoryFilter.isEnableAuthorDate();
+                    boolean isCommitDateEnabled = gitCommitRepositoryFilter.isEnableCommitDate();
 
-                    writer.triple(RdfCommitUtils.createAuthorDateProperty(commitUri, commitDateTime));
+                    if (isAuthorDateEnabled || isCommitDateEnabled) {
 
-                    writer.triple(RdfCommitUtils.createCommitDateProperty(commitUri, commitDateTime));
+                        Instant instant = Instant.ofEpochSecond(commit.getCommitTime());
+                        LocalDateTime commitDateTime = instant.atZone(ZoneId.of("Europe/Berlin")).toLocalDateTime();
 
-                    writer.triple(RdfCommitUtils.createCommitterNameProperty(commitUri, commit.getCommitterIdent().getName()));
+                        if (isAuthorDateEnabled) {
+                            writer.triple(RdfCommitUtils.createAuthorDateProperty(commitUri, commitDateTime));
+                        }
 
-                    writer.triple(RdfCommitUtils.createCommitterEmailProperty(commitUri, commit.getCommitterIdent().getEmailAddress()));
+                        if (isCommitDateEnabled) {
+                            writer.triple(RdfCommitUtils.createCommitDateProperty(commitUri, commitDateTime));
+                        }
+                    }
 
-                    writer.triple(RdfCommitUtils.createCommitMessageProperty(commitUri, commit.getFullMessage()));
+                    if (gitCommitRepositoryFilter.isEnableCommitterName()) {
+                        writer.triple(RdfCommitUtils.createCommitterNameProperty(commitUri, commit.getCommitterIdent().getName()));
+                    }
+
+                    if (gitCommitRepositoryFilter.isEnableCommitterEmail()) {
+                        writer.triple(RdfCommitUtils.createCommitterEmailProperty(commitUri, commit.getCommitterIdent().getEmailAddress()));
+                    }
+
+                    if (gitCommitRepositoryFilter.isEnableCommitMessage()) {
+                        writer.triple(RdfCommitUtils.createCommitMessageProperty(commitUri, commit.getFullMessage()));
+                    }
 
                     // No possible solution found yet for merge commits -> maybe traverse to parent? Maybe both
                     //Property mergeCommitProperty = rdfModel.createProperty(gitUri + "MergeCommit");
