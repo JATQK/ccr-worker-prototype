@@ -2,12 +2,14 @@ package de.leipzig.htwk.gitrdf.worker.service.impl;
 
 import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
 import de.leipzig.htwk.gitrdf.worker.database.entity.GitCommitRepositoryFilter;
+import de.leipzig.htwk.gitrdf.worker.database.entity.GithubIssueRepositoryFilter;
 import de.leipzig.htwk.gitrdf.worker.database.entity.GithubRepositoryOrderEntity;
 import de.leipzig.htwk.gitrdf.worker.database.entity.enums.GitRepositoryOrderStatus;
 import de.leipzig.htwk.gitrdf.worker.database.entity.lob.GithubRepositoryOrderEntityLobs;
 import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
 import jakarta.persistence.EntityManager;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.StreamRDF;
@@ -19,8 +21,7 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.hibernate.engine.jdbc.BlobProxy;
-import org.kohsuke.github.GHRepository;
-import org.kohsuke.github.GitHub;
+import org.kohsuke.github.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,9 @@ import java.net.URISyntaxException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
 
 @Service
 public class GithubRdfConversionTransactionService {
@@ -41,6 +45,8 @@ public class GithubRdfConversionTransactionService {
     public static final String GIT_NAMESPACE = "git";
 
     public static final String GITHUB_COMMIT_NAMESPACE = "githubcommit";
+
+    public static final String GITHUB_ISSUE_NAMESPACE = "githubissue";
 
     public static final String XSD_SCHEMA_NAMESPACE = "xsd";
 
@@ -58,7 +64,7 @@ public class GithubRdfConversionTransactionService {
             GithubHandlerService githubHandlerService,
             EntityManager entityManager,
             GithubConfig githubConfig,
-            @Value("${worker.commits-per-iteration}") int commitsPerIteration) throws IOException {
+            @Value("${worker.commits-per-iteration}") int commitsPerIteration) {
 
         this.githubHandlerService = githubHandlerService;
         this.githubConfig = githubConfig;
@@ -97,9 +103,9 @@ public class GithubRdfConversionTransactionService {
         return needsToBeClosedOutsideOfTransaction;
     }
 
-    @Transactional(rollbackFor = {IOException.class, GitAPIException.class}) // Runtime-Exceptions are rollbacked by default; Checked-Exceptions not
+    @Transactional(rollbackFor = {IOException.class, GitAPIException.class, URISyntaxException.class, InterruptedException.class}) // Runtime-Exceptions are rollbacked by default; Checked-Exceptions not
     public InputStream performGithubRepoToRdfConversionWithGitCloningLogicAndReturnCloseableInputStream(
-            long id, File gitWorkingDirectory, File rdfTempFile) throws IOException, GitAPIException {
+            long id, File gitWorkingDirectory, File rdfTempFile) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
 
         Git gitHandler = null;
 
@@ -257,7 +263,7 @@ public class GithubRdfConversionTransactionService {
             File gitFile,
             GithubRepositoryOrderEntity entity,
             GithubRepositoryOrderEntityLobs entityLobs,
-            File rdfTempFile) throws GitAPIException, IOException {
+            File rdfTempFile) throws GitAPIException, IOException, URISyntaxException, InterruptedException {
 
         Repository gitRepository = new FileRepositoryBuilder().setGitDir(gitFile).build();
         Git gitHandler = new Git(gitRepository);
@@ -269,7 +275,7 @@ public class GithubRdfConversionTransactionService {
             Git gitHandler,
             GithubRepositoryOrderEntity entity,
             GithubRepositoryOrderEntityLobs entityLobs,
-            File rdfTempFile) throws GitAPIException, IOException {
+            File rdfTempFile) throws GitAPIException, IOException, URISyntaxException, InterruptedException {
 
         String owner = entity.getOwnerName();
         String repository = entity.getRepositoryName();
@@ -277,16 +283,26 @@ public class GithubRdfConversionTransactionService {
         GitCommitRepositoryFilter gitCommitRepositoryFilter
                 = entity.getGithubRepositoryFilter().getGitCommitRepositoryFilter();
 
+        GithubIssueRepositoryFilter githubIssueRepositoryFilter
+                = entity.getGithubRepositoryFilter().getGithubIssueRepositoryFilter();
+
         String githubCommitPrefixValue = getGithubCommitBaseUri(owner, repository);
+        String githubIssuePrefixValue = getGithubIssueBaseUri(owner, repository);
 
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(rdfTempFile))) {
+
+            GitHub githubHandle = githubHandlerService.getGithubHandle();
+
+            String githubRepositoryName = String.format("%s/%s", owner, repository);
 
             StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE_BLOCKS);
 
             writer.prefix(GIT_NAMESPACE, GIT_URI);
             writer.prefix(GITHUB_COMMIT_NAMESPACE, githubCommitPrefixValue);
+            writer.prefix(GITHUB_ISSUE_NAMESPACE, githubIssuePrefixValue);
             writer.prefix(XSD_SCHEMA_NAMESPACE, XSD_SCHEMA_URI);
 
+            // git commits
             for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
                 int skipCount = calculateSkipCountAndThrowExceptionIfIntegerOverflowIsImminent(iteration, commitsPerIteration);
@@ -322,8 +338,7 @@ public class GithubRdfConversionTransactionService {
 
                     if (isAuthorDateEnabled || isCommitDateEnabled) {
 
-                        Instant instant = Instant.ofEpochSecond(commit.getCommitTime());
-                        LocalDateTime commitDateTime = instant.atZone(ZoneId.of("Europe/Berlin")).toLocalDateTime();
+                        LocalDateTime commitDateTime = localDateTimeFrom(commit.getCommitTime());
 
                         if (isAuthorDateEnabled) {
                             writer.triple(RdfCommitUtils.createAuthorDateProperty(commitUri, commitDateTime));
@@ -364,6 +379,110 @@ public class GithubRdfConversionTransactionService {
 
             }
 
+            // issues
+            GHRepository githubRepositoryHandle = githubHandle.getRepository(githubRepositoryName);
+
+            if (githubRepositoryHandle.hasIssues()) {
+
+                //githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()
+
+                int issueCounter = 0;
+
+                boolean doesWriterContainNonWrittenRdfStreamElements = false;
+
+                for (GHIssue ghIssue : githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()) {
+
+                    if (issueCounter < 1) {
+                        writer.start();
+                        doesWriterContainNonWrittenRdfStreamElements = true;
+                    }
+
+                    long issueId = ghIssue.getId();
+
+                    //String githubIssueUri = getGithubIssueUri(owner, repository, issueId);
+                    String githubIssueUri = ghIssue.getHtmlUrl().toString();
+
+                    if (githubIssueRepositoryFilter.isEnableIssueId()) {
+                        writer.triple(RdfGithubIssueUtils.createIssueIdProperty(githubIssueUri, issueId));
+                    }
+
+                    // TODO: Was in einem Issue wahrscheinlich interessant ist: user, labels, assignees, milestones, createdAt, updatedAt, closedAt (wenn closed)
+
+                    if (githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() != null) {
+                        writer.triple(RdfGithubIssueUtils.createIssueStateProperty(githubIssueUri, ghIssue.getState().toString()));
+                    }
+
+                    if (githubIssueRepositoryFilter.isEnableIssueTitle() && ghIssue.getTitle() != null) {
+                        writer.triple(RdfGithubIssueUtils.createIssueTitleProperty(githubIssueUri, ghIssue.getTitle()));
+                    }
+
+                    if (githubIssueRepositoryFilter.isEnableIssueBody() && ghIssue.getBody() != null) {
+                        writer.triple(RdfGithubIssueUtils.createIssueBodyProperty(githubIssueUri, ghIssue.getBody()));
+                    }
+
+                    if (githubIssueRepositoryFilter.isEnableIssueUser() && ghIssue.getUser() != null) {
+
+                        //String githubIssueUserUri = getGithubUserUri(ghIssue.getUser().getLogin());
+                        String githubIssueUserUri = ghIssue.getUser().getHtmlUrl().toString();
+                        writer.triple(RdfGithubIssueUtils.createIssueUserProperty(githubIssueUri, githubIssueUserUri));
+                    }
+
+                    if (githubIssueRepositoryFilter.isEnableIssueLabels()) {
+                        writeLabelCollectionAsTriplesToIssue(writer, githubIssueUri, ghIssue.getLabels());
+                    }
+
+                    if (githubIssueRepositoryFilter.isEnableIssueAssignees()) {
+                        writeAssigneesAsTripleToIssue(writer, githubIssueUri, ghIssue.getAssignees());
+                    }
+
+                    if (githubIssueRepositoryFilter.isEnableIssueMilestone()) {
+
+                        GHMilestone issueMilestone = ghIssue.getMilestone();
+                        if (issueMilestone != null) {
+                            writer.triple(RdfGithubIssueUtils.createIssueMilestoneProperty(githubIssueUri, ghIssue.getMilestone().getHtmlUrl().toString()));
+                        }
+                    }
+
+                    if (githubIssueRepositoryFilter.isEnableIssueCreatedAt() && ghIssue.getCreatedAt() != null) {
+
+                        LocalDateTime createdAt = localDateTimeFrom(ghIssue.getCreatedAt());
+                        writer.triple(RdfGithubIssueUtils.createIssueCreatedAtProperty(githubIssueUri, createdAt));
+                    }
+
+                    if (githubIssueRepositoryFilter.isEnableIssueUpdatedAt()) {
+
+                        Date updatedAtUtilDate = ghIssue.getUpdatedAt();
+                        if (updatedAtUtilDate != null) {
+                            LocalDateTime updatedAt = localDateTimeFrom(updatedAtUtilDate);
+                            writer.triple(RdfGithubIssueUtils.createIssueUpdatedAtProperty(githubIssueUri, updatedAt));
+                        }
+                    }
+
+                    if (githubIssueRepositoryFilter.isEnableIssueClosedAt()) {
+
+                        Date closedAtUtilDate = ghIssue.getClosedAt();
+                        if (closedAtUtilDate != null) {
+                            LocalDateTime closedAt = localDateTimeFrom(closedAtUtilDate);
+                            writer.triple(RdfGithubIssueUtils.createIssueClosedAtProperty(githubIssueUri, closedAt));
+                        }
+                    }
+
+                    issueCounter++;
+
+                    if (issueCounter > 99) {
+                        writer.finish();
+                        doesWriterContainNonWrittenRdfStreamElements = false;
+                        issueCounter = 0;
+                    }
+
+                }
+
+                if (doesWriterContainNonWrittenRdfStreamElements) {
+                    writer.finish();
+                }
+
+            }
+
         }
 
         BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(rdfTempFile));
@@ -371,6 +490,28 @@ public class GithubRdfConversionTransactionService {
         entityLobs.setRdfFile(BlobProxy.generateProxy(bufferedInputStream, rdfTempFile.length()));
 
         return bufferedInputStream;
+    }
+
+    private void writeLabelCollectionAsTriplesToIssue(
+            StreamRDF writer,
+            String issueUri,
+            Collection<GHLabel> labels) {
+
+        for (GHLabel label : labels) {
+            writer.triple(RdfGithubIssueUtils.createIssueLabelProperty(issueUri, label.getUrl()));
+        }
+
+    }
+
+    private void writeAssigneesAsTripleToIssue(
+            StreamRDF writer,
+            String issueUri,
+            List<GHUser> assignees) {
+
+        for (GHUser assignee : assignees) {
+            writer.triple(RdfGithubIssueUtils.createIssueAssigneeProperty(issueUri, assignee.getHtmlUrl().toString()));
+        }
+
     }
 
     private int calculateSkipCountAndThrowExceptionIfIntegerOverflowIsImminent(
@@ -394,6 +535,32 @@ public class GithubRdfConversionTransactionService {
 
     private String getGithubCommitUri(String owner, String repository, String commitHash) {
         return getGithubCommitBaseUri(owner, repository) + commitHash;
+    }
+
+    private String getGithubIssueBaseUri(String owner, String repository) {
+        return "https://github.com/" + owner + "/" + repository + "/issues/";
+    }
+
+    private String getGithubIssueUri(String owner, String repository, long issueId) {
+        return getGithubIssueBaseUri(owner, repository) + issueId;
+    }
+
+    public String getGithubUserUri(String userName) {
+        return "https://github.com/" + userName;
+    }
+
+    private LocalDateTime localDateTimeFrom(Date utilDate) {
+        return localDateTimeFrom(utilDate.getTime());
+    }
+
+    private LocalDateTime localDateTimeFrom(int secondsSinceEpoch) {
+        Instant instant = Instant.ofEpochSecond(secondsSinceEpoch);
+        return instant.atZone(ZoneId.of("Europe/Berlin")).toLocalDateTime();
+    }
+
+    private LocalDateTime localDateTimeFrom(long milliSecondsSinceEpoch) {
+        Instant instant = Instant.ofEpochMilli(milliSecondsSinceEpoch);
+        return instant.atZone(ZoneId.of("Europe/Berlin")).toLocalDateTime();
     }
 
 }

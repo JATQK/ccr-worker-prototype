@@ -5,15 +5,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Entity
-@Table(name = "githubrepositorygitcommitfilter")
+@Embeddable
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class GitCommitRepositoryFilter {
 
     public static final GitCommitRepositoryFilter ENABLED = new GitCommitRepositoryFilter(
-           null,
             true,
             true,
             true,
@@ -24,7 +22,6 @@ public class GitCommitRepositoryFilter {
             true);
 
     public static final GitCommitRepositoryFilter DISABLED = new GitCommitRepositoryFilter(
-            null,
             false,
             false,
             false,
@@ -34,9 +31,9 @@ public class GitCommitRepositoryFilter {
             false,
             false);
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    //@Id
+    //@GeneratedValue(strategy = GenerationType.IDENTITY)
+    //private Long id;
 
     private boolean enableCommitHash;
 

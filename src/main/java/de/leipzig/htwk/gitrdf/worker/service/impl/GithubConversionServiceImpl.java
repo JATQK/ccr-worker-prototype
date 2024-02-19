@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 
 @Service
@@ -19,7 +20,7 @@ public class GithubConversionServiceImpl {
     }
 
     //@Override
-    public void performGithubRepoToRdfConversion(long id) throws IOException, GitAPIException {
+    public void performGithubRepoToRdfConversion(long id) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
 
         InputStream needsToBeClosed = null;
         File gitWorkingDirectory = Files.createTempDirectory("git-working-directory").toFile();
