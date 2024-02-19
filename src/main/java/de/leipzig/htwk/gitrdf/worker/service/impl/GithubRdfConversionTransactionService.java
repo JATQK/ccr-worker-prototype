@@ -380,109 +380,112 @@ public class GithubRdfConversionTransactionService {
             }
 
             // issues
-            GHRepository githubRepositoryHandle = githubHandle.getRepository(githubRepositoryName);
 
-            if (githubRepositoryHandle.hasIssues()) {
+            if (githubIssueRepositoryFilter.doesContainAtLeastOneEnabledFilterOption()) {
 
-                //githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()
+                GHRepository githubRepositoryHandle = githubHandle.getRepository(githubRepositoryName);
 
-                int issueCounter = 0;
+                if (githubRepositoryHandle.hasIssues()) {
 
-                boolean doesWriterContainNonWrittenRdfStreamElements = false;
+                    //githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()
 
-                for (GHIssue ghIssue : githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()) {
+                    int issueCounter = 0;
 
-                    if (issueCounter < 1) {
-                        writer.start();
-                        doesWriterContainNonWrittenRdfStreamElements = true;
-                    }
+                    boolean doesWriterContainNonWrittenRdfStreamElements = false;
 
-                    long issueId = ghIssue.getId();
+                    for (GHIssue ghIssue : githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()) {
 
-                    //String githubIssueUri = getGithubIssueUri(owner, repository, issueId);
-                    String githubIssueUri = ghIssue.getHtmlUrl().toString();
-
-                    if (githubIssueRepositoryFilter.isEnableIssueId()) {
-                        writer.triple(RdfGithubIssueUtils.createIssueIdProperty(githubIssueUri, issueId));
-                    }
-
-                    // TODO: Was in einem Issue wahrscheinlich interessant ist: user, labels, assignees, milestones, createdAt, updatedAt, closedAt (wenn closed)
-
-                    if (githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() != null) {
-                        writer.triple(RdfGithubIssueUtils.createIssueStateProperty(githubIssueUri, ghIssue.getState().toString()));
-                    }
-
-                    if (githubIssueRepositoryFilter.isEnableIssueTitle() && ghIssue.getTitle() != null) {
-                        writer.triple(RdfGithubIssueUtils.createIssueTitleProperty(githubIssueUri, ghIssue.getTitle()));
-                    }
-
-                    if (githubIssueRepositoryFilter.isEnableIssueBody() && ghIssue.getBody() != null) {
-                        writer.triple(RdfGithubIssueUtils.createIssueBodyProperty(githubIssueUri, ghIssue.getBody()));
-                    }
-
-                    if (githubIssueRepositoryFilter.isEnableIssueUser() && ghIssue.getUser() != null) {
-
-                        //String githubIssueUserUri = getGithubUserUri(ghIssue.getUser().getLogin());
-                        String githubIssueUserUri = ghIssue.getUser().getHtmlUrl().toString();
-                        writer.triple(RdfGithubIssueUtils.createIssueUserProperty(githubIssueUri, githubIssueUserUri));
-                    }
-
-                    if (githubIssueRepositoryFilter.isEnableIssueLabels()) {
-                        writeLabelCollectionAsTriplesToIssue(writer, githubIssueUri, ghIssue.getLabels());
-                    }
-
-                    if (githubIssueRepositoryFilter.isEnableIssueAssignees()) {
-                        writeAssigneesAsTripleToIssue(writer, githubIssueUri, ghIssue.getAssignees());
-                    }
-
-                    if (githubIssueRepositoryFilter.isEnableIssueMilestone()) {
-
-                        GHMilestone issueMilestone = ghIssue.getMilestone();
-                        if (issueMilestone != null) {
-                            writer.triple(RdfGithubIssueUtils.createIssueMilestoneProperty(githubIssueUri, ghIssue.getMilestone().getHtmlUrl().toString()));
+                        if (issueCounter < 1) {
+                            writer.start();
+                            doesWriterContainNonWrittenRdfStreamElements = true;
                         }
-                    }
 
-                    if (githubIssueRepositoryFilter.isEnableIssueCreatedAt() && ghIssue.getCreatedAt() != null) {
+                        long issueId = ghIssue.getId();
 
-                        LocalDateTime createdAt = localDateTimeFrom(ghIssue.getCreatedAt());
-                        writer.triple(RdfGithubIssueUtils.createIssueCreatedAtProperty(githubIssueUri, createdAt));
-                    }
+                        //String githubIssueUri = getGithubIssueUri(owner, repository, issueId);
+                        String githubIssueUri = ghIssue.getHtmlUrl().toString();
 
-                    if (githubIssueRepositoryFilter.isEnableIssueUpdatedAt()) {
-
-                        Date updatedAtUtilDate = ghIssue.getUpdatedAt();
-                        if (updatedAtUtilDate != null) {
-                            LocalDateTime updatedAt = localDateTimeFrom(updatedAtUtilDate);
-                            writer.triple(RdfGithubIssueUtils.createIssueUpdatedAtProperty(githubIssueUri, updatedAt));
+                        if (githubIssueRepositoryFilter.isEnableIssueId()) {
+                            writer.triple(RdfGithubIssueUtils.createIssueIdProperty(githubIssueUri, issueId));
                         }
-                    }
 
-                    if (githubIssueRepositoryFilter.isEnableIssueClosedAt()) {
+                        // TODO: Was in einem Issue wahrscheinlich interessant ist: user, labels, assignees, milestones, createdAt, updatedAt, closedAt (wenn closed)
 
-                        Date closedAtUtilDate = ghIssue.getClosedAt();
-                        if (closedAtUtilDate != null) {
-                            LocalDateTime closedAt = localDateTimeFrom(closedAtUtilDate);
-                            writer.triple(RdfGithubIssueUtils.createIssueClosedAtProperty(githubIssueUri, closedAt));
+                        if (githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() != null) {
+                            writer.triple(RdfGithubIssueUtils.createIssueStateProperty(githubIssueUri, ghIssue.getState().toString()));
                         }
+
+                        if (githubIssueRepositoryFilter.isEnableIssueTitle() && ghIssue.getTitle() != null) {
+                            writer.triple(RdfGithubIssueUtils.createIssueTitleProperty(githubIssueUri, ghIssue.getTitle()));
+                        }
+
+                        if (githubIssueRepositoryFilter.isEnableIssueBody() && ghIssue.getBody() != null) {
+                            writer.triple(RdfGithubIssueUtils.createIssueBodyProperty(githubIssueUri, ghIssue.getBody()));
+                        }
+
+                        if (githubIssueRepositoryFilter.isEnableIssueUser() && ghIssue.getUser() != null) {
+
+                            //String githubIssueUserUri = getGithubUserUri(ghIssue.getUser().getLogin());
+                            String githubIssueUserUri = ghIssue.getUser().getHtmlUrl().toString();
+                            writer.triple(RdfGithubIssueUtils.createIssueUserProperty(githubIssueUri, githubIssueUserUri));
+                        }
+
+                        if (githubIssueRepositoryFilter.isEnableIssueLabels()) {
+                            writeLabelCollectionAsTriplesToIssue(writer, githubIssueUri, ghIssue.getLabels());
+                        }
+
+                        if (githubIssueRepositoryFilter.isEnableIssueAssignees()) {
+                            writeAssigneesAsTripleToIssue(writer, githubIssueUri, ghIssue.getAssignees());
+                        }
+
+                        if (githubIssueRepositoryFilter.isEnableIssueMilestone()) {
+
+                            GHMilestone issueMilestone = ghIssue.getMilestone();
+                            if (issueMilestone != null) {
+                                writer.triple(RdfGithubIssueUtils.createIssueMilestoneProperty(githubIssueUri, ghIssue.getMilestone().getHtmlUrl().toString()));
+                            }
+                        }
+
+                        if (githubIssueRepositoryFilter.isEnableIssueCreatedAt() && ghIssue.getCreatedAt() != null) {
+
+                            LocalDateTime createdAt = localDateTimeFrom(ghIssue.getCreatedAt());
+                            writer.triple(RdfGithubIssueUtils.createIssueCreatedAtProperty(githubIssueUri, createdAt));
+                        }
+
+                        if (githubIssueRepositoryFilter.isEnableIssueUpdatedAt()) {
+
+                            Date updatedAtUtilDate = ghIssue.getUpdatedAt();
+                            if (updatedAtUtilDate != null) {
+                                LocalDateTime updatedAt = localDateTimeFrom(updatedAtUtilDate);
+                                writer.triple(RdfGithubIssueUtils.createIssueUpdatedAtProperty(githubIssueUri, updatedAt));
+                            }
+                        }
+
+                        if (githubIssueRepositoryFilter.isEnableIssueClosedAt()) {
+
+                            Date closedAtUtilDate = ghIssue.getClosedAt();
+                            if (closedAtUtilDate != null) {
+                                LocalDateTime closedAt = localDateTimeFrom(closedAtUtilDate);
+                                writer.triple(RdfGithubIssueUtils.createIssueClosedAtProperty(githubIssueUri, closedAt));
+                            }
+                        }
+
+                        issueCounter++;
+
+                        if (issueCounter > 99) {
+                            writer.finish();
+                            doesWriterContainNonWrittenRdfStreamElements = false;
+                            issueCounter = 0;
+                        }
+
                     }
 
-                    issueCounter++;
-
-                    if (issueCounter > 99) {
+                    if (doesWriterContainNonWrittenRdfStreamElements) {
                         writer.finish();
-                        doesWriterContainNonWrittenRdfStreamElements = false;
-                        issueCounter = 0;
                     }
 
                 }
-
-                if (doesWriterContainNonWrittenRdfStreamElements) {
-                    writer.finish();
-                }
-
             }
-
         }
 
         BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(rdfTempFile));

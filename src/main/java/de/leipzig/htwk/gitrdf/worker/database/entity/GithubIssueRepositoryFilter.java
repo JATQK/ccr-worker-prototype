@@ -62,4 +62,19 @@ public class GithubIssueRepositoryFilter {
     private boolean enableIssueUpdatedAt;
 
     private boolean enableIssueClosedAt;
+
+    public boolean doesContainAtLeastOneEnabledFilterOption() {
+        return this.isEnableIssueId()
+                || this.isEnableIssueState()
+                || this.isEnableIssueTitle()
+                || this.isEnableIssueBody()
+                || this.isEnableIssueUser()
+                || this.isEnableIssueLabels()
+                || this.isEnableIssueAssignees()
+                || this.isEnableIssueMilestone()
+                || this.isEnableIssueCreatedAt()
+                || this.isEnableIssueUpdatedAt()
+                || this.isEnableIssueClosedAt();
+    }
+
 }
