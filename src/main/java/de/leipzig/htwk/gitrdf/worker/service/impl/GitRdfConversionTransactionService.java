@@ -9,14 +9,25 @@ import jakarta.persistence.EntityManager;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.StreamRDF;
 import org.apache.jena.riot.system.StreamRDFWriter;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.diff.DiffEntry;
+import org.eclipse.jgit.diff.DiffFormatter;
+import org.eclipse.jgit.diff.Edit;
+import org.eclipse.jgit.diff.EditList;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.hibernate.engine.jdbc.BlobProxy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -29,6 +40,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -84,8 +96,12 @@ public class GitRdfConversionTransactionService {
             writer.prefix(GIT_NAMESPACE, GIT_URI);
 
             Repository gitRepository = new FileRepositoryBuilder().setGitDir(gitFile).build();
+            ObjectReader reader = gitRepository.newObjectReader();
 
             Git gitHandler = new Git(gitRepository);
+
+            DiffFormatter diffFormatter = new DiffFormatter( DisabledOutputStream.INSTANCE );
+            diffFormatter.setRepository( gitRepository );
 
             for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
@@ -101,7 +117,8 @@ public class GitRdfConversionTransactionService {
 
                     finished = false;
 
-                    String gitHash = commit.getId().name();
+                    ObjectId commitId = commit.getId();
+                    String gitHash = commitId.name();
 
                     writer.triple(createAuthorNameProperty(gitHash, commit.getAuthorIdent().getName()));
                     writer.triple(createAuthorEmailProperty(gitHash, commit.getAuthorIdent().getEmailAddress()));
@@ -119,6 +136,61 @@ public class GitRdfConversionTransactionService {
                     // No possible solution found yet for merge commits -> maybe traverse to parent? Maybe both
                     //Property mergeCommitProperty = rdfModel.createProperty(gitUri + "MergeCommit");
                     //commit.getParent()
+
+
+                    // Commit Diffs
+                    // See: https://www.codeaffine.com/2016/06/16/jgit-diff/
+
+                    // TODO: check if merges with more than 1 parent exist?
+
+                    RevCommit parentCommit = commit.getParent(0);
+
+                    if(parentCommit != null)
+                    {
+                        CanonicalTreeParser parentTreeParser = new CanonicalTreeParser();
+                        CanonicalTreeParser currentTreeParser = new CanonicalTreeParser();
+
+                        parentTreeParser.reset(reader, parentCommit.getTree());
+                        currentTreeParser.reset(reader, commit.getTree());
+
+                        // There needs to be a better/proper way
+                        // create commit-diff-resource to branch off multiple edits
+                        Resource commitResource = ResourceFactory.createResource();
+                        Node commitNode = NodeFactory.createURI(commitResource.getURI());
+
+                        //writer.triple(createCommitResource(gitHash, editType));
+
+                        List<DiffEntry> diffEntries = diffFormatter.scan( parentTreeParser, currentTreeParser );
+
+                        for(DiffEntry diffEntry : diffEntries)
+                        {
+                            // File Names (added/removed) (renamed?)
+                            FileHeader fileHeader = diffFormatter.toFileHeader( diffEntry );
+
+                            //writer.triple(createCommitDiffEditResource(gitHash, editType));
+
+                            // Diff Lines (added/changed/removed)
+                            EditList editList = fileHeader.toEditList();
+
+                            for(Edit edit : editList)
+                            {
+                                Edit.Type editType = edit.getType(); // INSERT,DELETE,REPLACE
+
+                                writer.triple(createCommitDiffEditTypeProperty(gitHash, editType));
+
+                                int beginA = edit.getBeginA();
+                                int beginB = edit.getBeginB();
+                                int endA = edit.getEndA();
+                                int endB = edit.getEndB();
+
+                                writer.triple(createCommitDiffEditBeginAProperty(gitHash, beginA));
+                                writer.triple(createCommitDiffEditBeginBProperty(gitHash, beginB));
+                                writer.triple(createCommitDiffEditEndAProperty(gitHash, endA));
+                                writer.triple(createCommitDiffEditEndBProperty(gitHash, endB));
+                            }
+                        }
+                    }
+
                 }
 
                 writer.finish();
@@ -230,5 +302,46 @@ public class GitRdfConversionTransactionService {
     private Triple createCommitMessageProperty(String gitHash, String commitMessageValue) {
         return Triple.create(literal(gitHash), uri(GIT_URI + "CommitMessage"), literal(commitMessageValue));
     }
+
+
+    // TODO
+    private Triple createCommitFileCreatedProperty(String gitHash, String fileName) {
+        return Triple.create(literal(gitHash), uri(GIT_URI + "FileCreated"), literal(fileName));
+    }
+
+    private Triple createCommitFileDeletedProperty(String gitHash, String fileName) {
+        return Triple.create(literal(gitHash), uri(GIT_URI + "FileDeleted"), literal(fileName));
+    }
+
+    private Triple createCommitResource(String gitHash, String _commitIdentifier) {
+        return Triple.create(literal(gitHash), uri(GIT_URI + "Commit"), literal(_commitIdentifier));
+    }
+
+    private Triple createCommitDiffEditResource(String gitHash, String _fileNameIdentifier) {
+        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitDiffEdit"), literal(_fileNameIdentifier));
+    }
+
+    private Triple createCommitDiffEditTypeProperty(String gitHash, Edit.Type editType) {
+        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitDiffEdit"), literal(editType.toString()));
+    }
+
+    private Triple createCommitDiffEditBeginAProperty(String gitHash, int lineNumberBegin ) {
+        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitDiffEdit"), literal(Integer.toString(lineNumberBegin)));
+    }
+
+    private Triple createCommitDiffEditBeginBProperty(String gitHash, int lineNumberBegin ) {
+        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitDiffEdit"), literal(Integer.toString(lineNumberBegin)));
+    }
+
+    private Triple createCommitDiffEditEndAProperty(String gitHash, int lineNumberEnd ) {
+        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitDiffEdit"), literal(Integer.toString(lineNumberEnd)));
+    }
+
+    private Triple createCommitDiffEditEndBProperty(String gitHash, int lineNumberEnd ) {
+        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitDiffEdit"), literal(Integer.toString(lineNumberEnd)));
+    }
+
+
+
 
 }
