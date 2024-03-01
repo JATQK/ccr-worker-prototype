@@ -140,7 +140,6 @@ public class GitRdfConversionTransactionService {
 
                     // Commit Diffs
                     // See: https://www.codeaffine.com/2016/06/16/jgit-diff/
-
                     // TODO: check if merges with more than 1 parent exist?
 
                     RevCommit parentCommit = commit.getParent(0);
@@ -153,40 +152,48 @@ public class GitRdfConversionTransactionService {
                         parentTreeParser.reset(reader, parentCommit.getTree());
                         currentTreeParser.reset(reader, commit.getTree());
 
-                        // There needs to be a better/proper way
-                        // create commit-diff-resource to branch off multiple edits
                         Resource commitResource = ResourceFactory.createResource();
-                        Node commitNode = NodeFactory.createURI(commitResource.getURI());
+                        Node commitNode = commitResource.asNode();
 
-                        //writer.triple(createCommitResource(gitHash, editType));
+                        writer.triple(createCommitResource(gitHash, commitNode));
 
-                        List<DiffEntry> diffEntries = diffFormatter.scan( parentTreeParser, currentTreeParser );
+                        List<DiffEntry> diffEntries = diffFormatter.scan(parentTreeParser, currentTreeParser);
 
                         for(DiffEntry diffEntry : diffEntries)
                         {
-                            // File Names (added/removed) (renamed?)
-                            FileHeader fileHeader = diffFormatter.toFileHeader( diffEntry );
+                            Resource diffEntryResource = ResourceFactory.createResource();
+                            Node diffEntryNode = diffEntryResource.asNode();
+                            writer.triple(createCommitDiffEntryResource(commitNode, diffEntryNode));
 
-                            //writer.triple(createCommitDiffEditResource(gitHash, editType));
+                            DiffEntry.ChangeType changeType = diffEntry.getChangeType(); // ADD,DELETE,MODIFY
+                            writer.triple(createCommitDiffEntryEditTypeProperty(diffEntryNode, changeType));
+
+                            FileHeader fileHeader = diffFormatter.toFileHeader(diffEntry);
+                            writer.triple(createCommitDiffEntryFileNameProperty(diffEntryNode, fileHeader));
 
                             // Diff Lines (added/changed/removed)
                             EditList editList = fileHeader.toEditList();
 
                             for(Edit edit : editList)
                             {
+                                Resource editResource = ResourceFactory.createResource();
+                                Node editNode = editResource.asNode();
+
+                                writer.triple(createCommitDiffEditResource(diffEntryNode, editNode));
+
                                 Edit.Type editType = edit.getType(); // INSERT,DELETE,REPLACE
 
-                                writer.triple(createCommitDiffEditTypeProperty(gitHash, editType));
+                                writer.triple(createCommitDiffEditTypeProperty(editNode, editType));
 
                                 int beginA = edit.getBeginA();
                                 int beginB = edit.getBeginB();
                                 int endA = edit.getEndA();
                                 int endB = edit.getEndB();
 
-                                writer.triple(createCommitDiffEditBeginAProperty(gitHash, beginA));
-                                writer.triple(createCommitDiffEditBeginBProperty(gitHash, beginB));
-                                writer.triple(createCommitDiffEditEndAProperty(gitHash, endA));
-                                writer.triple(createCommitDiffEditEndBProperty(gitHash, endB));
+                                writer.triple(createCommitDiffEditBeginAProperty(editNode, beginA));
+                                writer.triple(createCommitDiffEditBeginBProperty(editNode, beginB));
+                                writer.triple(createCommitDiffEditEndAProperty(editNode, endA));
+                                writer.triple(createCommitDiffEditEndBProperty(editNode, endB));
                             }
                         }
                     }
@@ -303,45 +310,43 @@ public class GitRdfConversionTransactionService {
         return Triple.create(literal(gitHash), uri(GIT_URI + "CommitMessage"), literal(commitMessageValue));
     }
 
-
-    // TODO
-    private Triple createCommitFileCreatedProperty(String gitHash, String fileName) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "FileCreated"), literal(fileName));
+    private Triple createCommitDiffEntryEditTypeProperty(Node diffEntryNode, DiffEntry.ChangeType changeType) {
+        return Triple.create(diffEntryNode, uri(GIT_URI + "ChangeType"), literal(changeType.toString()));
     }
 
-    private Triple createCommitFileDeletedProperty(String gitHash, String fileName) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "FileDeleted"), literal(fileName));
+    private Triple createCommitResource(String gitHash, Node commitNode) {
+        return Triple.create(literal(gitHash), uri(GIT_URI + "Commit"), commitNode);
     }
 
-    private Triple createCommitResource(String gitHash, String _commitIdentifier) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "Commit"), literal(_commitIdentifier));
+    private Triple createCommitDiffEntryResource(Node commitNode, Node diffEntryNode) {
+        return Triple.create(commitNode, uri(GIT_URI + "CommitDiffEntry"), diffEntryNode);
     }
 
-    private Triple createCommitDiffEditResource(String gitHash, String _fileNameIdentifier) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitDiffEdit"), literal(_fileNameIdentifier));
+    private Triple createCommitDiffEntryFileNameProperty(Node diffEntryNode, FileHeader fileHeader) {
+        return Triple.create(diffEntryNode, uri(GIT_URI + "FileName"), literal(fileHeader.toString()));
     }
 
-    private Triple createCommitDiffEditTypeProperty(String gitHash, Edit.Type editType) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitDiffEdit"), literal(editType.toString()));
+    private Triple createCommitDiffEditResource(Node diffEntryNode, Node diffEditNode) {
+        return Triple.create(diffEntryNode, uri(GIT_URI + "CommitDiffEdit"), diffEditNode);
     }
 
-    private Triple createCommitDiffEditBeginAProperty(String gitHash, int lineNumberBegin ) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitDiffEdit"), literal(Integer.toString(lineNumberBegin)));
+    private Triple createCommitDiffEditTypeProperty(Node editNode, Edit.Type editType) {
+        return Triple.create(editNode, uri(GIT_URI + "CommitDiffEditType"), literal(editType.toString()));
     }
 
-    private Triple createCommitDiffEditBeginBProperty(String gitHash, int lineNumberBegin ) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitDiffEdit"), literal(Integer.toString(lineNumberBegin)));
+    private Triple createCommitDiffEditBeginAProperty(Node editNode, int lineNumberBegin ) {
+        return Triple.create(editNode, uri(GIT_URI + "CommitDiffEditBeginA"), literal(Integer.toString(lineNumberBegin)));
     }
 
-    private Triple createCommitDiffEditEndAProperty(String gitHash, int lineNumberEnd ) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitDiffEdit"), literal(Integer.toString(lineNumberEnd)));
+    private Triple createCommitDiffEditBeginBProperty(Node editNode, int lineNumberBegin ) {
+        return Triple.create(editNode, uri(GIT_URI + "CommitDiffEditBeginB"), literal(Integer.toString(lineNumberBegin)));
     }
 
-    private Triple createCommitDiffEditEndBProperty(String gitHash, int lineNumberEnd ) {
-        return Triple.create(literal(gitHash), uri(GIT_URI + "CommitDiffEdit"), literal(Integer.toString(lineNumberEnd)));
+    private Triple createCommitDiffEditEndAProperty(Node editNode, int lineNumberEnd ) {
+        return Triple.create(editNode, uri(GIT_URI + "CommitDiffEditEndA"), literal(Integer.toString(lineNumberEnd)));
     }
 
-
-
-
+    private Triple createCommitDiffEditEndBProperty(Node editNode, int lineNumberEnd ) {
+        return Triple.create(editNode, uri(GIT_URI + "CommitDiffEditEndB"), literal(Integer.toString(lineNumberEnd)));
+    }
 }
