@@ -415,7 +415,7 @@ public class GithubRdfConversionTransactionService {
                                 Node diffEntryNode = diffEntryResource.asNode();
                                 writer.triple(RdfCommitUtils.createCommitDiffEntryResource(commitNode, diffEntryNode));
 
-                                DiffEntry.ChangeType changeType = diffEntry.getChangeType(); // ADD,DELETE,MODIFY
+                                DiffEntry.ChangeType changeType = diffEntry.getChangeType(); // ADD,DELETE,MODIFY,RENAME,COPY
                                 writer.triple(RdfCommitUtils.createCommitDiffEntryEditTypeProperty(diffEntryNode, changeType));
 
                                 FileHeader fileHeader = diffFormatter.toFileHeader(diffEntry);
