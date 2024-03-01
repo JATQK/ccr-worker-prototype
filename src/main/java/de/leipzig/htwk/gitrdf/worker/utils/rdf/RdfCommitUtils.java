@@ -64,23 +64,23 @@ public final class RdfCommitUtils {
     }
 
     public static Node commitDiffEntryFileNameProperty() {
-        return uri("git:CommitDiffEntryFileName");
+        return uri("git://CommitDiffEntryFileName");
     }
 
     public static Node commitDiffEditResource() {
-        return uri("git:CommitDiffEdit");
+        return uri("git://CommitDiffEdit");
     }
 
     public static Node commitDiffEditTypeProperty() {
-        return uri("git:CommitDiffEditType");
+        return uri("git://CommitDiffEditType");
     }
 
     public static Node commitDiffEditBeginAProperty() {
-        return uri("git:CommitDiffEditBeginA");
+        return uri("git://CommitDiffEditBeginA");
     }
 
     public static Node commitDiffEditBeginBProperty() {
-        return uri("git:CommitDiffEditBeginB");
+        return uri("git://CommitDiffEditBeginB");
     }
 
     public static Node commitDiffEditEndAProperty() {
