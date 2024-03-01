@@ -137,7 +137,7 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createCommitDiffEntryFileNameProperty(Node diffEntryNode, FileHeader fileHeader) {
-        return Triple.create(diffEntryNode, commitDiffEntryFileNameProperty(), stringLiteral(fileHeader.toString()));
+        return Triple.create(diffEntryNode, commitDiffEntryFileNameProperty(), stringLiteral(fileHeader.getOldPath())); // TODO: track renames?
     }
 
     public static Triple createCommitDiffEditResource(Node diffEntryNode, Node diffEditNode) {

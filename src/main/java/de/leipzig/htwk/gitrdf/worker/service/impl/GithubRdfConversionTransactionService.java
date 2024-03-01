@@ -419,7 +419,7 @@ public class GithubRdfConversionTransactionService {
                                 writer.triple(RdfCommitUtils.createCommitDiffEntryEditTypeProperty(diffEntryNode, changeType));
 
                                 FileHeader fileHeader = diffFormatter.toFileHeader(diffEntry);
-                                writer.triple(RdfCommitUtils.createCommitDiffEntryFileNameProperty(diffEntryNode, fileHeader));
+                                writer.triple(RdfCommitUtils.createCommitDiffEntryFileNameProperty(diffEntryNode, fileHeader)); // TODO: track rename?
 
                                 // Diff Lines (added/changed/removed)
                                 EditList editList = fileHeader.toEditList();
