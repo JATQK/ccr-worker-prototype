@@ -385,64 +385,72 @@ public class GithubRdfConversionTransactionService {
                     //Property mergeCommitProperty = rdfModel.createProperty(gitUri + "MergeCommit");
                     //commit.getParent()
 
+                    // TODO: Tags, Branches
+
+                    // Branch
+
+                    //writer.triple(RdfCommitUtils.createCommitBranchProperty(commitUri, commit));
 
                     // Commit Diffs
                     // See: https://www.codeaffine.com/2016/06/16/jgit-diff/
                     // TODO: check if merges with more than 1 parent exist?
 
-                    int parentCommitCount = commit.getParentCount();
+                    if( gitCommitRepositoryFilter.isEnableCommitDiff() ) {
 
-                    if( parentCommitCount > 0 ) {
+                        int parentCommitCount = commit.getParentCount();
 
-                        RevCommit parentCommit = commit.getParent(0);
+                        if (parentCommitCount > 0) {
 
-                        if (parentCommit != null) {
-                            CanonicalTreeParser parentTreeParser = new CanonicalTreeParser();
-                            CanonicalTreeParser currentTreeParser = new CanonicalTreeParser();
+                            RevCommit parentCommit = commit.getParent(0);
 
-                            parentTreeParser.reset(reader, parentCommit.getTree());
-                            currentTreeParser.reset(reader, commit.getTree());
+                            if (parentCommit != null) {
+                                CanonicalTreeParser parentTreeParser = new CanonicalTreeParser();
+                                CanonicalTreeParser currentTreeParser = new CanonicalTreeParser();
 
-                            Resource commitResource = ResourceFactory.createResource();
-                            Node commitNode = commitResource.asNode();
+                                parentTreeParser.reset(reader, parentCommit.getTree());
+                                currentTreeParser.reset(reader, commit.getTree());
 
-                            writer.triple(RdfCommitUtils.createCommitResource(commitUri, commitNode));
+                                Resource commitResource = ResourceFactory.createResource(gitHash); // TODO: use proper uri?
+                                Node commitNode = commitResource.asNode();
 
-                            List<DiffEntry> diffEntries = diffFormatter.scan(parentTreeParser, currentTreeParser);
+                                writer.triple(RdfCommitUtils.createCommitResource(commitUri, commitNode));
 
-                            for (DiffEntry diffEntry : diffEntries) {
-                                Resource diffEntryResource = ResourceFactory.createResource();
-                                Node diffEntryNode = diffEntryResource.asNode();
-                                writer.triple(RdfCommitUtils.createCommitDiffEntryResource(commitNode, diffEntryNode));
+                                List<DiffEntry> diffEntries = diffFormatter.scan(parentTreeParser, currentTreeParser);
 
-                                DiffEntry.ChangeType changeType = diffEntry.getChangeType(); // ADD,DELETE,MODIFY,RENAME,COPY
-                                writer.triple(RdfCommitUtils.createCommitDiffEntryEditTypeProperty(diffEntryNode, changeType));
+                                for (DiffEntry diffEntry : diffEntries) {
+                                    Resource diffEntryResource = ResourceFactory.createResource(); // TODO: use proper uri?
+                                    Node diffEntryNode = diffEntryResource.asNode();
+                                    writer.triple(RdfCommitUtils.createCommitDiffEntryResource(commitNode, diffEntryNode));
 
-                                FileHeader fileHeader = diffFormatter.toFileHeader(diffEntry);
-                                writer.triple(RdfCommitUtils.createCommitDiffEntryFileNameProperty(diffEntryNode, fileHeader)); // TODO: track rename?
+                                    DiffEntry.ChangeType changeType = diffEntry.getChangeType(); // ADD,DELETE,MODIFY,RENAME,COPY
+                                    writer.triple(RdfCommitUtils.createCommitDiffEntryEditTypeProperty(diffEntryNode, changeType));
 
-                                // Diff Lines (added/changed/removed)
-                                EditList editList = fileHeader.toEditList();
+                                    FileHeader fileHeader = diffFormatter.toFileHeader(diffEntry);
+                                    writer.triple(RdfCommitUtils.createCommitDiffEntryFileNameProperty(diffEntryNode, fileHeader)); // TODO: track rename?
 
-                                for (Edit edit : editList) {
-                                    Resource editResource = ResourceFactory.createResource();
-                                    Node editNode = editResource.asNode();
+                                    // Diff Lines (added/changed/removed)
+                                    EditList editList = fileHeader.toEditList();
 
-                                    writer.triple(RdfCommitUtils.createCommitDiffEditResource(diffEntryNode, editNode));
+                                    for (Edit edit : editList) {
+                                        Resource editResource = ResourceFactory.createResource();
+                                        Node editNode = editResource.asNode();
 
-                                    Edit.Type editType = edit.getType(); // INSERT,DELETE,REPLACE
+                                        writer.triple(RdfCommitUtils.createCommitDiffEditResource(diffEntryNode, editNode));
 
-                                    writer.triple(RdfCommitUtils.createCommitDiffEditTypeProperty(editNode, editType));
+                                        Edit.Type editType = edit.getType(); // INSERT,DELETE,REPLACE
 
-                                    int beginA = edit.getBeginA();
-                                    int beginB = edit.getBeginB();
-                                    int endA = edit.getEndA();
-                                    int endB = edit.getEndB();
+                                        writer.triple(RdfCommitUtils.createCommitDiffEditTypeProperty(editNode, editType));
 
-                                    writer.triple(RdfCommitUtils.createCommitDiffEditBeginAProperty(editNode, beginA));
-                                    writer.triple(RdfCommitUtils.createCommitDiffEditBeginBProperty(editNode, beginB));
-                                    writer.triple(RdfCommitUtils.createCommitDiffEditEndAProperty(editNode, endA));
-                                    writer.triple(RdfCommitUtils.createCommitDiffEditEndBProperty(editNode, endB));
+                                        int beginA = edit.getBeginA();
+                                        int beginB = edit.getBeginB();
+                                        int endA = edit.getEndA();
+                                        int endB = edit.getEndB();
+
+                                        writer.triple(RdfCommitUtils.createCommitDiffEditBeginAProperty(editNode, beginA));
+                                        writer.triple(RdfCommitUtils.createCommitDiffEditBeginBProperty(editNode, beginB));
+                                        writer.triple(RdfCommitUtils.createCommitDiffEditEndAProperty(editNode, endA));
+                                        writer.triple(RdfCommitUtils.createCommitDiffEditEndBProperty(editNode, endB));
+                                    }
                                 }
                             }
                         }
