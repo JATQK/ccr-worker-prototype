@@ -1,8 +1,8 @@
 package de.leipzig.htwk.gitrdf.worker.service.impl;
 
-import de.leipzig.htwk.gitrdf.worker.database.entity.GitRepositoryOrderEntity;
-import de.leipzig.htwk.gitrdf.worker.database.entity.enums.GitRepositoryOrderStatus;
-import de.leipzig.htwk.gitrdf.worker.database.entity.lob.GitRepositoryOrderEntityLobs;
+import de.leipzig.htwk.gitrdf.database.common.entity.GitRepositoryOrderEntity;
+import de.leipzig.htwk.gitrdf.database.common.entity.enums.GitRepositoryOrderStatus;
+import de.leipzig.htwk.gitrdf.database.common.entity.lob.GitRepositoryOrderEntityLobs;
 import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
 import jakarta.persistence.EntityManager;

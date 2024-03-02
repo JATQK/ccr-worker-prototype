@@ -1,11 +1,11 @@
 package de.leipzig.htwk.gitrdf.worker.service.impl;
 
+import de.leipzig.htwk.gitrdf.database.common.entity.GitCommitRepositoryFilter;
+import de.leipzig.htwk.gitrdf.database.common.entity.GithubIssueRepositoryFilter;
+import de.leipzig.htwk.gitrdf.database.common.entity.GithubRepositoryOrderEntity;
+import de.leipzig.htwk.gitrdf.database.common.entity.enums.GitRepositoryOrderStatus;
+import de.leipzig.htwk.gitrdf.database.common.entity.lob.GithubRepositoryOrderEntityLobs;
 import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
-import de.leipzig.htwk.gitrdf.worker.database.entity.GitCommitRepositoryFilter;
-import de.leipzig.htwk.gitrdf.worker.database.entity.GithubIssueRepositoryFilter;
-import de.leipzig.htwk.gitrdf.worker.database.entity.GithubRepositoryOrderEntity;
-import de.leipzig.htwk.gitrdf.worker.database.entity.enums.GitRepositoryOrderStatus;
-import de.leipzig.htwk.gitrdf.worker.database.entity.lob.GithubRepositoryOrderEntityLobs;
 import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;

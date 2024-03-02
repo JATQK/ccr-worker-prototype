@@ -1,11 +1,11 @@
 package de.leipzig.htwk.gitrdf.worker.scheduler;
 
+import de.leipzig.htwk.gitrdf.database.common.entity.GitRepositoryOrderEntity;
+import de.leipzig.htwk.gitrdf.database.common.entity.GithubRepositoryOrderEntity;
+import de.leipzig.htwk.gitrdf.database.common.entity.enums.GitRepositoryOrderStatus;
+import de.leipzig.htwk.gitrdf.database.common.repository.GitRepositoryOrderRepository;
+import de.leipzig.htwk.gitrdf.database.common.repository.GithubRepositoryOrderRepository;
 import de.leipzig.htwk.gitrdf.worker.config.SchedulerConfig;
-import de.leipzig.htwk.gitrdf.worker.database.entity.GitRepositoryOrderEntity;
-import de.leipzig.htwk.gitrdf.worker.database.entity.GithubRepositoryOrderEntity;
-import de.leipzig.htwk.gitrdf.worker.database.entity.enums.GitRepositoryOrderStatus;
-import de.leipzig.htwk.gitrdf.worker.database.repository.GitRepositoryOrderRepository;
-import de.leipzig.htwk.gitrdf.worker.database.repository.GithubRepositoryOrderRepository;
 import de.leipzig.htwk.gitrdf.worker.service.GitRdfConversionService;
 import de.leipzig.htwk.gitrdf.worker.service.impl.GithubConversionServiceImpl;
 import de.leipzig.htwk.gitrdf.worker.service.impl.GithubHandlerService;
