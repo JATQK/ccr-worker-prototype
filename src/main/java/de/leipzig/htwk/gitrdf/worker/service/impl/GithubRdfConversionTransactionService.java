@@ -18,6 +18,7 @@ import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.StreamRDF;
 import org.apache.jena.riot.system.StreamRDFWriter;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
@@ -25,9 +26,11 @@ import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.diff.EditList;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectReader;
+import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
@@ -43,6 +46,7 @@ import java.net.URISyntaxException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -318,8 +322,10 @@ public class GithubRdfConversionTransactionService {
 
             DiffFormatter diffFormatter = new DiffFormatter( DisabledOutputStream.INSTANCE );
             diffFormatter.setRepository( gitRepository );
-
             ObjectReader reader = gitRepository.newObjectReader();
+
+            Iterable<Ref> branches = gitHandler.branchList().setListMode(ListBranchCommand.ListMode.ALL).call();
+            RevWalk revWalk = new RevWalk(gitRepository);
 
             // git commits
             for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
@@ -385,17 +391,28 @@ public class GithubRdfConversionTransactionService {
                     //Property mergeCommitProperty = rdfModel.createProperty(gitUri + "MergeCommit");
                     //commit.getParent()
 
-                    // TODO: Tags, Branches
-
                     // Branch
+                    // TODO: better way to handle merges? (so commit could have multiple branches)
+                    //if(gitCommitRepositoryFilter.isEnableCommitBranch())
+                    {
 
-                    //writer.triple(RdfCommitUtils.createCommitBranchProperty(commitUri, commit));
+                        for (Ref branchRef : branches) {
+
+                            RevCommit commitRev = revWalk.lookupCommit(commit.getId());
+                            RevCommit branchRev = revWalk.lookupCommit(branchRef.getObjectId());
+
+                            if (revWalk.isMergedInto(commitRev, branchRev)) {
+                                writer.triple(RdfCommitUtils.createCommitBranchNameProperty(commitUri, branchRef.getName()));
+                            }
+                        }
+                    }
 
                     // Commit Diffs
                     // See: https://www.codeaffine.com/2016/06/16/jgit-diff/
                     // TODO: check if merges with more than 1 parent exist?
 
-                    if( gitCommitRepositoryFilter.isEnableCommitDiff() ) {
+                    //if(gitCommitRepositoryFilter.isEnableCommitDiff())
+                    {
 
                         int parentCommitCount = commit.getParentCount();
 
@@ -469,6 +486,34 @@ public class GithubRdfConversionTransactionService {
                 }
 
             }
+
+            // branches
+            // TODO: does this needs to be a resource (or is a property enough)
+
+            //if(gitCommitRepositoryFilter.isEnableCommitBranch())
+            {
+
+                //for(Ref branch : branches) {
+
+                    //String branchName = branch.getName();
+
+                    // as a resource:
+                    //Resource branchResource = ResourceFactory.createResource(); // TODO: use proper uri?
+                    //Node branchNode = branchResource.asNode();
+                    //writer.triple(RdfCommitUtils.createBranchResource(branchNode, branchName));
+
+                    // as a property:
+                    // TODO: check if branch.getObjectId().name() is the commit-hash of the branch creator commit or the head/latest commit
+                    //String commitHash = branch.getObjectId().name();
+                    //writer.triple(RdfCommitUtils.createCommitBranchNameProperty(commitHash, branchName));
+                //}
+            }
+
+            // tags
+
+            //if(gitCommitRepositoryFilter.isEnableCommitTag()) {
+            //
+            //}
 
             // issues
 

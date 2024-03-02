@@ -19,8 +19,11 @@ public class GitCommitRepositoryFilter {
             true,
             true,
             true,
-            true,
-            true);
+            true
+            //true,
+            //true,
+            //true,
+    );
 
     public static final GitCommitRepositoryFilter DISABLED = new GitCommitRepositoryFilter(
             false,
@@ -30,8 +33,11 @@ public class GitCommitRepositoryFilter {
             false,
             false,
             false,
-            false,
-            false);
+            false
+            //false,
+            //false,
+            //false,
+    );
 
     //@Id
     //@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -53,5 +59,10 @@ public class GitCommitRepositoryFilter {
 
     private boolean enableCommitMessage;
 
-    private boolean enableCommitDiff;
+
+    //private boolean enableCommitDiff;
+
+    //private boolean enableCommitBranch;
+
+    //private boolean enableCommitTag;
 }

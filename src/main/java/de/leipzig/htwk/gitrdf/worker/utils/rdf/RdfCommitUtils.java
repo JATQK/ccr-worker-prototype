@@ -51,12 +51,24 @@ public final class RdfCommitUtils {
         return uri("git://CommitMessage");
     }
 
+    public static Node commitBranchNameProperty() {
+        return uri("git://BranchName");
+    }
+
     public static Node commitDiffEntryEditTypeProperty() {
         return uri("git://ChangeType");
     }
 
     public static Node commitResource() {
         return uri("git://Commit");
+    }
+
+    public static Node branchResource() {
+        return uri("git://Branch");
+    }
+
+    public static Node tagResource() {
+        return uri("git://Tag");
     }
 
     public static Node commitDiffEntryResource() {
@@ -162,5 +174,17 @@ public final class RdfCommitUtils {
 
     public static Triple createCommitDiffEditEndBProperty(Node editNode, int lineNumberEnd ) {
         return Triple.create(editNode, commitDiffEditEndBProperty(), longLiteral(lineNumberEnd));
+    }
+
+    public static Triple createCommitBranchNameProperty(String commitUri, String branchName) {
+        return Triple.create(uri(commitUri), commitBranchNameProperty(), stringLiteral(branchName));
+    }
+
+    public static Triple createBranchResource(Node branchNode, String branchName) {
+        return Triple.create(branchNode, branchResource(), stringLiteral(branchName));
+    }
+
+    public static Triple createTagResource(Node tagNode, String tagName) {
+        return Triple.create(tagNode, tagResource(), stringLiteral(tagName));
     }
 }
