@@ -28,6 +28,8 @@
 		<kohsuke.github-api.version>1.318</kohsuke.github-api.version>
 		<jjwt.version>0.12.5</jjwt.version>
 		<bouncycastle.bcpkix-jdk18on.version>1.77</bouncycastle.bcpkix-jdk18on.version>
+
+		<de.leipzig.htwk.gitrdf.database.common.version>1.0.3-SNAPSHOT</de.leipzig.htwk.gitrdf.database.common.version>
 	</properties>
 
 	<dependencies>
@@ -35,7 +37,7 @@
 		<dependency>
 			<groupId>de.leipzig.htwk.gitrdf.database</groupId>
 			<artifactId>common</artifactId>
-			<version>1.0.3-SNAPSHOT</version>
+			<version>${de.leipzig.htwk.gitrdf.database.common.version}</version>
 		</dependency>
 
 		<dependency>
