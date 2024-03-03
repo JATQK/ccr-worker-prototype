@@ -75,8 +75,12 @@ public final class RdfCommitUtils {
         return uri("git://CommitDiffEntry");
     }
 
-    public static Node commitDiffEntryFileNameProperty() {
-        return uri("git://CommitDiffEntryFileName");
+    public static Node commitDiffEntryOldFileNameProperty() {
+        return uri("git://CommitDiffEntryOldFileName");
+    }
+
+    public static Node commitDiffEntryNewFileNameProperty() {
+        return uri("git://CommitDiffEntryNewFileName");
     }
 
     public static Node commitDiffEditResource() {
@@ -87,21 +91,15 @@ public final class RdfCommitUtils {
         return uri("git://CommitDiffEditType");
     }
 
-    public static Node commitDiffEditBeginAProperty() {
-        return uri("git://CommitDiffEditBeginA");
-    }
+    public static Node editOldLineNumberBeginProperty() { return uri("git://EditOldLineNumberBegin"); }
 
-    public static Node commitDiffEditBeginBProperty() {
-        return uri("git://CommitDiffEditBeginB");
-    }
+    public static Node editNewLineNumberBeginProperty() { return uri("git://EditNewLineNumberBegin"); }
 
-    public static Node commitDiffEditEndAProperty() {
-        return uri("git://CommitDiffEditEndA");
-    }
+    public static Node editOldLineNumberEndProperty() { return uri("git://EditOldLineNumberEnd"); }
 
-    public static Node commitDiffEditEndBProperty() {
-        return uri("git://CommitDiffEditEndB");
-    }
+    public static Node editNewLineNumberEndProperty() { return uri("git://EditNewLineNumberEnd"); }
+
+
 
     public static Triple createCommitHashProperty(String commitUri, String commitHash) {
         return Triple.create(uri(commitUri), commitHashProperty(), stringLiteral(commitHash));
@@ -148,8 +146,16 @@ public final class RdfCommitUtils {
         return Triple.create(commitNode, commitDiffEntryResource(), diffEntryNode);
     }
 
-    public static Triple createCommitDiffEntryFileNameProperty(Node diffEntryNode, FileHeader fileHeader) {
-        return Triple.create(diffEntryNode, commitDiffEntryFileNameProperty(), stringLiteral(fileHeader.getOldPath())); // TODO: track renames?
+    public static Triple createCommitDiffEntryProperty(String commitUri, Node diffEntryNode) {
+        return Triple.create(uri(commitUri), commitDiffEntryResource(), diffEntryNode);
+    }
+
+    public static Triple createCommitDiffEntryOldFileNameProperty(Node diffEntryNode, FileHeader fileHeader) {
+        return Triple.create(diffEntryNode, commitDiffEntryOldFileNameProperty(), stringLiteral(fileHeader.getOldPath()));
+    }
+
+    public static Triple createCommitDiffEntryNewFileNameProperty(Node diffEntryNode, FileHeader fileHeader) {
+        return Triple.create(diffEntryNode, commitDiffEntryNewFileNameProperty(), stringLiteral(fileHeader.getNewPath()));
     }
 
     public static Triple createCommitDiffEditResource(Node diffEntryNode, Node diffEditNode) {
@@ -160,20 +166,20 @@ public final class RdfCommitUtils {
         return Triple.create(editNode, commitDiffEditTypeProperty(), stringLiteral(editType.toString())); // TODO: edittype-literal?
     }
 
-    public static Triple createCommitDiffEditBeginAProperty(Node editNode, int lineNumberBegin ) {
-        return Triple.create(editNode, commitDiffEditBeginAProperty(), longLiteral(lineNumberBegin));
+    public static Triple createEditOldLineNumberBeginProperty(Node editNode, int lineNumberBegin ) {
+        return Triple.create(editNode, editOldLineNumberBeginProperty(), longLiteral(lineNumberBegin));
     }
 
-    public static Triple createCommitDiffEditBeginBProperty(Node editNode, int lineNumberBegin ) {
-        return Triple.create(editNode, commitDiffEditBeginBProperty(), longLiteral(lineNumberBegin));
+    public static Triple createEditNewLineNumberBeginProperty(Node editNode, int lineNumberBegin ) {
+        return Triple.create(editNode, editNewLineNumberBeginProperty(), longLiteral(lineNumberBegin));
     }
 
-    public static Triple createCommitDiffEditEndAProperty(Node editNode, int lineNumberEnd ) {
-        return Triple.create(editNode, commitDiffEditEndAProperty(), longLiteral(lineNumberEnd));
+    public static Triple createEditOldLineNumberEndProperty(Node editNode, int lineNumberEnd ) {
+        return Triple.create(editNode, editOldLineNumberEndProperty(), longLiteral(lineNumberEnd));
     }
 
-    public static Triple createCommitDiffEditEndBProperty(Node editNode, int lineNumberEnd ) {
-        return Triple.create(editNode, commitDiffEditEndBProperty(), longLiteral(lineNumberEnd));
+    public static Triple createEditNewLineNumberEndProperty(Node editNode, int lineNumberEnd ) {
+        return Triple.create(editNode, editNewLineNumberEndProperty(), longLiteral(lineNumberEnd));
     }
 
     public static Triple createCommitBranchNameProperty(String commitUri, String branchName) {

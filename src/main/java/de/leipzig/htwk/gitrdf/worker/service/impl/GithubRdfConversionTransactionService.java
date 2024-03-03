@@ -393,8 +393,7 @@ public class GithubRdfConversionTransactionService {
 
                     // Branch
                     // TODO: better way to handle merges? (so commit could have multiple branches)
-                    //if(gitCommitRepositoryFilter.isEnableCommitBranch())
-                    {
+                    if(gitCommitRepositoryFilter.isEnableCommitBranch()) {
 
                         for (Ref branchRef : branches) {
 
@@ -411,8 +410,7 @@ public class GithubRdfConversionTransactionService {
                     // See: https://www.codeaffine.com/2016/06/16/jgit-diff/
                     // TODO: check if merges with more than 1 parent exist?
 
-                    //if(gitCommitRepositoryFilter.isEnableCommitDiff())
-                    {
+                    if(gitCommitRepositoryFilter.isEnableCommitDiff()) {
 
                         int parentCommitCount = commit.getParentCount();
 
@@ -427,23 +425,40 @@ public class GithubRdfConversionTransactionService {
                                 parentTreeParser.reset(reader, parentCommit.getTree());
                                 currentTreeParser.reset(reader, commit.getTree());
 
-                                Resource commitResource = ResourceFactory.createResource(gitHash); // TODO: use proper uri?
-                                Node commitNode = commitResource.asNode();
-
-                                writer.triple(RdfCommitUtils.createCommitResource(commitUri, commitNode));
+                                //Resource commitResource = ResourceFactory.createResource(gitHash); // TODO: use proper uri?
+                                //Node commitNode = commitResource.asNode();
+                                //writer.triple(RdfCommitUtils.createCommitResource(commitUri, commitNode));
 
                                 List<DiffEntry> diffEntries = diffFormatter.scan(parentTreeParser, currentTreeParser);
 
                                 for (DiffEntry diffEntry : diffEntries) {
                                     Resource diffEntryResource = ResourceFactory.createResource(); // TODO: use proper uri?
                                     Node diffEntryNode = diffEntryResource.asNode();
-                                    writer.triple(RdfCommitUtils.createCommitDiffEntryResource(commitNode, diffEntryNode));
+                                    //writer.triple(RdfCommitUtils.createCommitDiffEntryResource(commitNode, diffEntryNode));
+                                    writer.triple(RdfCommitUtils.createCommitDiffEntryProperty(commitUri, diffEntryNode));
 
                                     DiffEntry.ChangeType changeType = diffEntry.getChangeType(); // ADD,DELETE,MODIFY,RENAME,COPY
                                     writer.triple(RdfCommitUtils.createCommitDiffEntryEditTypeProperty(diffEntryNode, changeType));
 
                                     FileHeader fileHeader = diffFormatter.toFileHeader(diffEntry);
-                                    writer.triple(RdfCommitUtils.createCommitDiffEntryFileNameProperty(diffEntryNode, fileHeader)); // TODO: track rename?
+
+                                    // See: org.eclipse.jgit.diff.DiffEntry.ChangeType.toString()
+                                    switch (changeType) {
+                                        case ADD:
+                                            writer.triple(RdfCommitUtils.createCommitDiffEntryNewFileNameProperty(diffEntryNode, fileHeader));
+                                            break;
+                                        case COPY:
+                                        case RENAME:
+                                            writer.triple(RdfCommitUtils.createCommitDiffEntryOldFileNameProperty(diffEntryNode, fileHeader));
+                                            writer.triple(RdfCommitUtils.createCommitDiffEntryNewFileNameProperty(diffEntryNode, fileHeader));
+                                            break;
+                                        case DELETE:
+                                        case MODIFY:
+                                            writer.triple(RdfCommitUtils.createCommitDiffEntryOldFileNameProperty(diffEntryNode, fileHeader));
+                                            break;
+                                        default:
+                                            throw new IllegalStateException("Unexpected changeType: " + changeType);
+                                    }
 
                                     // Diff Lines (added/changed/removed)
                                     EditList editList = fileHeader.toEditList();
@@ -458,15 +473,15 @@ public class GithubRdfConversionTransactionService {
 
                                         writer.triple(RdfCommitUtils.createCommitDiffEditTypeProperty(editNode, editType));
 
-                                        int beginA = edit.getBeginA();
-                                        int beginB = edit.getBeginB();
-                                        int endA = edit.getEndA();
-                                        int endB = edit.getEndB();
+                                        int oldLineNumberBegin = edit.getBeginA();
+                                        int newLineNumberBegin = edit.getBeginB();
+                                        int oldLineNumberEnd = edit.getEndA();
+                                        int newLineNumberEnd = edit.getEndB();
 
-                                        writer.triple(RdfCommitUtils.createCommitDiffEditBeginAProperty(editNode, beginA));
-                                        writer.triple(RdfCommitUtils.createCommitDiffEditBeginBProperty(editNode, beginB));
-                                        writer.triple(RdfCommitUtils.createCommitDiffEditEndAProperty(editNode, endA));
-                                        writer.triple(RdfCommitUtils.createCommitDiffEditEndBProperty(editNode, endB));
+                                        writer.triple(RdfCommitUtils.createEditOldLineNumberBeginProperty(editNode, oldLineNumberBegin));
+                                        writer.triple(RdfCommitUtils.createEditNewLineNumberBeginProperty(editNode, newLineNumberBegin));
+                                        writer.triple(RdfCommitUtils.createEditOldLineNumberEndProperty(editNode, oldLineNumberEnd));
+                                        writer.triple(RdfCommitUtils.createEditNewLineNumberEndProperty(editNode, newLineNumberEnd));
                                     }
                                 }
                             }
@@ -490,8 +505,7 @@ public class GithubRdfConversionTransactionService {
             // branches
             // TODO: does this needs to be a resource (or is a property enough)
 
-            //if(gitCommitRepositoryFilter.isEnableCommitBranch())
-            {
+            if(gitCommitRepositoryFilter.isEnableCommitBranch()) {
 
                 //for(Ref branch : branches) {
 
@@ -511,9 +525,11 @@ public class GithubRdfConversionTransactionService {
 
             // tags
 
-            //if(gitCommitRepositoryFilter.isEnableCommitTag()) {
-            //
-            //}
+            if(gitCommitRepositoryFilter.isEnableCommitTag()) {
+
+            }
+
+            // TODO: PullRequests
 
             // issues
 
