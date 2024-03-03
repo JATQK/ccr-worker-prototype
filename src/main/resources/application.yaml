@@ -4,9 +4,9 @@ spring:
       ddl-auto: none # validate
     #defer-datasource-initialization: true
   datasource:
-    url: jdbc:postgresql://localhost:5432/gitrdfdb
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/gitrdfdb}
     username: root
-    password: example # temporary for prototyping
+    password: ${SPRING_DATASOURCE_PASSWORD:example} # temporary for prototyping
   flyway:
     baseline-on-migrate: true
     locations: 'classpath:db/migration'
@@ -30,7 +30,7 @@ worker:
 
 github:
   login:
-    jwt-token: ${GITHUB_LOGIN_JWT_TOKEN}
+    #jwt-token: ${GITHUB_LOGIN_JWT_TOKEN}
     key: ${GITHUB_LOGIN_KEY}
     app:
       id: ${GITHUB_LOGIN_APP_ID}
