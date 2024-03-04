@@ -11,15 +11,30 @@ import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
 import jakarta.persistence.EntityManager;
+import org.apache.jena.graph.Node;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.StreamRDF;
 import org.apache.jena.riot.system.StreamRDFWriter;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.diff.DiffEntry;
+import org.eclipse.jgit.diff.DiffFormatter;
+import org.eclipse.jgit.diff.Edit;
+import org.eclipse.jgit.diff.EditList;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectReader;
+import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
+import org.eclipse.jgit.treewalk.CanonicalTreeParser;
+import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.hibernate.engine.jdbc.BlobProxy;
 import org.kohsuke.github.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -278,7 +293,9 @@ public class GithubRdfConversionTransactionService {
             File rdfTempFile) throws GitAPIException, IOException, URISyntaxException, InterruptedException {
 
         String owner = entity.getOwnerName();
-        String repository = entity.getRepositoryName();
+        String repositoryName = entity.getRepositoryName();
+
+        Repository gitRepository = gitHandler.getRepository();
 
         GitCommitRepositoryFilter gitCommitRepositoryFilter
                 = entity.getGithubRepositoryFilter().getGitCommitRepositoryFilter();
@@ -286,14 +303,14 @@ public class GithubRdfConversionTransactionService {
         GithubIssueRepositoryFilter githubIssueRepositoryFilter
                 = entity.getGithubRepositoryFilter().getGithubIssueRepositoryFilter();
 
-        String githubCommitPrefixValue = getGithubCommitBaseUri(owner, repository);
-        String githubIssuePrefixValue = getGithubIssueBaseUri(owner, repository);
+        String githubCommitPrefixValue = getGithubCommitBaseUri(owner, repositoryName);
+        String githubIssuePrefixValue = getGithubIssueBaseUri(owner, repositoryName);
 
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(rdfTempFile))) {
 
             GitHub githubHandle = githubHandlerService.getGithubHandle();
 
-            String githubRepositoryName = String.format("%s/%s", owner, repository);
+            String githubRepositoryName = String.format("%s/%s", owner, repositoryName);
 
             StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE_BLOCKS);
 
@@ -301,6 +318,13 @@ public class GithubRdfConversionTransactionService {
             writer.prefix(GITHUB_COMMIT_NAMESPACE, githubCommitPrefixValue);
             writer.prefix(GITHUB_ISSUE_NAMESPACE, githubIssuePrefixValue);
             writer.prefix(XSD_SCHEMA_NAMESPACE, XSD_SCHEMA_URI);
+
+            DiffFormatter diffFormatter = new DiffFormatter(DisabledOutputStream.INSTANCE);
+            diffFormatter.setRepository( gitRepository );
+            ObjectReader reader = gitRepository.newObjectReader();
+
+            Iterable<Ref> branches = gitHandler.branchList().setListMode(ListBranchCommand.ListMode.ALL).call();
+            RevWalk revWalk = new RevWalk(gitRepository);
 
             // git commits
             for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
@@ -317,9 +341,10 @@ public class GithubRdfConversionTransactionService {
 
                     finished = false;
 
-                    String gitHash = commit.getId().name();
+                    ObjectId commitId = commit.getId();
+                    String gitHash = commitId.name();
 
-                    String commitUri = getGithubCommitUri(owner, repository, gitHash);
+                    String commitUri = getGithubCommitUri(owner, repositoryName, gitHash);
 
                     if (gitCommitRepositoryFilter.isEnableCommitHash()) {
                         writer.triple(RdfCommitUtils.createCommitHashProperty(commitUri, gitHash));
@@ -364,6 +389,103 @@ public class GithubRdfConversionTransactionService {
                     // No possible solution found yet for merge commits -> maybe traverse to parent? Maybe both
                     //Property mergeCommitProperty = rdfModel.createProperty(gitUri + "MergeCommit");
                     //commit.getParent()
+
+                    // Branch
+                    // TODO: better way to handle merges? (so commit could have multiple branches)
+                    if(gitCommitRepositoryFilter.isEnableCommitBranch()) {
+
+                        for (Ref branchRef : branches) {
+
+                            RevCommit commitRev = revWalk.lookupCommit(commit.getId());
+                            RevCommit branchRev = revWalk.lookupCommit(branchRef.getObjectId());
+
+                            if (revWalk.isMergedInto(commitRev, branchRev)) {
+                                writer.triple(RdfCommitUtils.createCommitBranchNameProperty(commitUri, branchRef.getName()));
+                            }
+                        }
+                    }
+
+                    // Commit Diffs
+                    // See: https://www.codeaffine.com/2016/06/16/jgit-diff/
+                    // TODO: check if merges with more than 1 parent exist?
+
+                    if(gitCommitRepositoryFilter.isEnableCommitDiff()) {
+
+                        int parentCommitCount = commit.getParentCount();
+
+                        if (parentCommitCount > 0) {
+
+                            RevCommit parentCommit = commit.getParent(0);
+
+                            if (parentCommit != null) {
+                                CanonicalTreeParser parentTreeParser = new CanonicalTreeParser();
+                                CanonicalTreeParser currentTreeParser = new CanonicalTreeParser();
+
+                                parentTreeParser.reset(reader, parentCommit.getTree());
+                                currentTreeParser.reset(reader, commit.getTree());
+
+                                //Resource commitResource = ResourceFactory.createResource(gitHash); // TODO: use proper uri?
+                                //Node commitNode = commitResource.asNode();
+                                //writer.triple(RdfCommitUtils.createCommitResource(commitUri, commitNode));
+
+                                List<DiffEntry> diffEntries = diffFormatter.scan(parentTreeParser, currentTreeParser);
+
+                                for (DiffEntry diffEntry : diffEntries) {
+                                    Resource diffEntryResource = ResourceFactory.createResource(); // TODO: use proper uri?
+                                    Node diffEntryNode = diffEntryResource.asNode();
+                                    //writer.triple(RdfCommitUtils.createCommitDiffEntryResource(commitNode, diffEntryNode));
+                                    writer.triple(RdfCommitUtils.createCommitDiffEntryProperty(commitUri, diffEntryNode));
+
+                                    DiffEntry.ChangeType changeType = diffEntry.getChangeType(); // ADD,DELETE,MODIFY,RENAME,COPY
+                                    writer.triple(RdfCommitUtils.createCommitDiffEntryEditTypeProperty(diffEntryNode, changeType));
+
+                                    FileHeader fileHeader = diffFormatter.toFileHeader(diffEntry);
+
+                                    // See: org.eclipse.jgit.diff.DiffEntry.ChangeType.toString()
+                                    switch (changeType) {
+                                        case ADD:
+                                            writer.triple(RdfCommitUtils.createCommitDiffEntryNewFileNameProperty(diffEntryNode, fileHeader));
+                                            break;
+                                        case COPY:
+                                        case RENAME:
+                                            writer.triple(RdfCommitUtils.createCommitDiffEntryOldFileNameProperty(diffEntryNode, fileHeader));
+                                            writer.triple(RdfCommitUtils.createCommitDiffEntryNewFileNameProperty(diffEntryNode, fileHeader));
+                                            break;
+                                        case DELETE:
+                                        case MODIFY:
+                                            writer.triple(RdfCommitUtils.createCommitDiffEntryOldFileNameProperty(diffEntryNode, fileHeader));
+                                            break;
+                                        default:
+                                            throw new IllegalStateException("Unexpected changeType: " + changeType);
+                                    }
+
+                                    // Diff Lines (added/changed/removed)
+                                    EditList editList = fileHeader.toEditList();
+
+                                    for (Edit edit : editList) {
+                                        Resource editResource = ResourceFactory.createResource();
+                                        Node editNode = editResource.asNode();
+
+                                        writer.triple(RdfCommitUtils.createCommitDiffEditResource(diffEntryNode, editNode));
+
+                                        Edit.Type editType = edit.getType(); // INSERT,DELETE,REPLACE
+
+                                        writer.triple(RdfCommitUtils.createCommitDiffEditTypeProperty(editNode, editType));
+
+                                        int oldLineNumberBegin = edit.getBeginA();
+                                        int newLineNumberBegin = edit.getBeginB();
+                                        int oldLineNumberEnd = edit.getEndA();
+                                        int newLineNumberEnd = edit.getEndB();
+
+                                        writer.triple(RdfCommitUtils.createEditOldLineNumberBeginProperty(editNode, oldLineNumberBegin));
+                                        writer.triple(RdfCommitUtils.createEditNewLineNumberBeginProperty(editNode, newLineNumberBegin));
+                                        writer.triple(RdfCommitUtils.createEditOldLineNumberEndProperty(editNode, oldLineNumberEnd));
+                                        writer.triple(RdfCommitUtils.createEditNewLineNumberEndProperty(editNode, newLineNumberEnd));
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 writer.finish();
