@@ -10,95 +10,105 @@ import org.eclipse.jgit.patch.FileHeader;
 
 import java.time.LocalDateTime;
 
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.GIT_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.*;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfCommitUtils {
 
+    private static final String NS = GIT_NAMESPACE + "://";
+    
     // org.apache.jena.datatypes.xsd.XSDDatatype -> static xsd Datatype collection from apache jena
 
     // somewhat of an applicable base uri to the contents of git: https://git-scm.com/docs/gitglossary
-
+    
     public static Node commitHashProperty() {
         return uri("https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-aiddefSHA1aSHA-1");
     }
-
+    
     public static Node authorNameProperty() {
-       return uri("git://AuthorName");
+       return uri(NS + "hasAuthorName");
     }
 
     public static Node authorEmailProperty() {
-        return uri("git://AuthorEmail");
+        return uri(NS + "hasAuthorEmail");
     }
 
     public static Node authorDateProperty() {
-        return uri("git://AuthorDate");
+        return uri(NS + "hasAuthorDate");
     }
 
     public static Node commitDateProperty() {
-        return uri("git://CommitDate");
+        return uri(NS + "hasCommitDate");
     }
 
     public static Node committerNameProperty() {
-        return uri("git://CommitterName");
+        return uri(NS + "hasCommitterName");
     }
 
     public static Node committerEmailProperty() {
-        return uri("git://CommitterEmail");
+        return uri(NS + "hasCommitterEmail");
     }
 
     public static Node commitMessageProperty() {
-        return uri("git://CommitMessage");
+        return uri(NS + "hasCommitMessage");
     }
 
-
     public static Node commitBranchNameProperty() {
-        return uri("git://BranchName");
+        return uri(NS + "hasBranchName");
     }
 
     public static Node commitDiffEntryEditTypeProperty() {
-        return uri("git://ChangeType");
+        return uri(NS + "hasChangeType");
     }
 
     public static Node commitResource() {
-        return uri("git://Commit");
+        return uri(NS + "hasCommit");
     }
 
     public static Node branchResource() {
-        return uri("git://Branch");
+        return uri(NS + "hasBranch");
     }
 
     public static Node tagResource() {
-        return uri("git://Tag");
+        return uri(NS + "hasTag");
     }
 
     public static Node commitDiffEntryResource() {
-        return uri("git://CommitDiffEntry");
+        return uri(NS + "hasCommitDiffEntry");
     }
 
     public static Node commitDiffEntryOldFileNameProperty() {
-        return uri("git://CommitDiffEntryOldFileName");
+        return uri(NS + "hasCommitDiffEntryOldFileName");
     }
 
     public static Node commitDiffEntryNewFileNameProperty() {
-        return uri("git://CommitDiffEntryNewFileName");
+        return uri(NS + "hasCommitDiffEntryNewFileName");
     }
 
     public static Node commitDiffEditResource() {
-        return uri("git://CommitDiffEdit");
+        return uri(NS + "hasCommitDiffEdit");
     }
 
     public static Node commitDiffEditTypeProperty() {
-        return uri("git://CommitDiffEditType");
+        return uri(NS + "hasCommitDiffEditType");
     }
 
-    public static Node editOldLineNumberBeginProperty() { return uri("git://EditOldLineNumberBegin"); }
+    public static Node editOldLineNumberBeginProperty() {
+        return uri(NS + "hasEditOldLineNumberBegin");
+    }
 
-    public static Node editNewLineNumberBeginProperty() { return uri("git://EditNewLineNumberBegin"); }
+    public static Node editNewLineNumberBeginProperty() {
+        return uri(NS + "hasEditNewLineNumberBegin");
+    }
 
-    public static Node editOldLineNumberEndProperty() { return uri("git://EditOldLineNumberEnd"); }
+    public static Node editOldLineNumberEndProperty() {
+        return uri(NS + "hasEditOldLineNumberEnd");
+    }
 
-    public static Node editNewLineNumberEndProperty() { return uri("git://EditNewLineNumberEnd"); }
+    public static Node editNewLineNumberEndProperty() {
+        return uri(NS + "hasEditNewLineNumberEnd");
+    }
 
     public static Triple createCommitHashProperty(String commitUri, String commitHash) {
         return Triple.create(uri(commitUri), commitHashProperty(), stringLiteral(commitHash));

@@ -55,9 +55,18 @@ public class GithubRdfConversionTransactionService {
 
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
-    public static final String GIT_URI = "git://";
+    // TODO: replace PURL
+    public static final String GIT_URI = "https://purl.archive.org/purl/git2rdflab-test/git2RDFLab-git#";
+
+    public static final String PLATFORM_URI = "https://purl.archive.org/purl/git2rdflab-test/git2RDFLab-platform#";
+
+    public static final String PLATFORM_GITHUB_URI = "https://purl.archive.org/purl/git2rdflab-test/git2RDFLab-platform-github#";
 
     public static final String GIT_NAMESPACE = "git";
+
+    public static final String PLATFORM_NAMESPACE = "platform";
+
+    public static final String PLATFORM_GITHUB_NAMESPACE = "github";
 
     public static final String GITHUB_COMMIT_NAMESPACE = "githubcommit";
 
