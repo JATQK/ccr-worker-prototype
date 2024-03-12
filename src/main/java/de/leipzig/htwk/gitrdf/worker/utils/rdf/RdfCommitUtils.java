@@ -16,98 +16,99 @@ import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.*;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfCommitUtils {
 
-    private static final String NS = GIT_NAMESPACE + "://";
+    private static final String NS = GIT_NAMESPACE + ":";
     
     // org.apache.jena.datatypes.xsd.XSDDatatype -> static xsd Datatype collection from apache jena
 
     // somewhat of an applicable base uri to the contents of git: https://git-scm.com/docs/gitglossary
     
     public static Node commitHashProperty() {
-        return uri("https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-aiddefSHA1aSHA-1");
+        //return uri("https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-aiddefSHA1aSHA-1");
+        return uri(NS + "commitHash");
     }
     
     public static Node authorNameProperty() {
-       return uri(NS + "hasAuthorName");
+       return uri(NS + "authorName");
     }
 
     public static Node authorEmailProperty() {
-        return uri(NS + "hasAuthorEmail");
+        return uri(NS + "authorEmail");
     }
 
     public static Node authorDateProperty() {
-        return uri(NS + "hasAuthorDate");
+        return uri(NS + "authorDate");
     }
 
     public static Node commitDateProperty() {
-        return uri(NS + "hasCommitDate");
+        return uri(NS + "commitDate");
     }
 
     public static Node committerNameProperty() {
-        return uri(NS + "hasCommitterName");
+        return uri(NS + "committerName");
     }
 
     public static Node committerEmailProperty() {
-        return uri(NS + "hasCommitterEmail");
+        return uri(NS + "committerEmail");
     }
 
     public static Node commitMessageProperty() {
-        return uri(NS + "hasCommitMessage");
+        return uri(NS + "commitMessage");
     }
 
     public static Node commitBranchNameProperty() {
-        return uri(NS + "hasBranchName");
+        return uri(NS + "branchName");
     }
 
     public static Node commitDiffEntryEditTypeProperty() {
-        return uri(NS + "hasChangeType");
+        return uri(NS + "changeType");
     }
 
     public static Node commitResource() {
-        return uri(NS + "hasCommit");
+        return uri(NS + "commit");
     }
 
     public static Node branchResource() {
-        return uri(NS + "hasBranch");
+        return uri(NS + "branch");
     }
 
     public static Node tagResource() {
-        return uri(NS + "hasTag");
+        return uri(NS + "tag");
     }
 
     public static Node commitDiffEntryResource() {
-        return uri(NS + "hasCommitDiffEntry");
+        return uri(NS + "diffEntry");
     }
 
     public static Node commitDiffEntryOldFileNameProperty() {
-        return uri(NS + "hasCommitDiffEntryOldFileName");
+        return uri(NS + "oldFileName");
     }
 
     public static Node commitDiffEntryNewFileNameProperty() {
-        return uri(NS + "hasCommitDiffEntryNewFileName");
+        return uri(NS + "newFileName");
     }
 
     public static Node commitDiffEditResource() {
-        return uri(NS + "hasCommitDiffEdit");
+        return uri(NS + "diffEdit");
     }
 
     public static Node commitDiffEditTypeProperty() {
-        return uri(NS + "hasCommitDiffEditType");
+        return uri(NS + "editType");
     }
 
-    public static Node editOldLineNumberBeginProperty() {
-        return uri(NS + "hasEditOldLineNumberBegin");
+    public static Node editOldLinenumberBeginProperty() {
+        return uri(NS + "oldLinenumberBegin");
     }
 
-    public static Node editNewLineNumberBeginProperty() {
-        return uri(NS + "hasEditNewLineNumberBegin");
+    public static Node editNewLinenumberBeginProperty() {
+        return uri(NS + "newLinenumberBegin");
     }
 
-    public static Node editOldLineNumberEndProperty() {
-        return uri(NS + "hasEditOldLineNumberEnd");
+    public static Node editOldLinenumberEndProperty() {
+        return uri(NS + "oldLinenumberEnd");
     }
 
-    public static Node editNewLineNumberEndProperty() {
-        return uri(NS + "hasEditNewLineNumberEnd");
+    public static Node editNewLinenumberEndProperty() {
+        return uri(NS + "newLinenumberEnd");
     }
 
     public static Triple createCommitHashProperty(String commitUri, String commitHash) {
@@ -143,7 +144,7 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createCommitDiffEntryEditTypeProperty(Node diffEntryNode, DiffEntry.ChangeType changeType) {
-        return Triple.create(diffEntryNode, commitDiffEntryEditTypeProperty(), stringLiteral(changeType.toString())); // TODO: changetype-literal?
+        return Triple.create(diffEntryNode, commitDiffEntryEditTypeProperty(), changeTypeLiteral(changeType));
     }
 
     public static Triple createCommitResource(String commitUri, Node commitNode) {
@@ -171,23 +172,23 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createCommitDiffEditTypeProperty(Node editNode, Edit.Type editType) {
-        return Triple.create(editNode, commitDiffEditTypeProperty(), stringLiteral(editType.toString())); // TODO: edittype-literal?
+        return Triple.create(editNode, commitDiffEditTypeProperty(), stringLiteral(editType.toString()));
     }
 
-    public static Triple createEditOldLineNumberBeginProperty(Node editNode, int lineNumberBegin ) {
-        return Triple.create(editNode, editOldLineNumberBeginProperty(), longLiteral(lineNumberBegin));
+    public static Triple createEditOldLinenumberBeginProperty(Node editNode, int lineNumberBegin ) {
+        return Triple.create(editNode, editOldLinenumberBeginProperty(), longLiteral(lineNumberBegin));
     }
 
-    public static Triple createEditNewLineNumberBeginProperty(Node editNode, int lineNumberBegin ) {
-        return Triple.create(editNode, editNewLineNumberBeginProperty(), longLiteral(lineNumberBegin));
+    public static Triple createEditNewLinenumberBeginProperty(Node editNode, int lineNumberBegin ) {
+        return Triple.create(editNode, editNewLinenumberBeginProperty(), longLiteral(lineNumberBegin));
     }
 
-    public static Triple createEditOldLineNumberEndProperty(Node editNode, int lineNumberEnd ) {
-        return Triple.create(editNode, editOldLineNumberEndProperty(), longLiteral(lineNumberEnd));
+    public static Triple createEditOldLinenumberEndProperty(Node editNode, int lineNumberEnd ) {
+        return Triple.create(editNode, editOldLinenumberEndProperty(), longLiteral(lineNumberEnd));
     }
 
-    public static Triple createEditNewLineNumberEndProperty(Node editNode, int lineNumberEnd ) {
-        return Triple.create(editNode, editNewLineNumberEndProperty(), longLiteral(lineNumberEnd));
+    public static Triple createEditNewLinenumberEndProperty(Node editNode, int lineNumberEnd ) {
+        return Triple.create(editNode, editNewLinenumberEndProperty(), longLiteral(lineNumberEnd));
     }
 
     public static Triple createCommitBranchNameProperty(String commitUri, String branchName) {

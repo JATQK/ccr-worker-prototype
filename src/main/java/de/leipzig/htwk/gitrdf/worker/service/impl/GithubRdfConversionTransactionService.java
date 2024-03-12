@@ -56,11 +56,11 @@ public class GithubRdfConversionTransactionService {
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
     // TODO: replace PURL
-    public static final String GIT_URI = "https://purl.archive.org/purl/git2rdflab-test/git2RDFLab-git#";
+    public static final String GIT_URI = "https://purl.archive.org/purl/git2rdflab-test/v1/git2RDFLab-git.ttl#";
 
-    public static final String PLATFORM_URI = "https://purl.archive.org/purl/git2rdflab-test/git2RDFLab-platform#";
+    public static final String PLATFORM_URI = "https://purl.archive.org/purl/git2rdflab-test/v1/git2RDFLab-platform.ttl#";
 
-    public static final String PLATFORM_GITHUB_URI = "https://purl.archive.org/purl/git2rdflab-test/git2RDFLab-platform-github#";
+    public static final String PLATFORM_GITHUB_URI = "https://purl.archive.org/purl/git2rdflab-test/v1/git2RDFLab-platform-github.ttl#";
 
     public static final String GIT_NAMESPACE = "git";
 
@@ -481,15 +481,15 @@ public class GithubRdfConversionTransactionService {
 
                                         writer.triple(RdfCommitUtils.createCommitDiffEditTypeProperty(editNode, editType));
 
-                                        int oldLineNumberBegin = edit.getBeginA();
-                                        int newLineNumberBegin = edit.getBeginB();
-                                        int oldLineNumberEnd = edit.getEndA();
-                                        int newLineNumberEnd = edit.getEndB();
+                                        final int oldLinenumberBegin = edit.getBeginA();
+                                        final int newLinenumberBegin = edit.getBeginB();
+                                        final int oldLinenumberEnd = edit.getEndA();
+                                        final int newLinenumberEnd = edit.getEndB();
 
-                                        writer.triple(RdfCommitUtils.createEditOldLineNumberBeginProperty(editNode, oldLineNumberBegin));
-                                        writer.triple(RdfCommitUtils.createEditNewLineNumberBeginProperty(editNode, newLineNumberBegin));
-                                        writer.triple(RdfCommitUtils.createEditOldLineNumberEndProperty(editNode, oldLineNumberEnd));
-                                        writer.triple(RdfCommitUtils.createEditNewLineNumberEndProperty(editNode, newLineNumberEnd));
+                                        writer.triple(RdfCommitUtils.createEditOldLinenumberBeginProperty(editNode, oldLinenumberBegin));
+                                        writer.triple(RdfCommitUtils.createEditNewLinenumberBeginProperty(editNode, newLinenumberBegin));
+                                        writer.triple(RdfCommitUtils.createEditOldLinenumberEndProperty(editNode, oldLinenumberEnd));
+                                        writer.triple(RdfCommitUtils.createEditNewLinenumberEndProperty(editNode, newLinenumberEnd));
                                     }
                                 }
                             }

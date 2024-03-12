@@ -1,10 +1,13 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf;
 
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.gitdatatypes.RdfGitDataType;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.gitdatatypes.RdfGitDiffEntryChangeType;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
+import org.eclipse.jgit.diff.DiffEntry;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -28,8 +31,11 @@ public final class RdfUtils {
         return NodeFactory.createLiteral(dateTime.format(dateTimeFormatter), XSDDatatype.XSDdateTime);
     }
 
+    public static Node changeTypeLiteral(DiffEntry.ChangeType changeType) {
+        return NodeFactory.createLiteral(changeType.toString(), RdfGitDataType.DiffEntryChangeType);
+    }
+
     public static Node uri(String value) {
         return NodeFactory.createURI(value);
     }
-
 }
