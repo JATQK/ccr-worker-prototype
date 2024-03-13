@@ -56,11 +56,16 @@ public class GithubRdfConversionTransactionService {
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
     // TODO: replace PURL
-    public static final String GIT_URI = "https://purl.archive.org/purl/git2rdflab-test/v1/git2RDFLab-git.ttl#";
+    public static final String GIT_URI = "https://raw.githubusercontent.com/git2RDFLab/rdf-schema/main/v1/git2RDFLab-git.ttl#";
+    //public static final String GIT_URI = "https://purl.archive.org/purl/git2rdflab-test/v1/git2RDFLab-git#";
 
-    public static final String PLATFORM_URI = "https://purl.archive.org/purl/git2rdflab-test/v1/git2RDFLab-platform.ttl#";
 
-    public static final String PLATFORM_GITHUB_URI = "https://purl.archive.org/purl/git2rdflab-test/v1/git2RDFLab-platform-github.ttl#";
+    public static final String PLATFORM_URI = "https://raw.githubusercontent.com/git2RDFLab/rdf-schema/main/v1/git2RDFLab-platform.ttl#";
+    //public static final String PLATFORM_URI = "https://purl.archive.org/purl/git2rdflab-test/v1/git2RDFLab-platform#";
+
+
+    public static final String PLATFORM_GITHUB_URI = "https://raw.githubusercontent.com/git2RDFLab/rdf-schema/main/v1/git2RDFLab-platform-github.ttl#";
+    //public static final String PLATFORM_GITHUB_URI = "https://purl.archive.org/purl/git2rdflab-test/v1/git2RDFLab-platform-github#";
 
     public static final String GIT_NAMESPACE = "git";
 
@@ -321,12 +326,15 @@ public class GithubRdfConversionTransactionService {
 
             String githubRepositoryName = String.format("%s/%s", owner, repositoryName);
 
+            // See: https://jena.apache.org/documentation/io/rdf-output.html#streamed-block-formats
             StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE_BLOCKS);
 
-            writer.prefix(GIT_NAMESPACE, GIT_URI);
-            writer.prefix(GITHUB_COMMIT_NAMESPACE, githubCommitPrefixValue);
-            writer.prefix(GITHUB_ISSUE_NAMESPACE, githubIssuePrefixValue);
             writer.prefix(XSD_SCHEMA_NAMESPACE, XSD_SCHEMA_URI);
+            writer.prefix(GIT_NAMESPACE, GIT_URI);
+            writer.prefix(PLATFORM_NAMESPACE, PLATFORM_URI);
+            writer.prefix(PLATFORM_GITHUB_NAMESPACE, PLATFORM_GITHUB_URI);
+            //writer.prefix(GITHUB_COMMIT_NAMESPACE, githubCommitPrefixValue);
+            //writer.prefix(GITHUB_ISSUE_NAMESPACE, githubIssuePrefixValue);
 
             DiffFormatter diffFormatter = new DiffFormatter(DisabledOutputStream.INSTANCE);
             diffFormatter.setRepository( gitRepository );
@@ -354,6 +362,9 @@ public class GithubRdfConversionTransactionService {
                     String gitHash = commitId.name();
 
                     String commitUri = getGithubCommitUri(owner, repositoryName, gitHash);
+                    //String commitUri = GIT_NAMESPACE + ":GitCommit";
+
+                    writer.triple(RdfCommitUtils.createRdfTypeProperty(commitUri));
 
                     if (gitCommitRepositoryFilter.isEnableCommitHash()) {
                         writer.triple(RdfCommitUtils.createCommitHashProperty(commitUri, gitHash));
@@ -440,7 +451,7 @@ public class GithubRdfConversionTransactionService {
                                 List<DiffEntry> diffEntries = diffFormatter.scan(parentTreeParser, currentTreeParser);
 
                                 for (DiffEntry diffEntry : diffEntries) {
-                                    Resource diffEntryResource = ResourceFactory.createResource(); // TODO: use proper uri?
+                                    Resource diffEntryResource = ResourceFactory.createResource(/*GIT_NAMESPACE + ":entry"*/);
                                     Node diffEntryNode = diffEntryResource.asNode();
                                     //writer.triple(RdfCommitUtils.createCommitDiffEntryResource(commitNode, diffEntryNode));
                                     writer.triple(RdfCommitUtils.createCommitDiffEntryProperty(commitUri, diffEntryNode));
@@ -472,7 +483,7 @@ public class GithubRdfConversionTransactionService {
                                     EditList editList = fileHeader.toEditList();
 
                                     for (Edit edit : editList) {
-                                        Resource editResource = ResourceFactory.createResource();
+                                        Resource editResource = ResourceFactory.createResource(/*GIT_NAMESPACE + ":edit"*/);
                                         Node editNode = editResource.asNode();
 
                                         writer.triple(RdfCommitUtils.createCommitDiffEditResource(diffEntryNode, editNode));
@@ -507,7 +518,6 @@ public class GithubRdfConversionTransactionService {
                     throw new RuntimeException(
                             "While iterating through commit log and transforming log to rdf: Exceeded iteration max count (integer overflow)");
                 }
-
             }
 
             // issues
@@ -531,19 +541,22 @@ public class GithubRdfConversionTransactionService {
                             doesWriterContainNonWrittenRdfStreamElements = true;
                         }
 
-                        long issueId = ghIssue.getId();
+                        long issueId = ghIssue.getId(); // ID seems to be an internal ID, not the actual issue number
+                        int issueNumber = ghIssue.getNumber(); // number is used in shortcuts like #123 or the URL
 
-                        //String githubIssueUri = getGithubIssueUri(owner, repository, issueId);
+                        //String githubIssueUri = getGithubIssueUri(owner, repositoryName, issueId);
                         String githubIssueUri = ghIssue.getHtmlUrl().toString();
+                        //String githubIssueUri = PLATFORM_GITHUB_NAMESPACE + ":GithubIssue";
+
+                        writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(githubIssueUri));
 
                         if (githubIssueRepositoryFilter.isEnableIssueId()) {
                             writer.triple(RdfGithubIssueUtils.createIssueIdProperty(githubIssueUri, issueId));
                         }
 
-                        // TODO: Was in einem Issue wahrscheinlich interessant ist: user, labels, assignees, milestones, createdAt, updatedAt, closedAt (wenn closed)
-
-                        if (githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() != null) {
-                            writer.triple(RdfGithubIssueUtils.createIssueStateProperty(githubIssueUri, ghIssue.getState().toString()));
+                        // TODO: implement number filter
+                        if (githubIssueRepositoryFilter.isEnableIssueId()) {
+                            writer.triple(RdfGithubIssueUtils.createIssueNumberProperty(githubIssueUri, issueNumber));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueTitle() && ghIssue.getTitle() != null) {
@@ -552,6 +565,13 @@ public class GithubRdfConversionTransactionService {
 
                         if (githubIssueRepositoryFilter.isEnableIssueBody() && ghIssue.getBody() != null) {
                             writer.triple(RdfGithubIssueUtils.createIssueBodyProperty(githubIssueUri, ghIssue.getBody()));
+                        }
+
+                        // TODO: Was in einem Issue wahrscheinlich interessant ist:
+                        //  user, labels, assignees, milestones, createdAt, updatedAt, closedAt (wenn closed)
+
+                        if (githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() != null) {
+                            writer.triple(RdfGithubIssueUtils.createIssueStateProperty(githubIssueUri, ghIssue.getState().toString()));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueUser() && ghIssue.getUser() != null) {
@@ -608,13 +628,11 @@ public class GithubRdfConversionTransactionService {
                             doesWriterContainNonWrittenRdfStreamElements = false;
                             issueCounter = 0;
                         }
-
                     }
 
                     if (doesWriterContainNonWrittenRdfStreamElements) {
                         writer.finish();
                     }
-
                 }
             }
         }

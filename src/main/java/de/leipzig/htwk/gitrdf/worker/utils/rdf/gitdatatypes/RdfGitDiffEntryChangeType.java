@@ -10,7 +10,7 @@ import org.eclipse.jgit.diff.DiffEntry;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.GIT_NAMESPACE;
 
 public class RdfGitDiffEntryChangeType extends BaseDatatype {
-    private static final String URI = GIT_NAMESPACE + "DiffEntryChangeType";
+    private static final String URI = GIT_NAMESPACE + ":changeType";
 
     RdfGitDiffEntryChangeType() {
         super(URI);

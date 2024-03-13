@@ -21,7 +21,11 @@ public final class RdfCommitUtils {
     // org.apache.jena.datatypes.xsd.XSDDatatype -> static xsd Datatype collection from apache jena
 
     // somewhat of an applicable base uri to the contents of git: https://git-scm.com/docs/gitglossary
-    
+
+    public static Node rdfTypeProperty() {
+        return RdfUtils.uri("rdf:type");
+    }
+
     public static Node commitHashProperty() {
         //return uri("https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-aiddefSHA1aSHA-1");
         return uri(NS + "commitHash");
@@ -111,6 +115,10 @@ public final class RdfCommitUtils {
         return uri(NS + "newLinenumberEnd");
     }
 
+    public static Triple createRdfTypeProperty(String issueUri) {
+        return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri( "git:GitCommit" ));
+    }
+
     public static Triple createCommitHashProperty(String commitUri, String commitHash) {
         return Triple.create(uri(commitUri), commitHashProperty(), stringLiteral(commitHash));
     }
@@ -124,11 +132,13 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createAuthorDateProperty(String commitUri, LocalDateTime authorDateTimeValue) {
-        return Triple.create(uri(commitUri), authorDateProperty(), dateTimeLiteral(authorDateTimeValue));
+        //return Triple.create(uri(commitUri), authorDateProperty(), dateTimeLiteral(authorDateTimeValue));
+        return Triple.create(uri(commitUri), authorDateProperty(), stringLiteral(authorDateTimeValue.toString()));
     }
 
     public static Triple createCommitDateProperty(String commitUri, LocalDateTime commitDateTimeValue) {
-        return Triple.create(uri(commitUri), commitDateProperty(), dateTimeLiteral(commitDateTimeValue));
+        //return Triple.create(uri(commitUri), commitDateProperty(), dateTimeLiteral(commitDateTimeValue));
+        return Triple.create(uri(commitUri), commitDateProperty(), stringLiteral(commitDateTimeValue.toString()));
     }
 
     public static Triple createCommitterNameProperty(String commitUri, String committerNameValue) {
@@ -144,7 +154,8 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createCommitDiffEntryEditTypeProperty(Node diffEntryNode, DiffEntry.ChangeType changeType) {
-        return Triple.create(diffEntryNode, commitDiffEntryEditTypeProperty(), changeTypeLiteral(changeType));
+        //return Triple.create(diffEntryNode, commitDiffEntryEditTypeProperty(), changeTypeLiteral(changeType));
+        return Triple.create(diffEntryNode, commitDiffEntryEditTypeProperty(), uri(NS + changeType.toString().toLowerCase()));
     }
 
     public static Triple createCommitResource(String commitUri, Node commitNode) {
@@ -172,23 +183,28 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createCommitDiffEditTypeProperty(Node editNode, Edit.Type editType) {
-        return Triple.create(editNode, commitDiffEditTypeProperty(), stringLiteral(editType.toString()));
+        //return Triple.create(editNode, commitDiffEditTypeProperty(), stringLiteral(editType.toString()));
+        return Triple.create(editNode, commitDiffEntryEditTypeProperty(), uri(NS + editType.toString().toLowerCase()));
     }
 
     public static Triple createEditOldLinenumberBeginProperty(Node editNode, int lineNumberBegin ) {
-        return Triple.create(editNode, editOldLinenumberBeginProperty(), longLiteral(lineNumberBegin));
+        //return Triple.create(editNode, editOldLinenumberBeginProperty(), longLiteral(lineNumberBegin));
+        return Triple.create(editNode, editOldLinenumberBeginProperty(), stringLiteral(Integer.toString(lineNumberBegin)));
     }
 
     public static Triple createEditNewLinenumberBeginProperty(Node editNode, int lineNumberBegin ) {
-        return Triple.create(editNode, editNewLinenumberBeginProperty(), longLiteral(lineNumberBegin));
+        //return Triple.create(editNode, editNewLinenumberBeginProperty(), longLiteral(lineNumberBegin));
+        return Triple.create(editNode, editNewLinenumberBeginProperty(), stringLiteral(Integer.toString(lineNumberBegin)));
     }
 
     public static Triple createEditOldLinenumberEndProperty(Node editNode, int lineNumberEnd ) {
-        return Triple.create(editNode, editOldLinenumberEndProperty(), longLiteral(lineNumberEnd));
+        //return Triple.create(editNode, editOldLinenumberEndProperty(), longLiteral(lineNumberEnd));
+        return Triple.create(editNode, editOldLinenumberEndProperty(), stringLiteral(Integer.toString(lineNumberEnd)));
     }
 
     public static Triple createEditNewLinenumberEndProperty(Node editNode, int lineNumberEnd ) {
-        return Triple.create(editNode, editNewLinenumberEndProperty(), longLiteral(lineNumberEnd));
+        //return Triple.create(editNode, editNewLinenumberEndProperty(), longLiteral(lineNumberEnd));
+        return Triple.create(editNode, editNewLinenumberEndProperty(), stringLiteral(Integer.toString(lineNumberEnd)));
     }
 
     public static Triple createCommitBranchNameProperty(String commitUri, String branchName) {
