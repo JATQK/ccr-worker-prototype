@@ -35,6 +35,10 @@ public final class RdfUtils {
         return NodeFactory.createLiteral(changeType.toString(), RdfGitDataType.DiffEntryChangeType);
     }
 
+    public static Node nonNegativeIntegerLiteral(long value) {
+        return NodeFactory.createLiteralByValue(value, XSDDatatype.XSDnonNegativeInteger);
+    }
+
     public static Node uri(String value) {
         return NodeFactory.createURI(value);
     }

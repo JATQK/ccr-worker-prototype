@@ -115,6 +115,66 @@ public final class RdfCommitUtils {
         return uri(NS + "newLinenumberEnd");
     }
 
+
+    public static Node branchSnapshotProperty() {
+        return uri(NS + "branchSnapshot");
+    }
+    public static Node branchSnapshotLineEntryProperty() {
+        return uri(NS + "branchSnapshotLineEntry");
+    }
+    public static Node branchSnapshotFileEntryProperty() {
+        return uri(NS + "branchSnapshotFileEntry");
+    }
+
+    public static Node branchSnapshotLineProperty() {
+        return uri(NS + "branchSnapshotLine");
+    }
+
+    public static Node branchSnapshotFilenameProperty() {
+        return uri(NS + "branchSnapshotFilename");
+    }
+
+    public static Node branchSnapshotCommitHashProperty() {
+        return uri(NS + "branchSnapshotCommitHash");
+    }
+
+    public static Node branchSnapshotDateProperty() {
+        return uri(NS + "branchSnapshotDate");
+    }
+
+
+    public static Triple createBranchSnapshotProperty(Node snapshotNode) {
+        return Triple.create(snapshotNode, rdfTypeProperty(), RdfUtils.uri( "git:BranchSnapshot" ));
+    }
+
+    public static Triple createBranchSnapshotDateProperty(Node snapshotNode, LocalDateTime dateTimeValue) {
+        return Triple.create(snapshotNode, branchSnapshotDateProperty(), stringLiteral(dateTimeValue.toString()));
+    }
+
+    public static Triple createBranchSnapshotFilenameProperty(Node snapshotFileEntryNode, String filename) {
+        return Triple.create(snapshotFileEntryNode, branchSnapshotFilenameProperty(), stringLiteral(filename));
+    }
+
+    public static Triple createBranchSnapshotFileEntryProperty(Node snapshotNode, Node snapshotFileEntryNode) {
+        return Triple.create(snapshotNode, branchSnapshotFileEntryProperty(), snapshotFileEntryNode);
+    }
+
+    public static Triple createBranchSnapshotLineEntryProperty(Node snapshotFileEntryNode, Node snapshotLineEntryNode) {
+        return Triple.create(snapshotFileEntryNode, branchSnapshotLineEntryProperty(), snapshotLineEntryNode);
+    }
+
+    public static Triple createBranchSnapshotLineProperty(Node snapshotLineEntryNode, int line) {
+        return Triple.create(snapshotLineEntryNode, branchSnapshotLineProperty(), nonNegativeIntegerLiteral(line));
+    }
+
+    public static Triple createBranchSnapshotCommitHashProperty(Node snapshotLineEntryNode, String commitHash) {
+        return Triple.create(snapshotLineEntryNode, branchSnapshotCommitHashProperty(), stringLiteral(commitHash));
+    }
+
+
+
+
+
     public static Triple createRdfTypeProperty(String issueUri) {
         return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri( "git:GitCommit" ));
     }

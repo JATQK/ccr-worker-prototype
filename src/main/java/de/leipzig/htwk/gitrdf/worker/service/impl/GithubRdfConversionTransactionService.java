@@ -17,23 +17,25 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.StreamRDF;
 import org.apache.jena.riot.system.StreamRDFWriter;
+import org.eclipse.jgit.api.BlameCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.diff.DiffEntry;
-import org.eclipse.jgit.diff.DiffFormatter;
-import org.eclipse.jgit.diff.Edit;
-import org.eclipse.jgit.diff.EditList;
+import org.eclipse.jgit.blame.BlameResult;
+import org.eclipse.jgit.diff.*;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevObjectList;
+import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
+import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.hibernate.engine.jdbc.BlobProxy;
 import org.kohsuke.github.*;
@@ -46,9 +48,9 @@ import java.net.URISyntaxException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+
+import static org.hibernate.id.SequenceMismatchStrategy.LOG;
 
 @Service
 public class GithubRdfConversionTransactionService {
@@ -520,6 +522,61 @@ public class GithubRdfConversionTransactionService {
                 }
             }
 
+            // branch-snapshot
+            // TODO: rename to 'blame'?
+
+            if (gitCommitRepositoryFilter.isEnableBranchSnapshot() ) {
+
+                Resource branchSnapshotResource = ResourceFactory.createResource(GIT_NAMESPACE + ":BLAME"); // TODO: unique uri
+                Node branchSnapshotNode = branchSnapshotResource.asNode();
+
+                writer.triple(RdfCommitUtils.createBranchSnapshotProperty(branchSnapshotNode));
+                writer.triple(RdfCommitUtils.createBranchSnapshotDateProperty(branchSnapshotNode, LocalDateTime.now()));
+
+                List<String> fileNames = listRepositoryContents(gitRepository);
+
+                for (String fileName : fileNames) {
+
+                    Resource branchSnapshotFileResource = ResourceFactory.createResource();
+                    Node branchSnapshotFileNode = branchSnapshotFileResource.asNode();
+
+                    writer.triple(RdfCommitUtils.createBranchSnapshotFileEntryProperty(branchSnapshotNode, branchSnapshotFileNode));
+                    writer.triple(RdfCommitUtils.createBranchSnapshotFilenameProperty(branchSnapshotFileNode, fileName));
+
+                    BlameCommand blameCommand = new BlameCommand(gitRepository);
+                    blameCommand.setFilePath(fileName);
+                    BlameResult blameResult;
+
+                    try {
+                        blameResult = blameCommand
+                                .setTextComparator(RawTextComparator.WS_IGNORE_ALL) // Equivalent to -w command line option
+                                .setFilePath(fileName).call();
+                    } catch (Exception e) {
+                        throw new IllegalStateException("Unable to blame file " + fileName, e);
+                    }
+
+                    if (blameResult == null)
+                        continue;
+
+                    RawText blameText = blameResult.getResultContents();
+
+                    for (int lineIdx = 0; lineIdx < blameText.size(); lineIdx++) {
+
+                        RevCommit commit = blameResult.getSourceCommit(lineIdx);
+
+                        if (commit == null)
+                            continue;
+
+                        Resource branchSnapshotLineEntryResource = ResourceFactory.createResource();
+                        Node branchSnapshotLineEntryNode = branchSnapshotLineEntryResource.asNode();
+
+                        writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
+                        writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, commit.getId().name()));
+                        writer.triple(RdfCommitUtils.createBranchSnapshotLineProperty(branchSnapshotLineEntryNode, lineIdx));
+                    }
+                }
+            }
+
             // issues
 
             if (githubIssueRepositoryFilter.doesContainAtLeastOneEnabledFilterOption()) {
@@ -642,6 +699,24 @@ public class GithubRdfConversionTransactionService {
         entityLobs.setRdfFile(BlobProxy.generateProxy(bufferedInputStream, rdfTempFile.length()));
 
         return bufferedInputStream;
+    }
+
+    // See: https://stackoverflow.com/q/19941597/11341498
+    private List<String> listRepositoryContents(Repository repository) throws IOException {
+
+        Ref head = repository.getRef("HEAD");
+        RevWalk walk = new RevWalk(repository);
+        RevCommit commit = walk.parseCommit(head.getObjectId());
+        TreeWalk treeWalk = new TreeWalk(repository);
+        treeWalk.addTree(commit.getTree());
+        treeWalk.setRecursive(true);
+        List<String> fileNames = new ArrayList<String>();
+
+        while (treeWalk.next()) {
+            fileNames.add(treeWalk.getPathString());
+        }
+
+        return fileNames;
     }
 
     private void writeLabelCollectionAsTriplesToIssue(
