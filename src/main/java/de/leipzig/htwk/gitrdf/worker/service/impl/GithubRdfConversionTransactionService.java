@@ -527,7 +527,16 @@ public class GithubRdfConversionTransactionService {
 
             if (gitCommitRepositoryFilter.isEnableBranchSnapshot() ) {
 
-                Resource branchSnapshotResource = ResourceFactory.createResource(GIT_NAMESPACE + ":BLAME"); // TODO: unique uri
+                writer.start();
+
+                ObjectId headCommitId = gitRepository.resolve("HEAD");
+                String commitUri = getGithubCommitUri(owner, repositoryName, headCommitId.getName());
+
+                String branchSnapshotUri = commitUri;
+                //String branchSnapshotUri = GIT_NS + ":blame";
+                //String branchSnapshotUri = "";
+
+                Resource branchSnapshotResource = ResourceFactory.createResource(branchSnapshotUri);
                 Node branchSnapshotNode = branchSnapshotResource.asNode();
 
                 writer.triple(RdfCommitUtils.createBranchSnapshotProperty(branchSnapshotNode));
@@ -575,6 +584,8 @@ public class GithubRdfConversionTransactionService {
                         writer.triple(RdfCommitUtils.createBranchSnapshotLineProperty(branchSnapshotLineEntryNode, lineIdx));
                     }
                 }
+
+                writer.finish();
             }
 
             // issues
@@ -611,8 +622,7 @@ public class GithubRdfConversionTransactionService {
                             writer.triple(RdfGithubIssueUtils.createIssueIdProperty(githubIssueUri, issueId));
                         }
 
-                        // TODO: implement number filter
-                        if (githubIssueRepositoryFilter.isEnableIssueId()) {
+                        if (githubIssueRepositoryFilter.isEnableIssueNumber()) {
                             writer.triple(RdfGithubIssueUtils.createIssueNumberProperty(githubIssueUri, issueNumber));
                         }
 
@@ -623,9 +633,6 @@ public class GithubRdfConversionTransactionService {
                         if (githubIssueRepositoryFilter.isEnableIssueBody() && ghIssue.getBody() != null) {
                             writer.triple(RdfGithubIssueUtils.createIssueBodyProperty(githubIssueUri, ghIssue.getBody()));
                         }
-
-                        // TODO: Was in einem Issue wahrscheinlich interessant ist:
-                        //  user, labels, assignees, milestones, createdAt, updatedAt, closedAt (wenn closed)
 
                         if (githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() != null) {
                             writer.triple(RdfGithubIssueUtils.createIssueStateProperty(githubIssueUri, ghIssue.getState().toString()));
