@@ -564,24 +564,72 @@ public class GithubRdfConversionTransactionService {
                         throw new IllegalStateException("Unable to blame file " + fileName, e);
                     }
 
-                    if (blameResult == null)
+                    if (blameResult == null) {
                         continue;
+                    }
+
+                    HashMap<String,List<Integer>> commitLineMap = new HashMap<>();
+
+                    String prevCommitHash = null;
+                    int linenumberBegin = 1;
 
                     RawText blameText = blameResult.getResultContents();
+                    int lineCount = blameText.size();
 
-                    for (int lineIdx = 0; lineIdx < blameText.size(); lineIdx++) {
+                    for (int lineIdx = 0; lineIdx < lineCount; lineIdx++) {
 
                         RevCommit commit = blameResult.getSourceCommit(lineIdx);
 
-                        if (commit == null)
+                        if (commit == null) {
                             continue;
+                        }
 
-                        Resource branchSnapshotLineEntryResource = ResourceFactory.createResource();
-                        Node branchSnapshotLineEntryNode = branchSnapshotLineEntryResource.asNode();
+                        String currentCommitHash = commit.getId().name();
 
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, commit.getId().name()));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLineProperty(branchSnapshotLineEntryNode, lineIdx));
+                        if (prevCommitHash == null) {
+                            prevCommitHash = currentCommitHash;
+                        }
+
+                        boolean isAtEnd = lineIdx == lineCount - 1;
+                        boolean isNewCommit = !currentCommitHash.equals(prevCommitHash);
+
+                        if (isNewCommit || isAtEnd) {
+
+                            Resource branchSnapshotLineEntryResource = ResourceFactory.createResource();
+                            Node branchSnapshotLineEntryNode = branchSnapshotLineEntryResource.asNode();
+
+                            int lineNumberEnd = lineIdx;
+
+                            if (isAtEnd) {
+
+                                lineNumberEnd += 1;
+
+                                writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
+                                writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, prevCommitHash));
+                                writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, linenumberBegin));
+                                writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
+
+                                if (isNewCommit) {
+
+                                    writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
+                                    writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, currentCommitHash));
+                                    writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, lineNumberEnd));
+                                    writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
+                                }
+                            }
+
+                            if (isNewCommit) {
+
+                                writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
+                                writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, prevCommitHash));
+                                writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, linenumberBegin));
+                                writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
+
+                                prevCommitHash = currentCommitHash;
+                            }
+
+                            linenumberBegin = lineIdx + 1;
+                        }
                     }
                 }
 

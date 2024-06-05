@@ -130,6 +130,14 @@ public final class RdfCommitUtils {
         return uri(NS + "branchSnapshotLine");
     }
 
+    public static Node branchSnapshotLinenumberBeginProperty() {
+        return uri(NS + "branchSnapshotLinenumberBegin");
+    }
+
+    public static Node branchSnapshotLinenumberEndProperty() {
+        return uri(NS + "branchSnapshotLinenumberEnd");
+    }
+
     public static Node branchSnapshotFilenameProperty() {
         return uri(NS + "branchSnapshotFilename");
     }
@@ -166,6 +174,15 @@ public final class RdfCommitUtils {
     public static Triple createBranchSnapshotLineProperty(Node snapshotLineEntryNode, int line) {
         return Triple.create(snapshotLineEntryNode, branchSnapshotLineProperty(), nonNegativeIntegerLiteral(line));
     }
+
+    public static Triple createBranchSnapshotLinenumberBeginProperty(Node snapshotLineEntryNode, int linenumberBegin) {
+        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberBeginProperty(), nonNegativeIntegerLiteral(linenumberBegin));
+    }
+
+    public static Triple createBranchSnapshotLinenumberEndProperty(Node snapshotLineEntryNode, int linenumberEnd) {
+        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberEndProperty(), nonNegativeIntegerLiteral(linenumberEnd));
+    }
+
 
     public static Triple createBranchSnapshotCommitHashProperty(Node snapshotLineEntryNode, String commitHash) {
         return Triple.create(snapshotLineEntryNode, branchSnapshotCommitHashProperty(), stringLiteral(commitHash));
