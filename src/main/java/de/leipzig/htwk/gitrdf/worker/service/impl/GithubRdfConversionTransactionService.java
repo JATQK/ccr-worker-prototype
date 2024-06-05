@@ -58,30 +58,25 @@ public class GithubRdfConversionTransactionService {
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
     // TODO: replace PURL
-    public static final String GIT_URI = "https://raw.githubusercontent.com/git2RDFLab/rdf-schema/main/v1/git2RDFLab-git.ttl#";
-    //public static final String GIT_URI = "https://purl.archive.org/purl/git2rdflab-test/v1/git2RDFLab-git#";
-
-
-    public static final String PLATFORM_URI = "https://raw.githubusercontent.com/git2RDFLab/rdf-schema/main/v1/git2RDFLab-platform.ttl#";
-    //public static final String PLATFORM_URI = "https://purl.archive.org/purl/git2rdflab-test/v1/git2RDFLab-platform#";
-
-
-    public static final String PLATFORM_GITHUB_URI = "https://raw.githubusercontent.com/git2RDFLab/rdf-schema/main/v1/git2RDFLab-platform-github.ttl#";
-    //public static final String PLATFORM_GITHUB_URI = "https://purl.archive.org/purl/git2rdflab-test/v1/git2RDFLab-platform-github#";
 
     public static final String GIT_NAMESPACE = "git";
+    public static final String GIT_URI = "https://purl.archive.org/git2rdflab-test/v1/git2RDFLab-git#";
+
 
     public static final String PLATFORM_NAMESPACE = "platform";
+    public static final String PLATFORM_URI = "https://purl.archive.org/git2rdflab-test/v1/git2RDFLab-platform#";
 
+
+    public static final String PLATFORM_GITHUB_URI = "https://purl.archive.org/git2rdflab-test/v1/git2RDFLab-platform-github#";
     public static final String PLATFORM_GITHUB_NAMESPACE = "github";
 
-    public static final String GITHUB_COMMIT_NAMESPACE = "githubcommit";
-
-    public static final String GITHUB_ISSUE_NAMESPACE = "githubissue";
-
-    public static final String XSD_SCHEMA_NAMESPACE = "xsd";
 
     public static final String XSD_SCHEMA_URI = "http://www.w3.org/2001/XMLSchema#";
+    public static final String XSD_SCHEMA_NAMESPACE = "xsd";
+
+    public static final String RDF_SCHEMA_URI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    public static final String RDF_SCHEMA_NAMESPACE = "rdf";
+
 
     private final GithubHandlerService githubHandlerService;
 
@@ -332,6 +327,7 @@ public class GithubRdfConversionTransactionService {
             StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE_BLOCKS);
 
             writer.prefix(XSD_SCHEMA_NAMESPACE, XSD_SCHEMA_URI);
+            writer.prefix(RDF_SCHEMA_NAMESPACE, RDF_SCHEMA_URI);
             writer.prefix(GIT_NAMESPACE, GIT_URI);
             writer.prefix(PLATFORM_NAMESPACE, PLATFORM_URI);
             writer.prefix(PLATFORM_GITHUB_NAMESPACE, PLATFORM_GITHUB_URI);

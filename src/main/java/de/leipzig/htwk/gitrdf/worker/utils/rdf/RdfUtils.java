@@ -7,13 +7,26 @@ import lombok.NoArgsConstructor;
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.riot.system.PrefixMap;
+import org.apache.jena.riot.system.PrefixMapFactory;
 import org.eclipse.jgit.diff.DiffEntry;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
+
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.*;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfUtils {
+
+    private static final PrefixMap prefixMap = PrefixMapFactory.create(Map.of(
+            GIT_NAMESPACE, GIT_URI,
+            PLATFORM_NAMESPACE,PLATFORM_URI,
+            PLATFORM_GITHUB_NAMESPACE,PLATFORM_GITHUB_URI,
+            XSD_SCHEMA_NAMESPACE,XSD_SCHEMA_URI,
+            RDF_SCHEMA_NAMESPACE,RDF_SCHEMA_URI
+    ));
 
     private static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'hh:mm:ss");
 
@@ -40,6 +53,12 @@ public final class RdfUtils {
     }
 
     public static Node uri(String value) {
+        var expandedValue = prefixMap.expand(value);
+
+        if( expandedValue != null )
+            value = expandedValue;
+
         return NodeFactory.createURI(value);
     }
+
 }

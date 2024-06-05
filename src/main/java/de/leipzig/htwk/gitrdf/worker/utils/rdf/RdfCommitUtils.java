@@ -3,12 +3,17 @@ package de.leipzig.htwk.gitrdf.worker.utils.rdf;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.jena.graph.Node;
+import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
+import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.riot.system.PrefixMap;
+import org.apache.jena.riot.system.PrefixMapFactory;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.patch.FileHeader;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.GIT_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.*;
@@ -17,7 +22,7 @@ import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.*;
 public final class RdfCommitUtils {
 
     private static final String NS = GIT_NAMESPACE + ":";
-    
+
     // org.apache.jena.datatypes.xsd.XSDDatatype -> static xsd Datatype collection from apache jena
 
     // somewhat of an applicable base uri to the contents of git: https://git-scm.com/docs/gitglossary
@@ -172,15 +177,18 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createBranchSnapshotLineProperty(Node snapshotLineEntryNode, int line) {
-        return Triple.create(snapshotLineEntryNode, branchSnapshotLineProperty(), nonNegativeIntegerLiteral(line));
+        //return Triple.create(snapshotLineEntryNode, branchSnapshotLineProperty(), nonNegativeIntegerLiteral(line));
+        return Triple.create(snapshotLineEntryNode, branchSnapshotLineProperty(), stringLiteral(Integer.toString(line)));
     }
 
     public static Triple createBranchSnapshotLinenumberBeginProperty(Node snapshotLineEntryNode, int linenumberBegin) {
-        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberBeginProperty(), nonNegativeIntegerLiteral(linenumberBegin));
+        //return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberBeginProperty(), nonNegativeIntegerLiteral(linenumberBegin));
+        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberBeginProperty(), stringLiteral(Integer.toString(linenumberBegin)));
     }
 
     public static Triple createBranchSnapshotLinenumberEndProperty(Node snapshotLineEntryNode, int linenumberEnd) {
-        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberEndProperty(), nonNegativeIntegerLiteral(linenumberEnd));
+        //return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberEndProperty(), nonNegativeIntegerLiteral(linenumberEnd));
+        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberEndProperty(), stringLiteral(Integer.toString(linenumberEnd)));
     }
 
 
