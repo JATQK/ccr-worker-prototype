@@ -9,6 +9,7 @@ import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
 import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
 import jakarta.persistence.EntityManager;
 import org.apache.jena.graph.Node;
@@ -317,12 +318,14 @@ public class GithubRdfConversionTransactionService {
         String githubCommitPrefixValue = getGithubCommitBaseUri(owner, repositoryName);
         String githubIssuePrefixValue = getGithubIssueBaseUri(owner, repositoryName);
 
+        Map<String, RdfGitCommitUserUtils> uniqueGitCommiterWithHash = new HashMap<>();
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(rdfTempFile))) {
 
             GitHub githubHandle = githubHandlerService.getGithubHandle();
 
             String githubRepositoryName = String.format("%s/%s", owner, repositoryName);
 
+            GHRepository githubRepositoryHandle = githubHandle.getRepository(githubRepositoryName);
             // See: https://jena.apache.org/documentation/io/rdf-output.html#streamed-block-formats
             StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE_BLOCKS);
 
@@ -368,13 +371,27 @@ public class GithubRdfConversionTransactionService {
                         writer.triple(RdfCommitUtils.createCommitHashProperty(commitUri, gitHash));
                     }
 
+                    if (gitCommitRepositoryFilter.isEnableAuthorEmail()) {
+                        String email = commit.getAuthorIdent().getEmailAddress();
+
+                        if (uniqueGitCommiterWithHash.containsKey(email)) {
+                            RdfGitCommitUserUtils commitInfo = uniqueGitCommiterWithHash.get(email);
+                            if (commitInfo.gitHubUser != null && !commitInfo.gitHubUser.isEmpty()) {
+                                writer.triple(RdfCommitUtils.createCommiterGitHubUserProperty(commitUri, commitInfo.gitHubUser));
+                            }
+                        } else {
+                            String gitHubUser = RdfGitCommitUserUtils.getGitHubUserFromCommit(githubRepositoryHandle, gitHash);
+                            uniqueGitCommiterWithHash.put(email, new RdfGitCommitUserUtils(gitHash, gitHubUser));
+                            if (gitHubUser != null && !gitHubUser.isEmpty()) {
+                                writer.triple(RdfCommitUtils.createCommiterGitHubUserProperty(commitUri, gitHubUser));
+                            }
+                        }
+                        writer.triple(RdfCommitUtils.createAuthorEmailProperty(commitUri, email));
+                    }
                     if (gitCommitRepositoryFilter.isEnableAuthorName()) {
                         writer.triple(RdfCommitUtils.createAuthorNameProperty(commitUri, commit.getAuthorIdent().getName()));
                     }
 
-                    if (gitCommitRepositoryFilter.isEnableAuthorEmail()) {
-                        writer.triple(RdfCommitUtils.createAuthorEmailProperty(commitUri, commit.getAuthorIdent().getEmailAddress()));
-                    }
 
                     boolean isAuthorDateEnabled = gitCommitRepositoryFilter.isEnableAuthorDate();
                     boolean isCommitDateEnabled = gitCommitRepositoryFilter.isEnableCommitDate();
@@ -635,8 +652,6 @@ public class GithubRdfConversionTransactionService {
             // issues
 
             if (githubIssueRepositoryFilter.doesContainAtLeastOneEnabledFilterOption()) {
-
-                GHRepository githubRepositoryHandle = githubHandle.getRepository(githubRepositoryName);
 
                 if (githubRepositoryHandle.hasIssues()) {
 

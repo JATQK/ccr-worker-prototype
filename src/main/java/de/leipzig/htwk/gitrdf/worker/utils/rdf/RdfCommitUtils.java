@@ -16,12 +16,14 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.GIT_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.*;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfCommitUtils {
 
     private static final String NS = GIT_NAMESPACE + ":";
+    private static final String RS = PLATFORM_GITHUB_NAMESPACE + ":";
 
     // org.apache.jena.datatypes.xsd.XSDDatatype -> static xsd Datatype collection from apache jena
 
@@ -80,6 +82,9 @@ public final class RdfCommitUtils {
         return uri(NS + "branch");
     }
 
+    public static Node commitGitHubUserProperty() {
+        return uri(RS + "user");
+    }
     public static Node tagResource() {
         return uri(NS + "tag");
     }
@@ -243,6 +248,9 @@ public final class RdfCommitUtils {
         return Triple.create(diffEntryNode, commitDiffEntryEditTypeProperty(), uri(NS + changeType.toString().toLowerCase()));
     }
 
+    public static Triple createCommiterGitHubUserProperty(String commitUri, String commiterGitHubUser) {
+        return Triple.create(uri(commitUri), commitGitHubUserProperty(), stringLiteral(commiterGitHubUser));
+    }
     public static Triple createCommitResource(String commitUri, Node commitNode) {
         return Triple.create(uri(commitUri), commitResource(), commitNode);
     }
