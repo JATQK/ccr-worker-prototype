@@ -222,13 +222,11 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createAuthorDateProperty(String commitUri, LocalDateTime authorDateTimeValue) {
-        //return Triple.create(uri(commitUri), authorDateProperty(), dateTimeLiteral(authorDateTimeValue));
-        return Triple.create(uri(commitUri), authorDateProperty(), stringLiteral(authorDateTimeValue.toString()));
+        return Triple.create(uri(commitUri), authorDateProperty(), dateTimeLiteral(authorDateTimeValue));
     }
 
     public static Triple createCommitDateProperty(String commitUri, LocalDateTime commitDateTimeValue) {
-        //return Triple.create(uri(commitUri), commitDateProperty(), dateTimeLiteral(commitDateTimeValue));
-        return Triple.create(uri(commitUri), commitDateProperty(), stringLiteral(commitDateTimeValue.toString()));
+        return Triple.create(uri(commitUri), commitDateProperty(), dateTimeLiteral(commitDateTimeValue));
     }
 
     public static Triple createCommitterNameProperty(String commitUri, String committerNameValue) {
