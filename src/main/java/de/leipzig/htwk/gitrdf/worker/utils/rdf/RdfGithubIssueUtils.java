@@ -117,18 +117,18 @@ public final class RdfGithubIssueUtils {
     }
 
     public static Triple createIssueCreatedAtProperty(String issueUri, LocalDateTime createdAtDateTime) {
-        //return Triple.create(RdfUtils.uri(issueUri), createdAtProperty(), RdfUtils.dateTimeLiteral(createdAtDateTime));
-        return Triple.create(RdfUtils.uri(issueUri), createdAtProperty(), RdfUtils.stringLiteral(createdAtDateTime.toString()));
+        return Triple.create(RdfUtils.uri(issueUri), createdAtProperty(), RdfUtils.dateTimeLiteral(createdAtDateTime));
+        //return Triple.create(RdfUtils.uri(issueUri), createdAtProperty(), RdfUtils.stringLiteral(createdAtDateTime.toString()));
     }
 
     public static Triple createIssueUpdatedAtProperty(String issueUri, LocalDateTime updatedAtDateTime) {
-        //return Triple.create(RdfUtils.uri(issueUri), updatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAtDateTime));
-        return Triple.create(RdfUtils.uri(issueUri), updatedAtProperty(), RdfUtils.stringLiteral(updatedAtDateTime.toString()));
+        return Triple.create(RdfUtils.uri(issueUri), updatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAtDateTime));
+        //return Triple.create(RdfUtils.uri(issueUri), updatedAtProperty(), RdfUtils.stringLiteral(updatedAtDateTime.toString()));
     }
 
     public static Triple createIssueClosedAtProperty(String issueUri, LocalDateTime closedAtDateTime) {
-        //return Triple.create(RdfUtils.uri(issueUri), closedAtProperty(), RdfUtils.dateTimeLiteral(closedAtDateTime));
-        return Triple.create(RdfUtils.uri(issueUri), closedAtProperty(), RdfUtils.stringLiteral(closedAtDateTime.toString()));
+        return Triple.create(RdfUtils.uri(issueUri), closedAtProperty(), RdfUtils.dateTimeLiteral(closedAtDateTime));
+        //return Triple.create(RdfUtils.uri(issueUri), closedAtProperty(), RdfUtils.stringLiteral(closedAtDateTime.toString()));
     }
 
 }
