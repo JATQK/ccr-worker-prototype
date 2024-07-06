@@ -47,3 +47,7 @@ github:
 
 server:
   port: 28099
+
+logging:
+  level:
+    root: debug

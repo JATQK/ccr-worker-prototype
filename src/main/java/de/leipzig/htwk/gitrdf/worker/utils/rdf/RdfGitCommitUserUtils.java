@@ -1,11 +1,13 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf;
 
+import lombok.extern.slf4j.Slf4j;
 import org.kohsuke.github.GHCommit;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
 
 import java.io.IOException;
 
+@Slf4j
 public class RdfGitCommitUserUtils {
     public String hash;
     public String gitHubUser;
@@ -22,7 +24,7 @@ public class RdfGitCommitUserUtils {
             GHUser author = commit.getAuthor();
             return author != null ? "https://github.com/" + author.getLogin() : null;
         } catch (IOException e) {
-            e.printStackTrace();
+            log.info("Could not retrieve github-user from commit hash '{}'", commitHash, e);
             return null;
         }
     }
