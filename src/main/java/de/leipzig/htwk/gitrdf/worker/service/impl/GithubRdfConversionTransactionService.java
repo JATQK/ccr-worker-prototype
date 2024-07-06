@@ -136,7 +136,10 @@ public class GithubRdfConversionTransactionService {
 
     @Transactional(rollbackFor = {IOException.class, GitAPIException.class, URISyntaxException.class, InterruptedException.class}) // Runtime-Exceptions are rollbacked by default; Checked-Exceptions not
     public InputStream performGithubRepoToRdfConversionWithGitCloningLogicAndReturnCloseableInputStream(
-            long id, File gitWorkingDirectory, File rdfTempFile, TimeLog timeLog) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
+            long id,
+            File gitWorkingDirectory,
+            File rdfTempFile,
+            TimeLog timeLog) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
 
         Git gitHandler = null;
 
@@ -726,7 +729,11 @@ public class GithubRdfConversionTransactionService {
 
             if (githubIssueRepositoryFilter.doesContainAtLeastOneEnabledFilterOption()) {
 
-                if (githubRepositoryHandle.hasIssues()) {
+                // request new github handle, so that we prevent installation token expiration during the process
+                GitHub githubIssueHandle = githubHandlerService.getGithubHandle();
+                GHRepository githubRepositoryIssueHandle = githubIssueHandle.getRepository(githubRepositoryName);
+
+                if (githubRepositoryIssueHandle.hasIssues()) {
 
                     //githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()
 
@@ -736,7 +743,7 @@ public class GithubRdfConversionTransactionService {
 
                     boolean doesWriterContainNonWrittenRdfStreamElements = false;
 
-                    for (GHIssue ghIssue : githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()) {
+                    for (GHIssue ghIssue : githubRepositoryIssueHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()) {
 
                         if (issueCounter < 1) {
                             log.info("Start issue rdf conversion batch");

@@ -22,6 +22,10 @@ spring:
 
 worker:
   commits-per-iteration: 100
+  #issues:
+  #  pre-secondary-rate-limit-check: 800
+  #  seconds-to-sleep: 60
+  #  issue-page-size: 100
   task:
     rdf-git-repo:
       enabled: ${WORKER_TASK_RDFGITREPO_ENABLED:true}
