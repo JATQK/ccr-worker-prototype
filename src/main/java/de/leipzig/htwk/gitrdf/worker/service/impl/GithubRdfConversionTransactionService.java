@@ -6,12 +6,15 @@ import de.leipzig.htwk.gitrdf.database.common.entity.GithubRepositoryOrderEntity
 import de.leipzig.htwk.gitrdf.database.common.entity.enums.GitRepositoryOrderStatus;
 import de.leipzig.htwk.gitrdf.database.common.entity.lob.GithubRepositoryOrderEntityLobs;
 import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
+import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
 import jakarta.persistence.EntityManager;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.time.StopWatch;
 import org.apache.jena.graph.Node;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
@@ -54,6 +57,7 @@ import java.util.*;
 import static org.hibernate.id.SequenceMismatchStrategy.LOG;
 
 @Service
+@Slf4j
 public class GithubRdfConversionTransactionService {
 
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
@@ -123,7 +127,7 @@ public class GithubRdfConversionTransactionService {
         File gitFile = getDotGitFileFromGithubRepositoryHandle(targetRepo, id, owner, repo);
 
         InputStream needsToBeClosedOutsideOfTransaction
-                = writeRdf(gitFile, githubRepositoryOrderEntity, githubRepositoryOrderEntityLobs, rdfTempFile);
+                = writeRdf(gitFile, githubRepositoryOrderEntity, githubRepositoryOrderEntityLobs, rdfTempFile, new TimeLog());
 
         githubRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.DONE);
 
@@ -132,7 +136,7 @@ public class GithubRdfConversionTransactionService {
 
     @Transactional(rollbackFor = {IOException.class, GitAPIException.class, URISyntaxException.class, InterruptedException.class}) // Runtime-Exceptions are rollbacked by default; Checked-Exceptions not
     public InputStream performGithubRepoToRdfConversionWithGitCloningLogicAndReturnCloseableInputStream(
-            long id, File gitWorkingDirectory, File rdfTempFile) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
+            long id, File gitWorkingDirectory, File rdfTempFile, TimeLog timeLog) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
 
         Git gitHandler = null;
 
@@ -147,10 +151,28 @@ public class GithubRdfConversionTransactionService {
             String owner = githubRepositoryOrderEntity.getOwnerName();
             String repo = githubRepositoryOrderEntity.getRepositoryName();
 
+            StopWatch downloadWatch = new StopWatch();
+
+            downloadWatch.start();
+
             gitHandler = performGitClone(owner, repo, gitWorkingDirectory);
 
+            downloadWatch.stop();
+
+            //log.info("TIME MEASUREMENT DONE: Download time in milliseconds is: '{}'", downloadWatch.getTime());
+            timeLog.setDownloadTime(downloadWatch.getTime());
+
+            StopWatch conversionWatch = new StopWatch();
+
+            conversionWatch.start();
+
             InputStream needsToBeClosedOutsideOfTransaction
-                    = writeRdf(gitHandler, githubRepositoryOrderEntity, githubRepositoryOrderEntityLobs, rdfTempFile);
+                    = writeRdf(gitHandler, githubRepositoryOrderEntity, githubRepositoryOrderEntityLobs, rdfTempFile, timeLog);
+
+            conversionWatch.stop();
+
+            //log.info("TIME MEASUREMENT DONE: Conversion time in milliseconds is: '{}'", conversionWatch.getTime());
+            timeLog.setConversionTime(conversionWatch.getTime());
 
             githubRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.DONE);
 
@@ -168,12 +190,15 @@ public class GithubRdfConversionTransactionService {
 
         String gitRepoTargetUrl = String.format("https://github.com/%s/%s.git", ownerName, repositoryName);
 
+        int timeoutSecondsOnNoDataTransfer = 60;
+
         return Git.cloneRepository()
                 .setURI(gitRepoTargetUrl)
                 .setDirectory(gitWorkingDirectory)
                 .setCredentialsProvider(new UsernamePasswordCredentialsProvider(
                         githubConfig.getGithubSystemUserName(),
                         githubConfig.getGithubSystemUserPersonalAccessToken())) // ---> maybe we dont even need this for public repositories?
+                .setTimeout(timeoutSecondsOnNoDataTransfer)
                 .call();
     }
 
@@ -290,19 +315,21 @@ public class GithubRdfConversionTransactionService {
             File gitFile,
             GithubRepositoryOrderEntity entity,
             GithubRepositoryOrderEntityLobs entityLobs,
-            File rdfTempFile) throws GitAPIException, IOException, URISyntaxException, InterruptedException {
+            File rdfTempFile,
+            TimeLog timeLog) throws GitAPIException, IOException, URISyntaxException, InterruptedException {
 
         Repository gitRepository = new FileRepositoryBuilder().setGitDir(gitFile).build();
         Git gitHandler = new Git(gitRepository);
 
-        return writeRdf(gitHandler, entity, entityLobs, rdfTempFile);
+        return writeRdf(gitHandler, entity, entityLobs, rdfTempFile, timeLog);
     }
 
     private InputStream writeRdf(
             Git gitHandler,
             GithubRepositoryOrderEntity entity,
             GithubRepositoryOrderEntityLobs entityLobs,
-            File rdfTempFile) throws GitAPIException, IOException, URISyntaxException, InterruptedException {
+            File rdfTempFile,
+            TimeLog timeLog) throws GitAPIException, IOException, URISyntaxException, InterruptedException {
 
         String owner = entity.getOwnerName();
         String repositoryName = entity.getRepositoryName();
@@ -344,10 +371,20 @@ public class GithubRdfConversionTransactionService {
             Iterable<Ref> branches = gitHandler.branchList().setListMode(ListBranchCommand.ListMode.ALL).call();
             RevWalk revWalk = new RevWalk(gitRepository);
 
+            log.info("Start conversion run of '{}' repository", repositoryName);
+
+            StopWatch commitConversionWatch = new StopWatch();
+
+            commitConversionWatch.start();
+
             // git commits
             for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
+                log.info("Start iterations of git commits. Current iteration count: {}", iteration);
+
                 int skipCount = calculateSkipCountAndThrowExceptionIfIntegerOverflowIsImminent(iteration, commitsPerIteration);
+
+                log.info("Calculated skip count for this iteration is: {}", skipCount);
 
                 Iterable<RevCommit> commits = gitHandler.log().setSkip(skipCount).setMaxCount(commitsPerIteration).call();
 
@@ -526,6 +563,7 @@ public class GithubRdfConversionTransactionService {
                 writer.finish();
 
                 if (finished) {
+                    log.info("Git commit iterations finished");
                     break;
                 }
 
@@ -535,10 +573,17 @@ public class GithubRdfConversionTransactionService {
                 }
             }
 
+            commitConversionWatch.stop();
+
+            //log.info("TIME MEASUREMENT DONE: Git-Commit conversion time in milliseconds is: '{}'", commitConversionWatch.getTime());
+            timeLog.setGitCommitConversionTime(commitConversionWatch.getTime());
+
             // branch-snapshot
             // TODO: rename to 'blame'?
 
             if (gitCommitRepositoryFilter.isEnableBranchSnapshot() ) {
+
+                log.info("Start branch snapshotting");
 
                 writer.start();
 
@@ -555,9 +600,24 @@ public class GithubRdfConversionTransactionService {
                 writer.triple(RdfCommitUtils.createBranchSnapshotProperty(branchSnapshotNode));
                 writer.triple(RdfCommitUtils.createBranchSnapshotDateProperty(branchSnapshotNode, LocalDateTime.now()));
 
+                writer.finish();
+
                 List<String> fileNames = listRepositoryContents(gitRepository);
 
-                for (String fileName : fileNames) {
+                log.info("Listed {} files for branch snapshotting", fileNames.size());
+
+                int branchSnapshotCounter = 0;
+
+                for (int ii = 0; ii < fileNames.size(); ii++) {
+
+                    if (branchSnapshotCounter < 1) {
+                        log.info("Branch Snapshotting iteration {} started", ii);
+                        writer.start();
+                    }
+
+                    branchSnapshotCounter++;
+
+                    String fileName = fileNames.get(ii);
 
                     Resource branchSnapshotFileResource = ResourceFactory.createResource();
                     Node branchSnapshotFileNode = branchSnapshotFileResource.asNode();
@@ -644,18 +704,33 @@ public class GithubRdfConversionTransactionService {
                             linenumberBegin = lineIdx + 1;
                         }
                     }
+
+                    if (branchSnapshotCounter > 99) {
+                        writer.finish();
+                        branchSnapshotCounter = 0;
+                    }
+
                 }
 
-                writer.finish();
+                if (branchSnapshotCounter > 0) {
+                    writer.finish();
+                }
+
             }
 
             // issues
+
+            StopWatch issueWatch = new StopWatch();
+
+            issueWatch.start();
 
             if (githubIssueRepositoryFilter.doesContainAtLeastOneEnabledFilterOption()) {
 
                 if (githubRepositoryHandle.hasIssues()) {
 
                     //githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()
+
+                    log.info("Start issue processing");
 
                     int issueCounter = 0;
 
@@ -664,6 +739,7 @@ public class GithubRdfConversionTransactionService {
                     for (GHIssue ghIssue : githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()) {
 
                         if (issueCounter < 1) {
+                            log.info("Start issue rdf conversion batch");
                             writer.start();
                             doesWriterContainNonWrittenRdfStreamElements = true;
                         }
@@ -747,6 +823,7 @@ public class GithubRdfConversionTransactionService {
                         issueCounter++;
 
                         if (issueCounter > 99) {
+                            log.info("Finish issue rdf conversion batch");
                             writer.finish();
                             doesWriterContainNonWrittenRdfStreamElements = false;
                             issueCounter = 0;
@@ -754,11 +831,20 @@ public class GithubRdfConversionTransactionService {
                     }
 
                     if (doesWriterContainNonWrittenRdfStreamElements) {
+                        log.info("Finish last issue rdf conversion batch");
                         writer.finish();
                     }
                 }
             }
+
+            issueWatch.stop();
+
+            //log.info("TIME MEASUREMENT DONE: Github-Issue conversion time in milliseconds is: '{}'", issueWatch.getTime());
+            timeLog.setGithubIssueConversionTime(issueWatch.getTime());
+
         }
+
+        log.info("Finished overall processing. Start to load rdf file into postgres blob storage");
 
         BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(rdfTempFile));
 

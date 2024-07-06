@@ -9,7 +9,9 @@ import de.leipzig.htwk.gitrdf.worker.config.SchedulerConfig;
 import de.leipzig.htwk.gitrdf.worker.service.GitRdfConversionService;
 import de.leipzig.htwk.gitrdf.worker.service.impl.GithubConversionServiceImpl;
 import de.leipzig.htwk.gitrdf.worker.service.impl.GithubHandlerService;
+import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.time.StopWatch;
 import org.springframework.integration.jdbc.lock.JdbcLockRegistry;
 import org.springframework.integration.support.locks.LockRegistry;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -163,11 +165,26 @@ public class RdfScheduler {
 
                 try {
 
+                    log.info("Start processing of '{}' repository", entity.getRepositoryName());
+
+                    TimeLog timeLog = new TimeLog();
+                    timeLog.setIdentifier(entity.getOwnerName() + " " + entity.getRepositoryName());
+
+                    // TODO: stop time here!?
+                    StopWatch watch = new StopWatch();
+                    watch.start();
+
                     entity.setStatus(GitRepositoryOrderStatus.PROCESSING);
                     entity.setNumberOfTries(entity.getNumberOfTries() + 1);
                     githubRepositoryOrderRepository.save(entity);
 
-                    githubConversionService.performGithubRepoToRdfConversion(entity.getId());
+                    githubConversionService.performGithubRepoToRdfConversion(entity.getId(), timeLog);
+
+                    watch.stop();
+
+                    timeLog.setTotalTime(watch.getTime());
+                    //log.info("TIME MEASUREMENT DONE: Total time in milliseconds is: '{}'", watch.getTime());
+                    timeLog.printTimes();
 
                 } catch (Exception ex) {
                     log.warn("Exception during .git repository to rdf conversion. Error is {}", ex, ex);
