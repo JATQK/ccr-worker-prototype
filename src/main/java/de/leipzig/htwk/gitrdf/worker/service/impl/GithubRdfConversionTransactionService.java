@@ -6,6 +6,7 @@ import de.leipzig.htwk.gitrdf.database.common.entity.GithubRepositoryOrderEntity
 import de.leipzig.htwk.gitrdf.database.common.entity.enums.GitRepositoryOrderStatus;
 import de.leipzig.htwk.gitrdf.database.common.entity.lob.GithubRepositoryOrderEntityLobs;
 import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
+import de.leipzig.htwk.gitrdf.worker.model.GithubHandle;
 import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
@@ -108,7 +109,7 @@ public class GithubRdfConversionTransactionService {
     public InputStream performGithubRepoToRdfConversionAndReturnCloseableInputStream(
             long id, File rdfTempFile) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
 
-        GitHub gitHubHandle = githubHandlerService.getGithubHandle();
+        GithubHandle gitHubHandle = githubHandlerService.getGithubHandle();
 
         // du kriegst die .git nicht als Teil der Zip ->
         //gitHubHandle.getRepository("").listCommits()
@@ -122,7 +123,7 @@ public class GithubRdfConversionTransactionService {
         String owner = githubRepositoryOrderEntity.getOwnerName();
         String repo = githubRepositoryOrderEntity.getRepositoryName();
 
-        GHRepository targetRepo = getGithubRepositoryHandle(owner, repo, gitHubHandle);
+        GHRepository targetRepo = getGithubRepositoryHandle(owner, repo, gitHubHandle.getGitHubHandle());
 
         File gitFile = getDotGitFileFromGithubRepositoryHandle(targetRepo, id, owner, repo);
 
@@ -351,11 +352,11 @@ public class GithubRdfConversionTransactionService {
         Map<String, RdfGitCommitUserUtils> uniqueGitCommiterWithHash = new HashMap<>();
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(rdfTempFile))) {
 
-            GitHub githubHandle = githubHandlerService.getGithubHandle();
+            GithubHandle githubHandle = githubHandlerService.getGithubHandle();
 
             String githubRepositoryName = String.format("%s/%s", owner, repositoryName);
 
-            GHRepository githubRepositoryHandle = githubHandle.getRepository(githubRepositoryName);
+            GHRepository githubRepositoryHandle = githubHandle.getGitHubHandle().getRepository(githubRepositoryName);
             // See: https://jena.apache.org/documentation/io/rdf-output.html#streamed-block-formats
             StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE_BLOCKS);
 
@@ -384,6 +385,12 @@ public class GithubRdfConversionTransactionService {
             for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
                 log.info("Start iterations of git commits. Current iteration count: {}", iteration);
+
+                if (log.isDebugEnabled()) log.debug("Check whether github installation token needs refresh");
+
+                if (githubHandle.refreshGithubHandleOnEmergingExpiring()) {
+                    githubRepositoryHandle = githubHandle.getGitHubHandle().getRepository(githubRepositoryName);
+                }
 
                 int skipCount = calculateSkipCountAndThrowExceptionIfIntegerOverflowIsImminent(iteration, commitsPerIteration);
 
@@ -815,8 +822,8 @@ public class GithubRdfConversionTransactionService {
             if (githubIssueRepositoryFilter.doesContainAtLeastOneEnabledFilterOption()) {
 
                 // request new github handle, so that we prevent installation token expiration during the process
-                GitHub githubIssueHandle = githubHandlerService.getGithubHandle();
-                GHRepository githubRepositoryIssueHandle = githubIssueHandle.getRepository(githubRepositoryName);
+                GithubHandle githubIssueHandle = githubHandlerService.getGithubHandle();
+                GHRepository githubRepositoryIssueHandle = githubIssueHandle.getGitHubHandle().getRepository(githubRepositoryName);
 
                 if (githubRepositoryIssueHandle.hasIssues()) {
 

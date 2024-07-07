@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
+import de.leipzig.htwk.gitrdf.worker.model.GithubHandle;
 import io.jsonwebtoken.Jwts;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
@@ -73,7 +74,15 @@ public class GithubHandlerService {
         this.objectMapper = objectMapper;
     }
 
-    public GitHub getGithubHandle() throws URISyntaxException, IOException, InterruptedException {
+    public GithubHandle getGithubHandle() throws URISyntaxException, IOException, InterruptedException {
+
+        GitHub gitHub = getGithub();
+        long creationTime = System.currentTimeMillis();
+
+        return new GithubHandle(gitHub, creationTime, this);
+    }
+
+    public GitHub getGithub() throws URISyntaxException, IOException, InterruptedException {
 
         String signedJwt = Jwts.builder()
                 .issuer(githubConfig.getGithubAppId())
