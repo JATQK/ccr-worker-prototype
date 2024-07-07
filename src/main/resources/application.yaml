@@ -50,4 +50,9 @@ server:
 
 logging:
   level:
-    root: debug
+    root: info
+    de:
+      leipzig:
+        htwk:
+          gitrdf:
+            worker: info
