@@ -429,38 +429,8 @@ public class GithubRdfConversionTransactionService {
                     if (log.isDebugEnabled()) log.debug("Set rdf author email");
 
                     if (gitCommitRepositoryFilter.isEnableAuthorEmail()) {
-                        String email = commit.getAuthorIdent().getEmailAddress();
-
-                        if (log.isDebugEnabled()) log.debug("Set rdf github user in commit");
-
-                        if (uniqueGitCommiterWithHash.containsKey(email)) {
-
-                            if (log.isDebugEnabled()) log.debug("Found github committer email in hash");
-
-                            RdfGitCommitUserUtils commitInfo = uniqueGitCommiterWithHash.get(email);
-                            if (commitInfo.gitHubUser != null && !commitInfo.gitHubUser.isEmpty()) {
-
-                                if (log.isDebugEnabled()) log.debug("Set RDF committer github user property after finding github committer email in hash");
-
-                                writer.triple(RdfCommitUtils.createCommiterGitHubUserProperty(commitUri, commitInfo.gitHubUser));
-                            }
-                        } else {
-
-                            if (log.isDebugEnabled()) log.debug("Did not find github committer email in hash");
-
-                            String gitHubUser = RdfGitCommitUserUtils.getGitHubUserFromCommit(githubRepositoryHandle, gitHash);
-                            uniqueGitCommiterWithHash.put(email, new RdfGitCommitUserUtils(gitHash, gitHubUser));
-                            if (gitHubUser != null && !gitHubUser.isEmpty()) {
-
-                                if (log.isDebugEnabled()) log.debug("Set RDF committer github user property after not finding it in github committer email in hash");
-
-                                writer.triple(RdfCommitUtils.createCommiterGitHubUserProperty(commitUri, gitHubUser));
-                            }
-                        }
-
-                        if (log.isDebugEnabled()) log.debug("Set RDF author email property");
-
-                        writer.triple(RdfCommitUtils.createAuthorEmailProperty(commitUri, email));
+                        calculateAuthorEmail( // Also brings github identifier into rdf
+                                commit, uniqueGitCommiterWithHash, writer, commitUri, gitHash, githubRepositoryHandle);
                     }
 
                     if (log.isDebugEnabled()) log.debug("Set RDF author name");
@@ -502,10 +472,15 @@ public class GithubRdfConversionTransactionService {
                         writer.triple(RdfCommitUtils.createCommitterEmailProperty(commitUri, commit.getCommitterIdent().getEmailAddress()));
                     }
 
-                    if (log.isDebugEnabled()) log.debug("Set RDF commit message");
+                    if (log.isDebugEnabled()) log.debug("Set RDF commit message for commit with hash '{}'", gitHash);
 
                     if (gitCommitRepositoryFilter.isEnableCommitMessage()) {
                         writer.triple(RdfCommitUtils.createCommitMessageProperty(commitUri, commit.getFullMessage()));
+                        //writer.triple(RdfCommitUtils.createCommitMessageProperty(commitUri, commit.getShortMessage()));
+                        // TODO (ccr): If this fastens things up: Erweitere den Filter und lass standardmäßig nur die Short-Message produzieren
+                        //  -> Filter kann dann auf full message im Zweifel gesetzt werden
+                        //  -> scheint nicht gewünschte beschleunigung zu bringen
+                        // TODO (ccr): Falls das auch beschleunigt -> schnellere Alternative zu Hashmap für Usernames -> es gibt nichts wirklich schnelleres
                     }
 
                     // No possible solution found yet for merge commits -> maybe traverse to parent? Maybe both
@@ -515,16 +490,7 @@ public class GithubRdfConversionTransactionService {
                     // Branch
                     // TODO: better way to handle merges? (so commit could have multiple branches)
                     if(gitCommitRepositoryFilter.isEnableCommitBranch()) {
-
-                        for (Ref branchRef : branches) {
-
-                            RevCommit commitRev = revWalk.lookupCommit(commit.getId());
-                            RevCommit branchRev = revWalk.lookupCommit(branchRef.getObjectId());
-
-                            if (revWalk.isMergedInto(commitRev, branchRev)) {
-                                writer.triple(RdfCommitUtils.createCommitBranchNameProperty(commitUri, branchRef.getName()));
-                            }
-                        }
+                        calculateCommitBranch(branches, revWalk, writer, commit, commitUri);
                     }
 
                     // Commit Diffs
@@ -534,121 +500,7 @@ public class GithubRdfConversionTransactionService {
                     if (log.isDebugEnabled()) log.debug("Check commit diff");
 
                     if(gitCommitRepositoryFilter.isEnableCommitDiff()) {
-
-                        int parentCommitCount = commit.getParentCount();
-
-                        if (log.isDebugEnabled()) log.debug("Commit diff is enabled - parent count is '{}'", parentCommitCount);
-
-                        if (parentCommitCount > 0) {
-
-                            RevCommit parentCommit = commit.getParent(0);
-
-                            if (log.isDebugEnabled()) log.debug("Check if parent commit is null");
-
-                            if (parentCommit != null) {
-                                CanonicalTreeParser parentTreeParser = new CanonicalTreeParser();
-                                CanonicalTreeParser currentTreeParser = new CanonicalTreeParser();
-
-                                if (log.isDebugEnabled()) log.debug("Reset tree parsers - starting with parent tree parser");
-                                parentTreeParser.reset(reader, parentCommit.getTree());
-
-                                if (log.isDebugEnabled()) log.debug("Reset tree parsers - continuing with current tree parser");
-                                currentTreeParser.reset(reader, commit.getTree());
-
-                                //Resource commitResource = ResourceFactory.createResource(gitHash); // TODO: use proper uri?
-                                //Node commitNode = commitResource.asNode();
-                                //writer.triple(RdfCommitUtils.createCommitResource(commitUri, commitNode));
-
-                                if (log.isDebugEnabled()) log.debug("Scan diff entries");
-
-                                List<DiffEntry> diffEntries = diffFormatter.scan(parentTreeParser, currentTreeParser);
-
-                                if (log.isDebugEnabled()) log.debug("Loop through diff entries. Diff entry list size is '{}'", diffEntries.size());
-
-                                for (DiffEntry diffEntry : diffEntries) {
-                                    Resource diffEntryResource = ResourceFactory.createResource(/*GIT_NAMESPACE + ":entry"*/);
-                                    Node diffEntryNode = diffEntryResource.asNode();
-                                    //writer.triple(RdfCommitUtils.createCommitDiffEntryResource(commitNode, diffEntryNode));
-
-                                    if (log.isDebugEnabled()) log.debug("Set RDF commit diff entry property");
-
-                                    writer.triple(RdfCommitUtils.createCommitDiffEntryProperty(commitUri, diffEntryNode));
-
-                                    DiffEntry.ChangeType changeType = diffEntry.getChangeType(); // ADD,DELETE,MODIFY,RENAME,COPY
-
-                                    if (log.isDebugEnabled()) log.debug("Set RDF commit diff entry edit type property");
-
-                                    writer.triple(RdfCommitUtils.createCommitDiffEntryEditTypeProperty(diffEntryNode, changeType));
-
-                                    FileHeader fileHeader = diffFormatter.toFileHeader(diffEntry);
-
-                                    if (log.isDebugEnabled()) log.debug("Switch through diff entry change type");
-
-                                    // See: org.eclipse.jgit.diff.DiffEntry.ChangeType.toString()
-                                    switch (changeType) {
-                                        case ADD:
-                                            if (log.isDebugEnabled()) log.debug("Set RDF ADD commit diff entry new file name property");
-                                            writer.triple(RdfCommitUtils.createCommitDiffEntryNewFileNameProperty(diffEntryNode, fileHeader));
-                                            break;
-                                        case COPY:
-                                        case RENAME:
-                                            if (log.isDebugEnabled()) log.debug("Set RDF COPY/RENAME commit diff entry new file name property");
-                                            writer.triple(RdfCommitUtils.createCommitDiffEntryOldFileNameProperty(diffEntryNode, fileHeader));
-                                            writer.triple(RdfCommitUtils.createCommitDiffEntryNewFileNameProperty(diffEntryNode, fileHeader));
-                                            break;
-                                        case DELETE:
-                                        case MODIFY:
-                                            if (log.isDebugEnabled()) log.debug("Set RDF DELETE/MODIFY commit diff entry new file name property");
-                                            writer.triple(RdfCommitUtils.createCommitDiffEntryOldFileNameProperty(diffEntryNode, fileHeader));
-                                            break;
-                                        default:
-                                            throw new IllegalStateException("Unexpected changeType: " + changeType);
-                                    }
-
-                                    // Diff Lines (added/changed/removed)
-
-                                    if (log.isDebugEnabled()) log.debug("Retrieve file header edit list");
-
-                                    EditList editList = fileHeader.toEditList();
-
-                                    if (log.isDebugEnabled()) log.debug("Loop trough edit list. There are '{}' edit list entries", editList.size());
-
-                                    for (Edit edit : editList) {
-                                        Resource editResource = ResourceFactory.createResource(/*GIT_NAMESPACE + ":edit"*/);
-                                        Node editNode = editResource.asNode();
-
-                                        if (log.isDebugEnabled()) log.debug("Set RDF commit diff edit resource");
-
-                                        writer.triple(RdfCommitUtils.createCommitDiffEditResource(diffEntryNode, editNode));
-
-                                        Edit.Type editType = edit.getType(); // INSERT,DELETE,REPLACE
-
-                                        if (log.isDebugEnabled()) log.debug("Set RDF commit diff edit type property");
-
-                                        writer.triple(RdfCommitUtils.createCommitDiffEditTypeProperty(editNode, editType));
-
-                                        if (log.isDebugEnabled()) log.debug("Retrieve for file diffs the old and new line number beginnings and endings");
-
-                                        final int oldLinenumberBegin = edit.getBeginA();
-                                        final int newLinenumberBegin = edit.getBeginB();
-                                        final int oldLinenumberEnd = edit.getEndA();
-                                        final int newLinenumberEnd = edit.getEndB();
-
-                                        if (log.isDebugEnabled()) log.debug("Set RDF edit old line number begin property");
-                                        writer.triple(RdfCommitUtils.createEditOldLinenumberBeginProperty(editNode, oldLinenumberBegin));
-
-                                        if (log.isDebugEnabled()) log.debug("Set RDF edit new line number begin property");
-                                        writer.triple(RdfCommitUtils.createEditNewLinenumberBeginProperty(editNode, newLinenumberBegin));
-
-                                        if (log.isDebugEnabled()) log.debug("Set RDF edit old line number end property");
-                                        writer.triple(RdfCommitUtils.createEditOldLinenumberEndProperty(editNode, oldLinenumberEnd));
-
-                                        if (log.isDebugEnabled()) log.debug("Set RDF edit new line number end property");
-                                        writer.triple(RdfCommitUtils.createEditNewLinenumberEndProperty(editNode, newLinenumberEnd));
-                                    }
-                                }
-                            }
-                        }
+                        calculateCommitDiff(commit, reader, diffFormatter, writer, commitUri);
                     }
                 }
 
@@ -950,6 +802,191 @@ public class GithubRdfConversionTransactionService {
         entityLobs.setRdfFile(BlobProxy.generateProxy(bufferedInputStream, rdfTempFile.length()));
 
         return bufferedInputStream;
+    }
+
+    private void calculateAuthorEmail(
+            RevCommit commit,
+            Map<String, RdfGitCommitUserUtils> uniqueGitCommiterWithHash,
+            StreamRDF writer,
+            String commitUri,
+            String gitHash,
+            GHRepository githubRepositoryHandle) {
+
+        String email = commit.getAuthorIdent().getEmailAddress();
+
+        if (log.isDebugEnabled()) log.debug("Set rdf github user in commit");
+
+        if (uniqueGitCommiterWithHash.containsKey(email)) {
+
+            if (log.isDebugEnabled()) log.debug("Found github committer email in hash");
+
+            RdfGitCommitUserUtils commitInfo = uniqueGitCommiterWithHash.get(email);
+            if (commitInfo.gitHubUser != null && !commitInfo.gitHubUser.isEmpty()) {
+
+                if (log.isDebugEnabled()) log.debug("Set RDF committer github user property after finding github committer email in hash");
+
+                writer.triple(RdfCommitUtils.createCommiterGitHubUserProperty(commitUri, commitInfo.gitHubUser));
+            }
+        } else {
+
+            if (log.isDebugEnabled()) log.debug("Did not find github committer email in hash");
+
+            String gitHubUser = RdfGitCommitUserUtils.getGitHubUserFromCommit(githubRepositoryHandle, gitHash);
+            uniqueGitCommiterWithHash.put(email, new RdfGitCommitUserUtils(gitHash, gitHubUser));
+            if (gitHubUser != null && !gitHubUser.isEmpty()) {
+
+                if (log.isDebugEnabled()) log.debug("Set RDF committer github user property after not finding it in github committer email in hash");
+
+                writer.triple(RdfCommitUtils.createCommiterGitHubUserProperty(commitUri, gitHubUser));
+            }
+        }
+
+        if (log.isDebugEnabled()) log.debug("Set RDF author email property");
+
+        writer.triple(RdfCommitUtils.createAuthorEmailProperty(commitUri, email));
+    }
+
+    private void calculateCommitBranch(
+            Iterable<Ref> branches,
+            RevWalk gitRepositoryRevWalk,
+            StreamRDF writer,
+            RevCommit currentCommit,
+            String commitUri) throws IOException {
+
+        for (Ref branchRef : branches) {
+
+            RevCommit commitRev = gitRepositoryRevWalk.lookupCommit(currentCommit.getId());
+            RevCommit branchRev = gitRepositoryRevWalk.lookupCommit(branchRef.getObjectId());
+
+            if (gitRepositoryRevWalk.isMergedInto(commitRev, branchRev)) {
+                writer.triple(RdfCommitUtils.createCommitBranchNameProperty(commitUri, branchRef.getName()));
+            }
+        }
+
+    }
+
+    private void calculateCommitDiff(
+            RevCommit commit,
+            ObjectReader currentRepositoryObjectReader,
+            DiffFormatter currentRepositoryDiffFormatter,
+            StreamRDF writer,
+            String commitUri) throws IOException {
+
+        int parentCommitCount = commit.getParentCount();
+
+        if (log.isDebugEnabled()) log.debug("Commit diff is enabled - parent count is '{}'", parentCommitCount);
+
+        if (parentCommitCount > 0) {
+
+            RevCommit parentCommit = commit.getParent(0);
+
+            if (log.isDebugEnabled()) log.debug("Check if parent commit is null");
+
+            if (parentCommit != null) {
+                CanonicalTreeParser parentTreeParser = new CanonicalTreeParser();
+                CanonicalTreeParser currentTreeParser = new CanonicalTreeParser();
+
+                if (log.isDebugEnabled()) log.debug("Reset tree parsers - starting with parent tree parser");
+                parentTreeParser.reset(currentRepositoryObjectReader, parentCommit.getTree());
+
+                if (log.isDebugEnabled()) log.debug("Reset tree parsers - continuing with current tree parser");
+                currentTreeParser.reset(currentRepositoryObjectReader, commit.getTree());
+
+                //Resource commitResource = ResourceFactory.createResource(gitHash); // TODO: use proper uri?
+                //Node commitNode = commitResource.asNode();
+                //writer.triple(RdfCommitUtils.createCommitResource(commitUri, commitNode));
+
+                if (log.isDebugEnabled()) log.debug("Scan diff entries");
+
+                List<DiffEntry> diffEntries = currentRepositoryDiffFormatter.scan(parentTreeParser, currentTreeParser);
+
+                if (log.isDebugEnabled()) log.debug("Loop through diff entries. Diff entry list size is '{}'", diffEntries.size());
+
+                for (DiffEntry diffEntry : diffEntries) {
+                    Resource diffEntryResource = ResourceFactory.createResource(/*GIT_NAMESPACE + ":entry"*/);
+                    Node diffEntryNode = diffEntryResource.asNode();
+                    //writer.triple(RdfCommitUtils.createCommitDiffEntryResource(commitNode, diffEntryNode));
+
+                    if (log.isDebugEnabled()) log.debug("Set RDF commit diff entry property");
+
+                    writer.triple(RdfCommitUtils.createCommitDiffEntryProperty(commitUri, diffEntryNode));
+
+                    DiffEntry.ChangeType changeType = diffEntry.getChangeType(); // ADD,DELETE,MODIFY,RENAME,COPY
+
+                    if (log.isDebugEnabled()) log.debug("Set RDF commit diff entry edit type property");
+
+                    writer.triple(RdfCommitUtils.createCommitDiffEntryEditTypeProperty(diffEntryNode, changeType));
+
+                    FileHeader fileHeader = currentRepositoryDiffFormatter.toFileHeader(diffEntry);
+
+                    if (log.isDebugEnabled()) log.debug("Switch through diff entry change type");
+
+                    // See: org.eclipse.jgit.diff.DiffEntry.ChangeType.toString()
+                    switch (changeType) {
+                        case ADD:
+                            if (log.isDebugEnabled()) log.debug("Set RDF ADD commit diff entry new file name property");
+                            writer.triple(RdfCommitUtils.createCommitDiffEntryNewFileNameProperty(diffEntryNode, fileHeader));
+                            break;
+                        case COPY:
+                        case RENAME:
+                            if (log.isDebugEnabled()) log.debug("Set RDF COPY/RENAME commit diff entry new file name property");
+                            writer.triple(RdfCommitUtils.createCommitDiffEntryOldFileNameProperty(diffEntryNode, fileHeader));
+                            writer.triple(RdfCommitUtils.createCommitDiffEntryNewFileNameProperty(diffEntryNode, fileHeader));
+                            break;
+                        case DELETE:
+                        case MODIFY:
+                            if (log.isDebugEnabled()) log.debug("Set RDF DELETE/MODIFY commit diff entry new file name property");
+                            writer.triple(RdfCommitUtils.createCommitDiffEntryOldFileNameProperty(diffEntryNode, fileHeader));
+                            break;
+                        default:
+                            throw new IllegalStateException("Unexpected changeType: " + changeType);
+                    }
+
+                    // Diff Lines (added/changed/removed)
+
+                    if (log.isDebugEnabled()) log.debug("Retrieve file header edit list");
+
+                    EditList editList = fileHeader.toEditList();
+
+                    if (log.isDebugEnabled()) log.debug("Loop trough edit list. There are '{}' edit list entries", editList.size());
+
+                    for (Edit edit : editList) {
+                        Resource editResource = ResourceFactory.createResource(/*GIT_NAMESPACE + ":edit"*/);
+                        Node editNode = editResource.asNode();
+
+                        if (log.isDebugEnabled()) log.debug("Set RDF commit diff edit resource");
+
+                        writer.triple(RdfCommitUtils.createCommitDiffEditResource(diffEntryNode, editNode));
+
+                        Edit.Type editType = edit.getType(); // INSERT,DELETE,REPLACE
+
+                        if (log.isDebugEnabled()) log.debug("Set RDF commit diff edit type property");
+
+                        writer.triple(RdfCommitUtils.createCommitDiffEditTypeProperty(editNode, editType));
+
+                        if (log.isDebugEnabled()) log.debug("Retrieve for file diffs the old and new line number beginnings and endings");
+
+                        final int oldLinenumberBegin = edit.getBeginA();
+                        final int newLinenumberBegin = edit.getBeginB();
+                        final int oldLinenumberEnd = edit.getEndA();
+                        final int newLinenumberEnd = edit.getEndB();
+
+                        if (log.isDebugEnabled()) log.debug("Set RDF edit old line number begin property");
+                        writer.triple(RdfCommitUtils.createEditOldLinenumberBeginProperty(editNode, oldLinenumberBegin));
+
+                        if (log.isDebugEnabled()) log.debug("Set RDF edit new line number begin property");
+                        writer.triple(RdfCommitUtils.createEditNewLinenumberBeginProperty(editNode, newLinenumberBegin));
+
+                        if (log.isDebugEnabled()) log.debug("Set RDF edit old line number end property");
+                        writer.triple(RdfCommitUtils.createEditOldLinenumberEndProperty(editNode, oldLinenumberEnd));
+
+                        if (log.isDebugEnabled()) log.debug("Set RDF edit new line number end property");
+                        writer.triple(RdfCommitUtils.createEditNewLinenumberEndProperty(editNode, newLinenumberEnd));
+                    }
+                }
+            }
+        }
+
     }
 
     // See: https://stackoverflow.com/q/19941597/11341498
