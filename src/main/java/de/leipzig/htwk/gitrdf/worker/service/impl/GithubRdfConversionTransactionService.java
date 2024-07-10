@@ -6,6 +6,7 @@ import de.leipzig.htwk.gitrdf.database.common.entity.GithubRepositoryOrderEntity
 import de.leipzig.htwk.gitrdf.database.common.entity.enums.GitRepositoryOrderStatus;
 import de.leipzig.htwk.gitrdf.database.common.entity.lob.GithubRepositoryOrderEntityLobs;
 import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
+import de.leipzig.htwk.gitrdf.worker.model.CommitBranchCalculator;
 import de.leipzig.htwk.gitrdf.worker.model.GithubHandle;
 import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
@@ -375,6 +376,12 @@ public class GithubRdfConversionTransactionService {
             Iterable<Ref> branches = gitHandler.branchList().setListMode(ListBranchCommand.ListMode.ALL).call();
             RevWalk revWalk = new RevWalk(gitRepository);
 
+            CommitBranchCalculator commitBranchCalculator = null;
+            if (gitCommitRepositoryFilter.isEnableCommitBranch()) {
+                log.info("Start constructing commit branch calculator");
+                commitBranchCalculator = new CommitBranchCalculator(branches, revWalk);
+            }
+
             log.info("Start conversion run of '{}' repository", repositoryName);
 
             StopWatch commitConversionWatch = new StopWatch();
@@ -490,7 +497,8 @@ public class GithubRdfConversionTransactionService {
                     // Branch
                     // TODO: better way to handle merges? (so commit could have multiple branches)
                     if(gitCommitRepositoryFilter.isEnableCommitBranch()) {
-                        calculateCommitBranch(branches, revWalk, writer, commit, commitUri);
+                        calculateCommitBranch(commitBranchCalculator, writer, commit, commitUri);
+                        // calculateCommitBranch(branches, revWalk, writer, commit, commitUri);
                     }
 
                     // Commit Diffs
@@ -846,12 +854,35 @@ public class GithubRdfConversionTransactionService {
         writer.triple(RdfCommitUtils.createAuthorEmailProperty(commitUri, email));
     }
 
+    /**
+     * New.
+     */
+    private void calculateCommitBranch(
+            CommitBranchCalculator commitBranchCalculator,
+            StreamRDF writer,
+            RevCommit currentCommit,
+            String commitUri) {
+
+        String commitHash = currentCommit.getName();
+
+        List<String> branches = commitBranchCalculator.getBranchesForShaHashOfCommit(commitHash);
+
+        for (String branchName : branches) {
+            writer.triple(RdfCommitUtils.createCommitBranchNameProperty(commitUri, branchName));
+        }
+
+    }
+
+    /**
+     * Old.
+     */
     private void calculateCommitBranch(
             Iterable<Ref> branches,
             RevWalk gitRepositoryRevWalk,
             StreamRDF writer,
             RevCommit currentCommit,
             String commitUri) throws IOException {
+
 
         for (Ref branchRef : branches) {
 
@@ -862,6 +893,7 @@ public class GithubRdfConversionTransactionService {
                 writer.triple(RdfCommitUtils.createCommitBranchNameProperty(commitUri, branchRef.getName()));
             }
         }
+
 
     }
 
