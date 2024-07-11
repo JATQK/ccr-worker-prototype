@@ -4,13 +4,13 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
+import de.leipzig.htwk.gitrdf.worker.config.GithubRateLimitHandlerExceptionAdvice;
 import de.leipzig.htwk.gitrdf.worker.model.GithubHandle;
 import io.jsonwebtoken.Jwts;
 import lombok.Getter;
-import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubBuilder;
-import org.springframework.beans.factory.annotation.Value;
+import org.kohsuke.github.RateLimitChecker;
 import org.springframework.stereotype.Service;
 
 import java.beans.ConstructorProperties;
@@ -23,7 +23,8 @@ import java.net.http.HttpResponse;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.spec.*;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -93,7 +94,11 @@ public class GithubHandlerService {
 
         String installationAccessToken = getInstallationAccessToken(signedJwt);
 
-        return new GitHubBuilder().withAppInstallationToken(installationAccessToken).build();
+        return new GitHubBuilder()
+                .withAppInstallationToken(installationAccessToken)
+                .withRateLimitChecker(new RateLimitChecker.LiteralValue(githubConfig.getRateLimitRequestsLeftBorder()))
+                .withRateLimitHandler(new GithubRateLimitHandlerExceptionAdvice())
+                .build();
     }
 
     private Date getDateOneMinuteInThePast() {

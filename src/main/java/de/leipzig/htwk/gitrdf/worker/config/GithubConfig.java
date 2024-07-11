@@ -20,6 +20,8 @@ public class GithubConfig {
 
     private final String githubSystemUserPersonalAccessToken;
 
+    private final int rateLimitRequestsLeftBorder;
+
     private static final IllegalArgumentException NoGithubPrivateKeyGiven = new IllegalArgumentException(
             "No github private pem key was specified for application startup. " +
                     "Specifying a github private pem key is mandatory for application startup. " +
@@ -64,7 +66,8 @@ public class GithubConfig {
             @Value("${github.login.app.id}") String githubAppId,
             @Value("${github.login.app.installation.id}") String githubAppInstallationId,
             @Value("${github.login.system.user.name}") String githubSystemUserName,
-            @Value("${github.login.system.user.personal-access-token}") String githubSystemUserPersonalAccessToken) {
+            @Value("${github.login.system.user.personal-access-token}") String githubSystemUserPersonalAccessToken,
+            @Value("${github.rate-limit.requests-left-border}") int rateLimitRequestLeftBorder) {
 
         if (StringUtils.isBlank(pemPrivateBase64Key)) throw NoGithubPrivateKeyGiven;
         if (StringUtils.isBlank(githubAppInstallationId)) throw NoGithubAppInstallationIdGiven;
@@ -77,6 +80,7 @@ public class GithubConfig {
         this.githubAppInstallationId = githubAppInstallationId;
         this.githubSystemUserName = githubSystemUserName;
         this.githubSystemUserPersonalAccessToken = githubSystemUserPersonalAccessToken;
+        this.rateLimitRequestsLeftBorder = rateLimitRequestLeftBorder;
     }
 
 }
