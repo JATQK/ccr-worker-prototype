@@ -116,7 +116,7 @@ public class RdfScheduler {
                     gitRdfConversionService.performGitRepoToRdfConversion(entity.getId());
 
                 } catch (Exception ex) {
-                    log.warn("Exception during .git repository to rdf conversion. Error is {}", ex, ex);
+                    log.warn("Exception during .git repository to rdf conversion. Error is {}", ex.getMessage(), ex);
                 } finally {
                     runPerformed = true;
                     lock.unlock();
@@ -187,7 +187,7 @@ public class RdfScheduler {
                     timeLog.printTimes();
 
                 } catch (Exception ex) {
-                    log.warn("Exception during .git repository to rdf conversion. Error is {}", ex, ex);
+                    log.warn("Exception during .git repository to rdf conversion. Error is {}", ex.getMessage(), ex);
                 } finally {
                     runPerformed = true;
                     lock.unlock();

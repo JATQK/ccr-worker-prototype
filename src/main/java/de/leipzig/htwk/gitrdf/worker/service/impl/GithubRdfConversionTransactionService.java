@@ -5,8 +5,9 @@ import de.leipzig.htwk.gitrdf.database.common.entity.GithubIssueRepositoryFilter
 import de.leipzig.htwk.gitrdf.database.common.entity.GithubRepositoryOrderEntity;
 import de.leipzig.htwk.gitrdf.database.common.entity.enums.GitRepositoryOrderStatus;
 import de.leipzig.htwk.gitrdf.database.common.entity.lob.GithubRepositoryOrderEntityLobs;
-import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
+import de.leipzig.htwk.gitrdf.worker.calculator.BranchSnapshotCalculator;
 import de.leipzig.htwk.gitrdf.worker.calculator.CommitBranchCalculator;
+import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
 import de.leipzig.htwk.gitrdf.worker.model.GithubHandle;
 import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
@@ -23,23 +24,20 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.StreamRDF;
 import org.apache.jena.riot.system.StreamRDFWriter;
-import org.eclipse.jgit.api.BlameCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.blame.BlameResult;
-import org.eclipse.jgit.diff.*;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.ObjectReader;
-import org.eclipse.jgit.lib.Ref;
-import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.diff.DiffEntry;
+import org.eclipse.jgit.diff.DiffFormatter;
+import org.eclipse.jgit.diff.Edit;
+import org.eclipse.jgit.diff.EditList;
+import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
-import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.hibernate.engine.jdbc.BlobProxy;
 import org.kohsuke.github.*;
@@ -416,6 +414,31 @@ public class GithubRdfConversionTransactionService {
                     ObjectId commitId = commit.getId();
                     String gitHash = commitId.name();
 
+                    PersonIdent authorIdent = null;
+                    PersonIdent committerIdent = null;
+
+                    try {
+
+                        authorIdent = commit.getAuthorIdent();
+
+                    } catch (RuntimeException ex) {
+
+                        log.warn("Error while trying to identify the author for the git commit '{}'. " +
+                                "Skipping author email and name entry. Error is '{}'", gitHash, ex.getMessage(), ex);
+
+                    }
+
+                    try {
+
+                        committerIdent = commit.getCommitterIdent();
+
+                    } catch (RuntimeException ex) {
+
+                        log.warn("Error while trying to identify the committer for the git commit '{}'. " +
+                                "Skipping committer email and name entry. Error is '{}'", gitHash, ex.getMessage(), ex);
+
+                    }
+
                     String commitUri = getGithubCommitUri(owner, repositoryName, gitHash);
                     //String commitUri = GIT_NAMESPACE + ":GitCommit";
 
@@ -433,13 +456,13 @@ public class GithubRdfConversionTransactionService {
 
                     if (gitCommitRepositoryFilter.isEnableAuthorEmail()) {
                         calculateAuthorEmail( // Also brings github identifier into rdf
-                                commit, uniqueGitCommiterWithHash, writer, commitUri, gitHash, githubRepositoryHandle);
+                                authorIdent, uniqueGitCommiterWithHash, writer, commitUri, gitHash, githubRepositoryHandle);
                     }
 
                     if (log.isDebugEnabled()) log.debug("Set RDF author name");
 
                     if (gitCommitRepositoryFilter.isEnableAuthorName()) {
-                        writer.triple(RdfCommitUtils.createAuthorNameProperty(commitUri, commit.getAuthorIdent().getName()));
+                        calculateAuthorName(writer, commitUri, authorIdent);
                     }
 
 
@@ -466,13 +489,13 @@ public class GithubRdfConversionTransactionService {
                     if (log.isDebugEnabled()) log.debug("Set RDF committer name");
 
                     if (gitCommitRepositoryFilter.isEnableCommitterName()) {
-                        writer.triple(RdfCommitUtils.createCommitterNameProperty(commitUri, commit.getCommitterIdent().getName()));
+                        calculateCommitterName(writer, commitUri, committerIdent);
                     }
 
                     if (log.isDebugEnabled()) log.debug("Set RDF committer email");
 
                     if (gitCommitRepositoryFilter.isEnableCommitterEmail()) {
-                        writer.triple(RdfCommitUtils.createCommitterEmailProperty(commitUri, commit.getCommitterIdent().getEmailAddress()));
+                        calculateCommitterEmail(writer, commitUri, committerIdent);
                     }
 
                     if (log.isDebugEnabled()) log.debug("Set RDF commit message for commit with hash '{}'", gitHash);
@@ -526,15 +549,22 @@ public class GithubRdfConversionTransactionService {
             // branch-snapshot
             // TODO: rename to 'blame'?
 
-            // TODO (ccr): Refactor a little bit -> bring it into its own separate method
-
             StopWatch branchSnapshottingWatch = new StopWatch();
 
             branchSnapshottingWatch.start();
 
             if (gitCommitRepositoryFilter.isEnableBranchSnapshot() ) {
+
                 log.info("Start branch snapshotting");
-                calculateBranchSnapshot(writer, gitRepository, repositoryName, owner);
+
+                ObjectId headCommitId = gitRepository.resolve("HEAD");
+
+                BranchSnapshotCalculator branchSnapshotCalculator = new BranchSnapshotCalculator(
+                        writer,
+                        gitRepository,
+                        getGithubCommitUri(owner, repositoryName, headCommitId.getName()));
+
+                branchSnapshotCalculator.calculateBranchSnapshot();
             }
 
             branchSnapshottingWatch.stop();
@@ -681,14 +711,18 @@ public class GithubRdfConversionTransactionService {
     }
 
     private void calculateAuthorEmail(
-            RevCommit commit,
+            PersonIdent authorIdent,
             Map<String, RdfGitCommitUserUtils> uniqueGitCommiterWithHash,
             StreamRDF writer,
             String commitUri,
             String gitHash,
             GHRepository githubRepositoryHandle) {
 
-        String email = commit.getAuthorIdent().getEmailAddress();
+        if (authorIdent == null) {
+            return;
+        }
+
+        String email = authorIdent.getEmailAddress();
 
         if (log.isDebugEnabled()) log.debug("Set rdf github user in commit");
 
@@ -720,6 +754,33 @@ public class GithubRdfConversionTransactionService {
         if (log.isDebugEnabled()) log.debug("Set RDF author email property");
 
         writer.triple(RdfCommitUtils.createAuthorEmailProperty(commitUri, email));
+    }
+
+    private void calculateAuthorName(StreamRDF writer, String commitUri, PersonIdent authorIdent) {
+
+        if (authorIdent == null) {
+            return;
+        }
+
+        writer.triple(RdfCommitUtils.createAuthorNameProperty(commitUri, authorIdent.getName()));
+    }
+
+    private void calculateCommitterName(StreamRDF writer, String commitUri, PersonIdent committerIdent) {
+
+        if (committerIdent == null) {
+            return;
+        }
+
+        writer.triple(RdfCommitUtils.createCommitterNameProperty(commitUri, committerIdent.getName()));
+    }
+
+    private void calculateCommitterEmail(StreamRDF writer, String commitUri, PersonIdent committerIdent) {
+
+        if (committerIdent == null) {
+            return;
+        }
+
+        writer.triple(RdfCommitUtils.createCommitterEmailProperty(commitUri, committerIdent.getEmailAddress()));
     }
 
     private void calculateCommitBranch(
@@ -860,163 +921,6 @@ public class GithubRdfConversionTransactionService {
             }
         }
 
-    }
-
-    private void calculateBranchSnapshot(
-            StreamRDF writer,
-            Repository gitRepository,
-            String repositoryName,
-            String owner) throws IOException {
-
-        writer.start();
-
-        ObjectId headCommitId = gitRepository.resolve("HEAD");
-        String commitUri = getGithubCommitUri(owner, repositoryName, headCommitId.getName());
-
-        String branchSnapshotUri = commitUri;
-        //String branchSnapshotUri = GIT_NS + ":blame";
-        //String branchSnapshotUri = "";
-
-        Resource branchSnapshotResource = ResourceFactory.createResource(branchSnapshotUri);
-        Node branchSnapshotNode = branchSnapshotResource.asNode();
-
-        writer.triple(RdfCommitUtils.createBranchSnapshotProperty(branchSnapshotNode));
-        writer.triple(RdfCommitUtils.createBranchSnapshotDateProperty(branchSnapshotNode, LocalDateTime.now()));
-
-        writer.finish();
-
-        List<String> fileNames = listRepositoryContents(gitRepository);
-
-        log.info("Listed {} files for branch snapshotting", fileNames.size());
-
-        int branchSnapshotCounter = 0;
-
-        for (int ii = 0; ii < fileNames.size(); ii++) {
-
-            if (branchSnapshotCounter < 1) {
-                log.info("Branch Snapshotting iteration {} started", ii);
-                writer.start();
-            }
-
-            branchSnapshotCounter++;
-
-            String fileName = fileNames.get(ii);
-
-            Resource branchSnapshotFileResource = ResourceFactory.createResource();
-            Node branchSnapshotFileNode = branchSnapshotFileResource.asNode();
-
-            writer.triple(RdfCommitUtils.createBranchSnapshotFileEntryProperty(branchSnapshotNode, branchSnapshotFileNode));
-            writer.triple(RdfCommitUtils.createBranchSnapshotFilenameProperty(branchSnapshotFileNode, fileName));
-
-            BlameCommand blameCommand = new BlameCommand(gitRepository);
-            blameCommand.setFilePath(fileName);
-            BlameResult blameResult;
-
-            try {
-                blameResult = blameCommand
-                        .setTextComparator(RawTextComparator.WS_IGNORE_ALL) // Equivalent to -w command line option
-                        .setFilePath(fileName).call();
-            } catch (Exception e) {
-                throw new IllegalStateException("Unable to blame file " + fileName, e);
-            }
-
-            if (blameResult == null) {
-                continue;
-            }
-
-            HashMap<String,List<Integer>> commitLineMap = new HashMap<>();
-
-            String prevCommitHash = null;
-            int linenumberBegin = 1;
-
-            RawText blameText = blameResult.getResultContents();
-            int lineCount = blameText.size();
-
-            for (int lineIdx = 0; lineIdx < lineCount; lineIdx++) {
-
-                RevCommit commit = blameResult.getSourceCommit(lineIdx);
-
-                if (commit == null) {
-                    continue;
-                }
-
-                String currentCommitHash = commit.getId().name();
-
-                if (prevCommitHash == null) {
-                    prevCommitHash = currentCommitHash;
-                }
-
-                boolean isAtEnd = lineIdx == lineCount - 1;
-                boolean isNewCommit = !currentCommitHash.equals(prevCommitHash);
-
-                if (isNewCommit || isAtEnd) {
-
-                    Resource branchSnapshotLineEntryResource = ResourceFactory.createResource();
-                    Node branchSnapshotLineEntryNode = branchSnapshotLineEntryResource.asNode();
-
-                    int lineNumberEnd = lineIdx;
-
-                    if (isAtEnd) {
-
-                        lineNumberEnd += 1;
-
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, prevCommitHash));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, linenumberBegin));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
-
-                        if (isNewCommit) {
-
-                            writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
-                            writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, currentCommitHash));
-                            writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, lineNumberEnd));
-                            writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
-                        }
-                    }
-
-                    if (isNewCommit) {
-
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, prevCommitHash));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, linenumberBegin));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
-
-                        prevCommitHash = currentCommitHash;
-                    }
-
-                    linenumberBegin = lineIdx + 1;
-                }
-            }
-
-            if (branchSnapshotCounter > 99) {
-                writer.finish();
-                branchSnapshotCounter = 0;
-            }
-
-        }
-
-        if (branchSnapshotCounter > 0) {
-            writer.finish();
-        }
-
-    }
-
-    // See: https://stackoverflow.com/q/19941597/11341498
-    private List<String> listRepositoryContents(Repository repository) throws IOException {
-
-        Ref head = repository.getRef("HEAD");
-        RevWalk walk = new RevWalk(repository);
-        RevCommit commit = walk.parseCommit(head.getObjectId());
-        TreeWalk treeWalk = new TreeWalk(repository);
-        treeWalk.addTree(commit.getTree());
-        treeWalk.setRecursive(true);
-        List<String> fileNames = new ArrayList<String>();
-
-        while (treeWalk.next()) {
-            fileNames.add(treeWalk.getPathString());
-        }
-
-        return fileNames;
     }
 
     private void writeLabelCollectionAsTriplesToIssue(
