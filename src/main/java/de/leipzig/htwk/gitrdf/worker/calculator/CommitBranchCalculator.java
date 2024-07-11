@@ -1,4 +1,4 @@
-package de.leipzig.htwk.gitrdf.worker.model;
+package de.leipzig.htwk.gitrdf.worker.calculator;
 
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.revwalk.RevCommit;
