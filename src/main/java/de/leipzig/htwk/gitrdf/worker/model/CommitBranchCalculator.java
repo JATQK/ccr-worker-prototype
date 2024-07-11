@@ -28,6 +28,7 @@ public class CommitBranchCalculator {
             RevCommit branchTipCommit = gitRepositoryRevWalk.lookupCommit(branchRef.getObjectId());
             String branchName = branchRef.getName();
 
+            gitRepositoryRevWalk.reset();
             gitRepositoryRevWalk.markStart(branchTipCommit);
 
             RevCommit commit = null;
@@ -35,11 +36,6 @@ public class CommitBranchCalculator {
             while ((commit = gitRepositoryRevWalk.next()) != null) {
                 updateCommitWithBranch(commit, branchName);
             }
-
-            // TODO: Look into the isMergedInto Method of RevWalk -> basically copy the logic, but: dont compare, instead traverse
-            //  through entire graph and fill up hashmap
-            // TODO (ccr): Continue here
-
 
         }
 
@@ -65,27 +61,3 @@ public class CommitBranchCalculator {
     }
 
 }
-
-/**
- *
- *
- *
- private void calculateCommitBranch(
- Iterable<Ref> branches,
- RevWalk gitRepositoryRevWalk,
- StreamRDF writer,
- RevCommit currentCommit,
- String commitUri) throws IOException {
-
- for (Ref branchRef : branches) {
-
- RevCommit commitRev = gitRepositoryRevWalk.lookupCommit(currentCommit.getId());
- RevCommit branchRev = gitRepositoryRevWalk.lookupCommit(branchRef.getObjectId());
-
- if (gitRepositoryRevWalk.isMergedInto(commitRev, branchRev)) {
- writer.triple(RdfCommitUtils.createCommitBranchNameProperty(commitUri, branchRef.getName()));
- }
- }
-
- }
- */

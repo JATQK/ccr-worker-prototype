@@ -483,11 +483,6 @@ public class GithubRdfConversionTransactionService {
 
                     if (gitCommitRepositoryFilter.isEnableCommitMessage()) {
                         writer.triple(RdfCommitUtils.createCommitMessageProperty(commitUri, commit.getFullMessage()));
-                        //writer.triple(RdfCommitUtils.createCommitMessageProperty(commitUri, commit.getShortMessage()));
-                        // TODO (ccr): If this fastens things up: Erweitere den Filter und lass standardmäßig nur die Short-Message produzieren
-                        //  -> Filter kann dann auf full message im Zweifel gesetzt werden
-                        //  -> scheint nicht gewünschte beschleunigung zu bringen
-                        // TODO (ccr): Falls das auch beschleunigt -> schnellere Alternative zu Hashmap für Usernames -> es gibt nichts wirklich schnelleres
                     }
 
                     // No possible solution found yet for merge commits -> maybe traverse to parent? Maybe both
@@ -498,7 +493,6 @@ public class GithubRdfConversionTransactionService {
                     // TODO: better way to handle merges? (so commit could have multiple branches)
                     if(gitCommitRepositoryFilter.isEnableCommitBranch()) {
                         calculateCommitBranch(commitBranchCalculator, writer, commit, commitUri);
-                        // calculateCommitBranch(branches, revWalk, writer, commit, commitUri);
                     }
 
                     // Commit Diffs
@@ -854,9 +848,6 @@ public class GithubRdfConversionTransactionService {
         writer.triple(RdfCommitUtils.createAuthorEmailProperty(commitUri, email));
     }
 
-    /**
-     * New.
-     */
     private void calculateCommitBranch(
             CommitBranchCalculator commitBranchCalculator,
             StreamRDF writer,
@@ -870,30 +861,6 @@ public class GithubRdfConversionTransactionService {
         for (String branchName : branches) {
             writer.triple(RdfCommitUtils.createCommitBranchNameProperty(commitUri, branchName));
         }
-
-    }
-
-    /**
-     * Old.
-     */
-    private void calculateCommitBranch(
-            Iterable<Ref> branches,
-            RevWalk gitRepositoryRevWalk,
-            StreamRDF writer,
-            RevCommit currentCommit,
-            String commitUri) throws IOException {
-
-
-        for (Ref branchRef : branches) {
-
-            RevCommit commitRev = gitRepositoryRevWalk.lookupCommit(currentCommit.getId());
-            RevCommit branchRev = gitRepositoryRevWalk.lookupCommit(branchRef.getObjectId());
-
-            if (gitRepositoryRevWalk.isMergedInto(commitRev, branchRev)) {
-                writer.triple(RdfCommitUtils.createCommitBranchNameProperty(commitUri, branchRef.getName()));
-            }
-        }
-
 
     }
 
