@@ -45,7 +45,7 @@ github:
         name: ${GITHUB_LOGIN_SYSTEM_USER_NAME}
         personal-access-token: ${GITHUB_LOGIN_SYSTEM_USER_PERSONALACCESSTOKEN}
   rate-limit:
-    requests-left-border: 100 # At this amount of requests left the application will start waiting for the rate limit to reset
+    requests-left-border: 50 # At this amount of requests left the application will start waiting for the rate limit to reset
 
 server:
   port: 28099
