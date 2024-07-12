@@ -47,6 +47,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
 import java.net.URISyntaxException;
+import java.nio.charset.IllegalCharsetNameException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -501,7 +502,7 @@ public class GithubRdfConversionTransactionService {
                     if (log.isDebugEnabled()) log.debug("Set RDF commit message for commit with hash '{}'", gitHash);
 
                     if (gitCommitRepositoryFilter.isEnableCommitMessage()) {
-                        writer.triple(RdfCommitUtils.createCommitMessageProperty(commitUri, commit.getFullMessage()));
+                        calculateCommitMessage(writer, commitUri, commit);
                     }
 
                     // No possible solution found yet for merge commits -> maybe traverse to parent? Maybe both
@@ -549,11 +550,12 @@ public class GithubRdfConversionTransactionService {
             // branch-snapshot
             // TODO: rename to 'blame'?
 
-            StopWatch branchSnapshottingWatch = new StopWatch();
-
-            branchSnapshottingWatch.start();
 
             if (gitCommitRepositoryFilter.isEnableBranchSnapshot() ) {
+
+                StopWatch branchSnapshottingWatch = new StopWatch();
+
+                branchSnapshottingWatch.start();
 
                 log.info("Start branch snapshotting");
 
@@ -565,11 +567,16 @@ public class GithubRdfConversionTransactionService {
                         getGithubCommitUri(owner, repositoryName, headCommitId.getName()));
 
                 branchSnapshotCalculator.calculateBranchSnapshot();
+
+                branchSnapshottingWatch.stop();
+
+                timeLog.setGitBranchSnapshottingTime(branchSnapshottingWatch.getTime());
+            } else {
+
+                timeLog.setGitBranchSnapshottingTime(0L);
+
             }
 
-            branchSnapshottingWatch.stop();
-
-            timeLog.setGitBranchSnapshottingTime(branchSnapshottingWatch.getTime());
 
             // issues
 
@@ -772,6 +779,25 @@ public class GithubRdfConversionTransactionService {
         }
 
         writer.triple(RdfCommitUtils.createCommitterNameProperty(commitUri, committerIdent.getName()));
+    }
+
+    private void calculateCommitMessage(StreamRDF writer, String commitUri, RevCommit commit) {
+
+        try {
+
+            writer.triple(RdfCommitUtils.createCommitMessageProperty(commitUri, commit.getFullMessage()));
+
+        } catch (IllegalCharsetNameException ex) {
+
+            log.warn("Skipping commit message for commit with hash '{}'. " +
+                    "Error occurred regarding an illegal charset. " +
+                    "Error is '{}'",
+                    commit.getName(),
+                    ex.getMessage(),
+                    ex);
+
+        }
+
     }
 
     private void calculateCommitterEmail(StreamRDF writer, String commitUri, PersonIdent committerIdent) {
