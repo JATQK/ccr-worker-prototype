@@ -105,7 +105,7 @@ public class GithubRdfConversionTransactionService {
     public InputStream performGithubRepoToRdfConversionAndReturnCloseableInputStream(
             long id, File rdfTempFile) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
 
-        GithubHandle gitHubHandle = githubHandlerService.getGithubHandle();
+        GitHub githubHandle = githubHandlerService.getGithub();
 
         // du kriegst die .git nicht als Teil der Zip ->
         //gitHubHandle.getRepository("").listCommits()
@@ -119,7 +119,7 @@ public class GithubRdfConversionTransactionService {
         String owner = githubRepositoryOrderEntity.getOwnerName();
         String repo = githubRepositoryOrderEntity.getRepositoryName();
 
-        GHRepository targetRepo = getGithubRepositoryHandle(owner, repo, gitHubHandle.getGitHubHandle());
+        GHRepository targetRepo = getGithubRepositoryHandle(owner, repo, githubHandle);
 
         File gitFile = getDotGitFileFromGithubRepositoryHandle(targetRepo, id, owner, repo);
 
@@ -348,11 +348,12 @@ public class GithubRdfConversionTransactionService {
         Map<String, RdfGitCommitUserUtils> uniqueGitCommiterWithHash = new HashMap<>();
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(rdfTempFile))) {
 
-            GithubHandle githubHandle = githubHandlerService.getGithubHandle();
+            //GithubHandle githubHandle = githubHandlerService.getGithubHandle();
+            GitHub gitHubHandle = githubHandlerService.getGithub();
 
             String githubRepositoryName = String.format("%s/%s", owner, repositoryName);
 
-            GHRepository githubRepositoryHandle = githubHandle.getGitHubHandle().getRepository(githubRepositoryName);
+            GHRepository githubRepositoryHandle = gitHubHandle.getRepository(githubRepositoryName);
             // See: https://jena.apache.org/documentation/io/rdf-output.html#streamed-block-formats
             StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE_BLOCKS);
 
@@ -389,10 +390,6 @@ public class GithubRdfConversionTransactionService {
                 log.info("Start iterations of git commits. Current iteration count: {}", iteration);
 
                 if (log.isDebugEnabled()) log.debug("Check whether github installation token needs refresh");
-
-                if (githubHandle.refreshGithubHandleOnEmergingExpiring()) {
-                    githubRepositoryHandle = githubHandle.getGitHubHandle().getRepository(githubRepositoryName);
-                }
 
                 int skipCount = calculateSkipCountAndThrowExceptionIfIntegerOverflowIsImminent(iteration, commitsPerIteration);
 
@@ -587,10 +584,10 @@ public class GithubRdfConversionTransactionService {
             if (githubIssueRepositoryFilter.doesContainAtLeastOneEnabledFilterOption()) {
 
                 // request new github handle, so that we prevent installation token expiration during the process
-                GithubHandle githubIssueHandle = githubHandlerService.getGithubHandle();
-                GHRepository githubRepositoryIssueHandle = githubIssueHandle.getGitHubHandle().getRepository(githubRepositoryName);
+                //GithubHandle githubIssueHandle = githubHandlerService.getGithubHandle();
+                //GHRepository githubRepositoryIssueHandle = githubIssueHandle.getGitHubHandle().getRepository(githubRepositoryName);
 
-                if (githubRepositoryIssueHandle.hasIssues()) {
+                if (githubRepositoryHandle.hasIssues()) {
 
                     //githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()
 
@@ -600,7 +597,7 @@ public class GithubRdfConversionTransactionService {
 
                     boolean doesWriterContainNonWrittenRdfStreamElements = false;
 
-                    for (GHIssue ghIssue : githubRepositoryIssueHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()) {
+                    for (GHIssue ghIssue : githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()) {
 
                         if (issueCounter < 1) {
                             log.info("Start issue rdf conversion batch");
