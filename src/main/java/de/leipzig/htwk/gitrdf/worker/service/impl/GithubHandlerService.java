@@ -4,9 +4,9 @@ import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
 import de.leipzig.htwk.gitrdf.worker.config.GithubRateLimitHandlerExceptionAdvice;
 import de.leipzig.htwk.gitrdf.worker.provider.GithubAppInstallationProvider;
 import de.leipzig.htwk.gitrdf.worker.provider.GithubJwtTokenProvider;
+import de.leipzig.htwk.gitrdf.worker.ratelimit.TimeMeasurementRateLimitChecker;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubBuilder;
-import org.kohsuke.github.RateLimitChecker;
 import org.kohsuke.github.authorization.AppInstallationAuthorizationProvider;
 import org.springframework.stereotype.Service;
 
@@ -36,9 +36,12 @@ public class GithubHandlerService {
         AppInstallationAuthorizationProvider appInstallationAuthorizationProvider
                 = new AppInstallationAuthorizationProvider(this.githubAppInstallationProvider, this.githubJwtTokenProvider);
 
+        TimeMeasurementRateLimitChecker rateLimitChecker
+                = new TimeMeasurementRateLimitChecker(githubConfig.getRateLimitRequestsLeftBorder());
+
         return new GitHubBuilder()
                 .withAuthorizationProvider(appInstallationAuthorizationProvider)
-                .withRateLimitChecker(new RateLimitChecker.LiteralValue(githubConfig.getRateLimitRequestsLeftBorder()))
+                .withRateLimitChecker(rateLimitChecker)
                 .withRateLimitHandler(new GithubRateLimitHandlerExceptionAdvice())
                 .build();
     }

@@ -1,12 +1,10 @@
 package de.leipzig.htwk.gitrdf.worker.timemeasurement;
 
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Data
-@NoArgsConstructor
 public class TimeLog {
     private String identifier;
     private long downloadTime;
@@ -15,6 +13,17 @@ public class TimeLog {
     private long githubIssueConversionTime;
     private long conversionTime;
     private long totalTime;
+
+    public TimeLog() {
+
+        this.identifier = "Not set";
+        this.downloadTime = 0;
+        this.gitCommitConversionTime = 0;
+        this.gitBranchSnapshottingTime = 0;
+        this.githubIssueConversionTime = 0;
+        this.conversionTime = 0;
+        this.totalTime = 0;
+    }
 
     public void printTimes() {
 
