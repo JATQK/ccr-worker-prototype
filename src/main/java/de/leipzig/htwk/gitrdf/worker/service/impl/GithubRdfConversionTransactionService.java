@@ -8,7 +8,6 @@ import de.leipzig.htwk.gitrdf.database.common.entity.lob.GithubRepositoryOrderEn
 import de.leipzig.htwk.gitrdf.worker.calculator.BranchSnapshotCalculator;
 import de.leipzig.htwk.gitrdf.worker.calculator.CommitBranchCalculator;
 import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
-import de.leipzig.htwk.gitrdf.worker.model.GithubHandle;
 import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
