@@ -14,7 +14,9 @@ public class TimeLog {
     private long conversionTime;
     private long totalTime;
 
-    public TimeLog() {
+    private boolean enabled;
+
+    public TimeLog(boolean enabled) {
 
         this.identifier = "Not set";
         this.downloadTime = 0;
@@ -23,9 +25,20 @@ public class TimeLog {
         this.githubIssueConversionTime = 0;
         this.conversionTime = 0;
         this.totalTime = 0;
+
+        if (!enabled) {
+            log.info("Time measurement logging is disabled.");
+        }
+
+        this.enabled = enabled;
     }
 
     public void printTimes() {
+
+        if (!this.enabled) {
+            log.info("Time measurement logging is disabled. No time measurement output will be provided.");
+            return;
+        }
 
         log.info("Identifier for measurements is: '{}'", this.identifier);
         log.info("TIME MEASUREMENT DONE: Download time in milliseconds is: '{}'", this.downloadTime);

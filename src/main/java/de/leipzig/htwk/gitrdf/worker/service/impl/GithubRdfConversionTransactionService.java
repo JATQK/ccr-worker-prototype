@@ -123,7 +123,7 @@ public class GithubRdfConversionTransactionService {
         File gitFile = getDotGitFileFromGithubRepositoryHandle(targetRepo, id, owner, repo);
 
         InputStream needsToBeClosedOutsideOfTransaction
-                = writeRdf(gitFile, githubRepositoryOrderEntity, githubRepositoryOrderEntityLobs, rdfTempFile, new TimeLog());
+                = writeRdf(gitFile, githubRepositoryOrderEntity, githubRepositoryOrderEntityLobs, rdfTempFile, new TimeLog(false));
 
         githubRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.DONE);
 

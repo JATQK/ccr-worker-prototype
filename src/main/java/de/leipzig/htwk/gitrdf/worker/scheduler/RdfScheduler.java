@@ -167,10 +167,9 @@ public class RdfScheduler {
 
                     log.info("Start processing of '{}' repository", entity.getRepositoryName());
 
-                    TimeLog timeLog = new TimeLog();
+                    TimeLog timeLog = new TimeLog(false);
                     timeLog.setIdentifier(entity.getOwnerName() + " " + entity.getRepositoryName());
 
-                    // TODO: stop time here!?
                     StopWatch watch = new StopWatch();
                     watch.start();
 
