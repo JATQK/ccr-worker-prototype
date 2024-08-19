@@ -167,23 +167,38 @@ public class RdfScheduler {
 
                     log.info("Start processing of '{}' repository", entity.getRepositoryName());
 
-                    TimeLog timeLog = new TimeLog(false);
-                    timeLog.setIdentifier(entity.getOwnerName() + " " + entity.getRepositoryName());
+                    if (entity.getNumberOfTries() > 9) {
 
-                    StopWatch watch = new StopWatch();
-                    watch.start();
+                        log.warn("Processing of '{}' repository aborted. " +
+                                "There are already more than 9 conversion attempts. " +
+                                "Setting status to '{}'",
+                                entity.getRepositoryName(),
+                                GitRepositoryOrderStatus.FAILED);
 
-                    entity.setStatus(GitRepositoryOrderStatus.PROCESSING);
-                    entity.setNumberOfTries(entity.getNumberOfTries() + 1);
-                    githubRepositoryOrderRepository.save(entity);
+                        entity.setStatus(GitRepositoryOrderStatus.FAILED);
+                        githubRepositoryOrderRepository.save(entity);
 
-                    githubConversionService.performGithubRepoToRdfConversion(entity.getId(), timeLog);
+                    } else {
 
-                    watch.stop();
+                        TimeLog timeLog = new TimeLog(false);
+                        timeLog.setIdentifier(entity.getOwnerName() + " " + entity.getRepositoryName());
 
-                    timeLog.setTotalTime(watch.getTime());
-                    //log.info("TIME MEASUREMENT DONE: Total time in milliseconds is: '{}'", watch.getTime());
-                    timeLog.printTimes();
+                        StopWatch watch = new StopWatch();
+                        watch.start();
+
+                        entity.setStatus(GitRepositoryOrderStatus.PROCESSING);
+                        entity.setNumberOfTries(entity.getNumberOfTries() + 1);
+                        githubRepositoryOrderRepository.save(entity);
+
+                        githubConversionService.performGithubRepoToRdfConversion(entity.getId(), timeLog);
+
+                        watch.stop();
+
+                        timeLog.setTotalTime(watch.getTime());
+                        //log.info("TIME MEASUREMENT DONE: Total time in milliseconds is: '{}'", watch.getTime());
+                        timeLog.printTimes();
+
+                    }
 
                 } catch (Exception ex) {
                     log.warn("Exception during .git repository to rdf conversion. Error is {}", ex.getMessage(), ex);
