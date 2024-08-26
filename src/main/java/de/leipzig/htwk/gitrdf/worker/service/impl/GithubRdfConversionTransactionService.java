@@ -63,14 +63,14 @@ public class GithubRdfConversionTransactionService {
     // TODO: replace PURL
 
     public static final String GIT_NAMESPACE = "git";
-    public static final String GIT_URI = "https://purl.archive.org/git2rdflab-test/v1/git2RDFLab-git#";
+    public static final String GIT_URI = "https://purl.archive.org/git2rdflab/v1/git2RDFLab-git#";
 
 
     public static final String PLATFORM_NAMESPACE = "platform";
-    public static final String PLATFORM_URI = "https://purl.archive.org/git2rdflab-test/v1/git2RDFLab-platform#";
+    public static final String PLATFORM_URI = "https://purl.archive.org/git2rdflab/v1/git2RDFLab-platform#";
 
 
-    public static final String PLATFORM_GITHUB_URI = "https://purl.archive.org/git2rdflab-test/v1/git2RDFLab-platform-github#";
+    public static final String PLATFORM_GITHUB_URI = "https://purl.archive.org/git2rdflab/v1/git2RDFLab-platform-github#";
     public static final String PLATFORM_GITHUB_NAMESPACE = "github";
 
 
