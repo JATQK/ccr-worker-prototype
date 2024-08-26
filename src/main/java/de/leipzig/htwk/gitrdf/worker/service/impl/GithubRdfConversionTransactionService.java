@@ -351,6 +351,7 @@ public class GithubRdfConversionTransactionService {
             GitHub gitHubHandle = githubHandlerService.getGithub();
 
             String githubRepositoryName = String.format("%s/%s", owner, repositoryName);
+            String repositoryUri = getGithubRepositoryUri(owner, repositoryName);
 
             GHRepository githubRepositoryHandle = gitHubHandle.getRepository(githubRepositoryName);
             // See: https://jena.apache.org/documentation/io/rdf-output.html#streamed-block-formats
@@ -394,6 +395,25 @@ public class GithubRdfConversionTransactionService {
 
                 tagNames.put(tagObjectId, tag.getName());
             }
+
+            // Metadata
+
+            writer.start();
+            writer.triple(RdfCommitUtils.createRepoRdfTypeProperty(repositoryUri));
+
+            Config config = gitRepository.getConfig();
+
+            // Metadata: encoding
+            String commitEncoding = config.getString("i18n", null, "commitEncoding");
+            String defaultEncoding = "UTF-8";
+            String encoding = commitEncoding != null ? commitEncoding : defaultEncoding;
+            writer.triple(RdfCommitUtils.createEncodingProperty(repositoryUri, encoding));
+
+            log.info("Repository Metadata - Encoding: {}", encoding);
+
+            // TODO Metadata: repository owner?
+
+            writer.finish();
 
             // git commits
             for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
@@ -563,13 +583,7 @@ public class GithubRdfConversionTransactionService {
             //log.info("TIME MEASUREMENT DONE: Git-Commit conversion time in milliseconds is: '{}'", commitConversionWatch.getTime());
             timeLog.setGitCommitConversionTime(commitConversionWatch.getTime());
 
-            // Tags
-
-
-
             // Submodules
-
-            // Metadata
 
 
             // branch-snapshot
@@ -1009,6 +1023,10 @@ public class GithubRdfConversionTransactionService {
         }
 
         return (int) skips;
+    }
+
+    private String getGithubRepositoryUri(String owner, String repository) {
+        return "https://github.com/" + owner + "/" + repository + "/";
     }
 
     private String getGithubCommitBaseUri(String owner, String repository) {

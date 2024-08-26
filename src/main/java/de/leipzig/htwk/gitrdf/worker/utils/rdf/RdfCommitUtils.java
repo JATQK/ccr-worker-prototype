@@ -33,6 +33,10 @@ public final class RdfCommitUtils {
         return RdfUtils.uri("rdf:type");
     }
 
+    public static Node repoEncodingProperty() {
+        return uri(NS + "encoding");
+    }
+
     public static Node commitHashProperty() {
         //return uri("https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-aiddefSHA1aSHA-1");
         return uri(NS + "commitHash");
@@ -331,5 +335,12 @@ public final class RdfCommitUtils {
 
     // Metadata
 
+    public static Triple createRepoRdfTypeProperty(String repoUri) {
+        return Triple.create(RdfUtils.uri(repoUri), rdfTypeProperty(), RdfUtils.uri( "git:GitRepository" ));
+    }
+
+    public static Triple createEncodingProperty(String repoUri, String encoding) {
+        return Triple.create(uri(repoUri), repoEncodingProperty(), stringLiteral(encoding));
+    }
 
 }
