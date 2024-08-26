@@ -160,9 +160,19 @@ public final class RdfCommitUtils {
         return uri(NS + "branchSnapshotDate");
     }
 
+    // Tags
+
+    public static Node commitTagNameProperty() {
+        return uri(NS + "tagName");
+    }
+
+    // Submodules
+
+    // Metadata
+
 
     public static Triple createBranchSnapshotProperty(Node snapshotNode) {
-        return Triple.create(snapshotNode, rdfTypeProperty(), RdfUtils.uri( "git:BranchSnapshot" ));
+        return Triple.create(snapshotNode, rdfTypeProperty(), RdfUtils.uri( NS + "BranchSnapshot" /*"git:BranchSnapshot"*/ ));
     }
 
     public static Triple createBranchSnapshotDateProperty(Node snapshotNode, LocalDateTime dateTimeValue) {
@@ -201,8 +211,9 @@ public final class RdfCommitUtils {
         return Triple.create(snapshotLineEntryNode, branchSnapshotCommitHashProperty(), stringLiteral(commitHash));
     }
 
+    // Submodules
 
-
+    // Metadata
 
 
     public static Triple createRdfTypeProperty(String issueUri) {
@@ -309,4 +320,16 @@ public final class RdfCommitUtils {
     public static Triple createTagResource(Node tagNode, String tagName) {
         return Triple.create(tagNode, tagResource(), stringLiteral(tagName));
     }
+
+    // Tag
+
+    public static Triple createCommitTagProperty(String commitUri, String tagName) {
+        return Triple.create(uri(commitUri), commitTagNameProperty(), stringLiteral(tagName));
+    }
+
+    // Submodule
+
+    // Metadata
+
+
 }

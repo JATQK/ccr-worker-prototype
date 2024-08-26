@@ -383,6 +383,18 @@ public class GithubRdfConversionTransactionService {
 
             commitConversionWatch.start();
 
+            // Tags (annotated only)
+            List<Ref> tags = gitHandler.tagList().call();
+            Map<ObjectId,String> tagNames = new HashMap<>();
+
+            for (Ref tag : tags) {
+                ObjectId tagObjectId = tag.getObjectId();
+
+                if (tagObjectId == null) continue;
+
+                tagNames.put(tagObjectId, tag.getName());
+            }
+
             // git commits
             for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
@@ -511,6 +523,14 @@ public class GithubRdfConversionTransactionService {
                         calculateCommitBranch(commitBranchCalculator, writer, commit, commitUri);
                     }
 
+                    // Tag
+                    if(gitCommitRepositoryFilter.isEnableCommitTag()) {
+                        if (tagNames.containsKey(commitId)) {
+                            String tagName = tagNames.get(commitId);
+                            writer.triple(RdfCommitUtils.createCommitTagProperty(commitUri, tagName));
+                        }
+                    }
+
                     // Commit Diffs
                     // See: https://www.codeaffine.com/2016/06/16/jgit-diff/
                     // TODO: check if merges with more than 1 parent exist?
@@ -542,6 +562,15 @@ public class GithubRdfConversionTransactionService {
 
             //log.info("TIME MEASUREMENT DONE: Git-Commit conversion time in milliseconds is: '{}'", commitConversionWatch.getTime());
             timeLog.setGitCommitConversionTime(commitConversionWatch.getTime());
+
+            // Tags
+
+
+
+            // Submodules
+
+            // Metadata
+
 
             // branch-snapshot
             // TODO: rename to 'blame'?
