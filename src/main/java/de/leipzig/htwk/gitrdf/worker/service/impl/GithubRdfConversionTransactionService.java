@@ -30,11 +30,13 @@ import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.diff.EditList;
+import org.eclipse.jgit.errors.ConfigInvalidException;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.submodule.SubmoduleWalk;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
@@ -399,7 +401,8 @@ public class GithubRdfConversionTransactionService {
             // Metadata
 
             writer.start();
-            writer.triple(RdfCommitUtils.createRepoRdfTypeProperty(repositoryUri));
+
+            writer.triple(RdfCommitUtils.createRepositoryRdfTypeProperty(repositoryUri));
             writer.triple(RdfCommitUtils.createRepositoryOwnerProperty(repositoryUri, owner));
             writer.triple(RdfCommitUtils.createRepositoryNameProperty(repositoryUri, repositoryName));
 
@@ -413,7 +416,43 @@ public class GithubRdfConversionTransactionService {
 
             log.info("Repository Metadata - Encoding: {}", encoding);
 
+            writer.finish();
 
+            // Submodules
+
+            writer.start();
+
+            SubmoduleWalk submoduleWalk = SubmoduleWalk.forIndex(gitRepository);
+
+            while (submoduleWalk.next()) {
+
+                try {
+                    String submodulePath = submoduleWalk.getPath();
+                    String submoduleUrl = submoduleWalk.getModulesUrl();
+                    String submoduleCommitHash = submoduleWalk.getObjectId().getName();
+                    String submoduleCommitHashUri = getGithubCommitUri(owner, repositoryName, submoduleCommitHash);
+                    String submoduleRepositoryUri = getGithubRepositoryUri(owner, repositoryName);
+
+                    Resource submoduleResource = ResourceFactory.createResource();
+                    Node submoduleNode = submoduleResource.asNode();
+
+                    writer.triple(RdfCommitUtils.createRepositorySubmoduleProperty(repositoryUri, submoduleNode));
+                    writer.triple(RdfCommitUtils.createSubmoduleRdfTypeProperty(submoduleNode));
+                    writer.triple(RdfCommitUtils.createSubmodulePathProperty(submoduleNode, submodulePath));
+                    writer.triple(RdfCommitUtils.createSubmoduleUrlProperty(submoduleNode, submoduleUrl));
+                    writer.triple(RdfCommitUtils.createSubmoduleCommitProperty(submoduleNode, submoduleCommitHash));
+                    writer.triple(RdfCommitUtils.createSubmoduleCommitEntryProperty(submoduleNode, submoduleCommitHashUri));
+                    writer.triple(RdfCommitUtils.createSubmoduleRepositoryEntryProperty(submoduleNode, submoduleRepositoryUri));
+
+                    log.info("Submodule: path: {} url: {} commit-hash: {}", submodulePath, submoduleUrl, submoduleCommitHash);
+                }
+                catch (ConfigInvalidException e) {
+                    log.info("Submodule Invalid Config Error: {}", e.getMessage());
+                }
+                catch (Exception e) {
+                    log.info("Submodule Error: {}", e.getMessage());
+                }
+            }
 
             writer.finish();
 

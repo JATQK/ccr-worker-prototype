@@ -45,6 +45,10 @@ public final class RdfCommitUtils {
         return uri(NS + "encoding");
     }
 
+    private static Node rdfSubmoduleProperty() {
+        return uri(NS + "submodule");
+    }
+
     public static Node commitHashProperty() {
         //return uri("https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-aiddefSHA1aSHA-1");
         return uri(NS + "commitHash");
@@ -339,11 +343,9 @@ public final class RdfCommitUtils {
         return Triple.create(uri(commitUri), commitTagNameProperty(), stringLiteral(tagName));
     }
 
-    // Submodule
-
     // Metadata
 
-    public static Triple createRepoRdfTypeProperty(String repoUri) {
+    public static Triple createRepositoryRdfTypeProperty(String repoUri) {
         return Triple.create(RdfUtils.uri(repoUri), rdfTypeProperty(), RdfUtils.uri( "git:GitRepository" ));
     }
 
@@ -357,6 +359,60 @@ public final class RdfCommitUtils {
 
     public static Triple createRepositoryNameProperty(String repoUri, String repositoryName) {
         return Triple.create(uri(repoUri), repositoryNameProperty(), stringLiteral(repositoryName));
+    }
+
+    // Submodule
+
+    public static Triple createRepositorySubmoduleProperty(String repoUri, Node submoduleNode) {
+        return Triple.create(uri(repoUri), rdfSubmoduleProperty(), submoduleNode);
+    }
+
+    public static Triple createSubmoduleRdfTypeProperty(Node submoduleNode) {
+        return Triple.create(submoduleNode, rdfTypeProperty(), RdfUtils.uri( "git:Submodule" ));
+    }
+
+    public static Triple createSubmoduleNameProperty(Node submoduleNode, String name) {
+        return Triple.create(submoduleNode, rdfSubmoduleNameProperty(), stringLiteral(name));
+    }
+
+    public static Triple createSubmodulePathProperty(Node submoduleNode, String pathName) {
+        return Triple.create(submoduleNode, rdfSubmodulePathProperty(), stringLiteral(pathName));
+    }
+
+    public static Triple createSubmoduleUrlProperty(Node submoduleNode, String submoduleUrl) {
+        return Triple.create(submoduleNode, rdfSubmoduleUrlProperty(), stringLiteral(submoduleUrl));
+    }
+
+    public static Triple createSubmoduleCommitProperty(Node submoduleNode, String commitHash) {
+        return Triple.create(submoduleNode, rdfSubmoduleCommitProperty(), stringLiteral(commitHash));
+    }
+
+    public static Triple createSubmoduleCommitEntryProperty(Node submoduleNode, String commitUrl) {
+        return Triple.create(submoduleNode, rdfSubmoduleCommitEntryProperty(), RdfUtils.uri(commitUrl));
+    }
+
+    public static Triple createSubmoduleRepositoryEntryProperty(Node submoduleNode, String submoduleUrl) {
+        return Triple.create(submoduleNode, rdfSubmoduleRepositoryEntryProperty(), RdfUtils.uri(submoduleUrl));
+    }
+
+    public static Node rdfSubmoduleNameProperty() {
+        return uri(NS + "submoduleName");
+    }
+    public static Node rdfSubmodulePathProperty() {
+        return uri(NS + "submodulePath");
+    }
+    public static Node rdfSubmoduleUrlProperty() {
+        return uri(NS + "submoduleUrl");
+    }
+    public static Node rdfSubmoduleCommitProperty() {
+        return uri(NS + "submoduleCommitHash");
+    }
+
+    public static Node rdfSubmoduleCommitEntryProperty() {
+        return uri(NS + "submoduleCommitUri");
+    }
+    public static Node rdfSubmoduleRepositoryEntryProperty() {
+        return uri(NS + "submoduleRepositoryUri");
     }
 
 }
