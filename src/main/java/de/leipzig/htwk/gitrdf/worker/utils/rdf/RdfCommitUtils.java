@@ -33,7 +33,15 @@ public final class RdfCommitUtils {
         return RdfUtils.uri("rdf:type");
     }
 
-    public static Node repoEncodingProperty() {
+    public static Node repositoryNameProperty() {
+        return uri(NS + "name");
+    }
+
+    public static Node repositoryOwnerProperty() {
+        return uri(NS + "owner");
+    }
+
+    public static Node repositoryEncodingProperty() {
         return uri(NS + "encoding");
     }
 
@@ -339,8 +347,16 @@ public final class RdfCommitUtils {
         return Triple.create(RdfUtils.uri(repoUri), rdfTypeProperty(), RdfUtils.uri( "git:GitRepository" ));
     }
 
-    public static Triple createEncodingProperty(String repoUri, String encoding) {
-        return Triple.create(uri(repoUri), repoEncodingProperty(), stringLiteral(encoding));
+    public static Triple createRepositoryEncodingProperty(String repoUri, String encoding) {
+        return Triple.create(uri(repoUri), repositoryEncodingProperty(), stringLiteral(encoding));
+    }
+
+    public static Triple createRepositoryOwnerProperty(String repoUri, String ownerName) {
+        return Triple.create(uri(repoUri), repositoryOwnerProperty(), stringLiteral(ownerName));
+    }
+
+    public static Triple createRepositoryNameProperty(String repoUri, String repositoryName) {
+        return Triple.create(uri(repoUri), repositoryNameProperty(), stringLiteral(repositoryName));
     }
 
 }

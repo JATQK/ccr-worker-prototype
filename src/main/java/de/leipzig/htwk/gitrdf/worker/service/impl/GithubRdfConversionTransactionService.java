@@ -400,6 +400,8 @@ public class GithubRdfConversionTransactionService {
 
             writer.start();
             writer.triple(RdfCommitUtils.createRepoRdfTypeProperty(repositoryUri));
+            writer.triple(RdfCommitUtils.createRepositoryOwnerProperty(repositoryUri, owner));
+            writer.triple(RdfCommitUtils.createRepositoryNameProperty(repositoryUri, repositoryName));
 
             Config config = gitRepository.getConfig();
 
@@ -407,11 +409,11 @@ public class GithubRdfConversionTransactionService {
             String commitEncoding = config.getString("i18n", null, "commitEncoding");
             String defaultEncoding = "UTF-8";
             String encoding = commitEncoding != null ? commitEncoding : defaultEncoding;
-            writer.triple(RdfCommitUtils.createEncodingProperty(repositoryUri, encoding));
+            writer.triple(RdfCommitUtils.createRepositoryEncodingProperty(repositoryUri, encoding));
 
             log.info("Repository Metadata - Encoding: {}", encoding);
 
-            // TODO Metadata: repository owner?
+
 
             writer.finish();
 
