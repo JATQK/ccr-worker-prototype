@@ -22,8 +22,8 @@ import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.*;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfCommitUtils {
 
-    private static final String NS = GIT_NAMESPACE + ":";
-    private static final String RS = PLATFORM_GITHUB_NAMESPACE + ":";
+    private static final String NS = PLATFORM_GITHUB_NAMESPACE + ":"; // GIT_NAMESPACE + ":";
+
 
     // org.apache.jena.datatypes.xsd.XSDDatatype -> static xsd Datatype collection from apache jena
 
@@ -45,14 +45,33 @@ public final class RdfCommitUtils {
         return uri(NS + "encoding");
     }
 
-    private static Node rdfSubmoduleProperty() {
-        return uri(NS + "submodule");
+    private static Node rdfSubmoduleProperty() { return uri(NS + "submodule"); }
+
+    public static Node rdfSubmoduleNameProperty() {
+        return uri(NS + "submoduleName");
     }
 
-    public static Node commitHashProperty() {
-        //return uri("https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-aiddefSHA1aSHA-1");
-        return uri(NS + "commitHash");
+    public static Node rdfSubmodulePathProperty() {
+        return uri(NS + "submodulePath");
     }
+
+    public static Node rdfSubmoduleUrlProperty() {
+        return uri(NS + "submoduleUrl");
+    }
+
+    public static Node rdfSubmoduleCommitProperty() {
+        return uri(NS + "submoduleCommitHash");
+    }
+
+    public static Node rdfSubmoduleCommitEntryProperty() {
+        return uri(NS + "submoduleCommitUri");
+    }
+
+    public static Node rdfSubmoduleRepositoryEntryProperty() {
+        return uri(NS + "submoduleRepositoryUri");
+    }
+
+    public static Node commitHashProperty() { return uri(NS + "commitHash"); }
     
     public static Node authorNameProperty() {
        return uri(NS + "authorName");
@@ -99,7 +118,7 @@ public final class RdfCommitUtils {
     }
 
     public static Node commitGitHubUserProperty() {
-        return uri(RS + "user");
+        return uri(NS + "user");
     }
     public static Node tagResource() {
         return uri(NS + "tag");
@@ -141,13 +160,14 @@ public final class RdfCommitUtils {
         return uri(NS + "newLinenumberEnd");
     }
 
-
     public static Node branchSnapshotProperty() {
         return uri(NS + "branchSnapshot");
     }
+
     public static Node branchSnapshotLineEntryProperty() {
         return uri(NS + "branchSnapshotLineEntry");
     }
+
     public static Node branchSnapshotFileEntryProperty() {
         return uri(NS + "branchSnapshotFileEntry");
     }
@@ -176,19 +196,15 @@ public final class RdfCommitUtils {
         return uri(NS + "branchSnapshotDate");
     }
 
-    // Tags
-
     public static Node commitTagNameProperty() {
         return uri(NS + "tagName");
     }
 
-    // Submodules
 
-    // Metadata
-
+    // Branch Snapshot
 
     public static Triple createBranchSnapshotProperty(Node snapshotNode) {
-        return Triple.create(snapshotNode, rdfTypeProperty(), RdfUtils.uri( NS + "BranchSnapshot" /*"git:BranchSnapshot"*/ ));
+        return Triple.create(snapshotNode, rdfTypeProperty(), RdfUtils.uri(NS + "BranchSnapshot" ));
     }
 
     public static Triple createBranchSnapshotDateProperty(Node snapshotNode, LocalDateTime dateTimeValue) {
@@ -208,32 +224,25 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createBranchSnapshotLineProperty(Node snapshotLineEntryNode, int line) {
-        //return Triple.create(snapshotLineEntryNode, branchSnapshotLineProperty(), nonNegativeIntegerLiteral(line));
         return Triple.create(snapshotLineEntryNode, branchSnapshotLineProperty(), stringLiteral(Integer.toString(line)));
     }
 
     public static Triple createBranchSnapshotLinenumberBeginProperty(Node snapshotLineEntryNode, int linenumberBegin) {
-        //return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberBeginProperty(), nonNegativeIntegerLiteral(linenumberBegin));
         return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberBeginProperty(), stringLiteral(Integer.toString(linenumberBegin)));
     }
 
     public static Triple createBranchSnapshotLinenumberEndProperty(Node snapshotLineEntryNode, int linenumberEnd) {
-        //return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberEndProperty(), nonNegativeIntegerLiteral(linenumberEnd));
         return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberEndProperty(), stringLiteral(Integer.toString(linenumberEnd)));
     }
-
 
     public static Triple createBranchSnapshotCommitHashProperty(Node snapshotLineEntryNode, String commitHash) {
         return Triple.create(snapshotLineEntryNode, branchSnapshotCommitHashProperty(), stringLiteral(commitHash));
     }
 
-    // Submodules
-
-    // Metadata
-
+    // Commit
 
     public static Triple createRdfTypeProperty(String issueUri) {
-        return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri( "git:GitCommit" ));
+        return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri( NS + ":GitCommit" ));
     }
 
     public static Triple createCommitHashProperty(String commitUri, String commitHash) {
@@ -280,6 +289,8 @@ public final class RdfCommitUtils {
         return Triple.create(uri(commitUri), commitResource(), commitNode);
     }
 
+    // Diff
+
     public static Triple createCommitDiffEntryResource(Node commitNode, Node diffEntryNode) {
         return Triple.create(commitNode, commitDiffEntryResource(), diffEntryNode);
     }
@@ -301,27 +312,22 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createCommitDiffEditTypeProperty(Node editNode, Edit.Type editType) {
-        //return Triple.create(editNode, commitDiffEditTypeProperty(), stringLiteral(editType.toString()));
         return Triple.create(editNode, commitDiffEntryEditTypeProperty(), uri(NS + editType.toString().toLowerCase()));
     }
 
     public static Triple createEditOldLinenumberBeginProperty(Node editNode, int lineNumberBegin ) {
-        //return Triple.create(editNode, editOldLinenumberBeginProperty(), longLiteral(lineNumberBegin));
         return Triple.create(editNode, editOldLinenumberBeginProperty(), stringLiteral(Integer.toString(lineNumberBegin)));
     }
 
     public static Triple createEditNewLinenumberBeginProperty(Node editNode, int lineNumberBegin ) {
-        //return Triple.create(editNode, editNewLinenumberBeginProperty(), longLiteral(lineNumberBegin));
         return Triple.create(editNode, editNewLinenumberBeginProperty(), stringLiteral(Integer.toString(lineNumberBegin)));
     }
 
     public static Triple createEditOldLinenumberEndProperty(Node editNode, int lineNumberEnd ) {
-        //return Triple.create(editNode, editOldLinenumberEndProperty(), longLiteral(lineNumberEnd));
         return Triple.create(editNode, editOldLinenumberEndProperty(), stringLiteral(Integer.toString(lineNumberEnd)));
     }
 
     public static Triple createEditNewLinenumberEndProperty(Node editNode, int lineNumberEnd ) {
-        //return Triple.create(editNode, editNewLinenumberEndProperty(), longLiteral(lineNumberEnd));
         return Triple.create(editNode, editNewLinenumberEndProperty(), stringLiteral(Integer.toString(lineNumberEnd)));
     }
 
@@ -395,24 +401,6 @@ public final class RdfCommitUtils {
         return Triple.create(submoduleNode, rdfSubmoduleRepositoryEntryProperty(), RdfUtils.uri(submoduleUrl));
     }
 
-    public static Node rdfSubmoduleNameProperty() {
-        return uri(NS + "submoduleName");
-    }
-    public static Node rdfSubmodulePathProperty() {
-        return uri(NS + "submodulePath");
-    }
-    public static Node rdfSubmoduleUrlProperty() {
-        return uri(NS + "submoduleUrl");
-    }
-    public static Node rdfSubmoduleCommitProperty() {
-        return uri(NS + "submoduleCommitHash");
-    }
 
-    public static Node rdfSubmoduleCommitEntryProperty() {
-        return uri(NS + "submoduleCommitUri");
-    }
-    public static Node rdfSubmoduleRepositoryEntryProperty() {
-        return uri(NS + "submoduleRepositoryUri");
-    }
 
 }
