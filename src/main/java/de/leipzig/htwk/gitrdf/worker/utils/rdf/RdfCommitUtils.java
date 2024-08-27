@@ -15,14 +15,15 @@ import org.eclipse.jgit.patch.FileHeader;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.GIT_NAMESPACE;
-import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.*;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.*;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfCommitUtils {
 
-    private static final String NS = PLATFORM_GITHUB_NAMESPACE + ":"; // GIT_NAMESPACE + ":";
+    private static final String NS = GIT_NAMESPACE + ":";
+    private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
+    private static final String RDF_NS = RDF_SCHEMA_NAMESPACE + ":";
 
 
     // org.apache.jena.datatypes.xsd.XSDDatatype -> static xsd Datatype collection from apache jena
@@ -30,7 +31,7 @@ public final class RdfCommitUtils {
     // somewhat of an applicable base uri to the contents of git: https://git-scm.com/docs/gitglossary
 
     public static Node rdfTypeProperty() {
-        return RdfUtils.uri("rdf:type");
+        return RdfUtils.uri(RDF_NS + "type");
     }
 
     public static Node repositoryNameProperty() {
@@ -118,7 +119,7 @@ public final class RdfCommitUtils {
     }
 
     public static Node commitGitHubUserProperty() {
-        return uri(NS + "user");
+        return uri(GH_NS + "user");
     }
     public static Node tagResource() {
         return uri(NS + "tag");
@@ -242,7 +243,7 @@ public final class RdfCommitUtils {
     // Commit
 
     public static Triple createRdfTypeProperty(String issueUri) {
-        return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri( NS + ":GitCommit" ));
+        return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri( GH_NS + "GitCommit" ));
     }
 
     public static Triple createCommitHashProperty(String commitUri, String commitHash) {
@@ -352,7 +353,7 @@ public final class RdfCommitUtils {
     // Metadata
 
     public static Triple createRepositoryRdfTypeProperty(String repoUri) {
-        return Triple.create(RdfUtils.uri(repoUri), rdfTypeProperty(), RdfUtils.uri( "git:GitRepository" ));
+        return Triple.create(RdfUtils.uri(repoUri), rdfTypeProperty(), RdfUtils.uri( NS + "GitRepository" ));
     }
 
     public static Triple createRepositoryEncodingProperty(String repoUri, String encoding) {
@@ -374,7 +375,7 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createSubmoduleRdfTypeProperty(Node submoduleNode) {
-        return Triple.create(submoduleNode, rdfTypeProperty(), RdfUtils.uri( "git:Submodule" ));
+        return Triple.create(submoduleNode, rdfTypeProperty(), RdfUtils.uri( NS + "Submodule" ));
     }
 
     public static Triple createSubmoduleNameProperty(Node submoduleNode, String name) {
