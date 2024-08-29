@@ -354,7 +354,7 @@ public final class RdfCommitUtils {
     // Metadata
 
     public static Triple createRepositoryRdfTypeProperty(String repoUri) {
-        return Triple.create(RdfUtils.uri(repoUri), rdfTypeProperty(), RdfUtils.uri( NS + "GitRepository" ));
+        return Triple.create(RdfUtils.uri(repoUri), rdfTypeProperty(), RdfUtils.uri( GH_NS + "GitRepository" ));
     }
 
     public static Triple createRepositoryEncodingProperty(String repoUri, String encoding) {
