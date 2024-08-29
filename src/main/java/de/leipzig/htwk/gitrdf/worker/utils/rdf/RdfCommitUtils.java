@@ -23,6 +23,7 @@ public final class RdfCommitUtils {
 
     private static final String NS = GIT_NAMESPACE + ":";
     private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
+    private static final String PF_NS = PLATFORM_NAMESPACE + ":";
     private static final String RDF_NS = RDF_SCHEMA_NAMESPACE + ":";
 
 
@@ -35,11 +36,11 @@ public final class RdfCommitUtils {
     }
 
     public static Node repositoryNameProperty() {
-        return uri(NS + "name");
+        return uri(PF_NS + "name");
     }
 
     public static Node repositoryOwnerProperty() {
-        return uri(NS + "owner");
+        return uri(GH_NS + "owner");
     }
 
     public static Node repositoryEncodingProperty() {

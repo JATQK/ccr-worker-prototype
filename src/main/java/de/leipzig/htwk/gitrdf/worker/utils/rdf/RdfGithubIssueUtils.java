@@ -24,10 +24,10 @@ public final class RdfGithubIssueUtils {
     }
 
     public static Node titleProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "title");
+        return RdfUtils.uri(PLATFORM_NS + "ticketTitle");
     }
 
-    public static Node bodyProperty() { return RdfUtils.uri(PLATFORM_NS + "body"); }
+    public static Node bodyProperty() { return RdfUtils.uri(PLATFORM_NS + "ticketBody"); }
 
     // Platform - GitHub
 
