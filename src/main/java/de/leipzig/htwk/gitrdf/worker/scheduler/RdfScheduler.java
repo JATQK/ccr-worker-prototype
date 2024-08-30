@@ -167,30 +167,48 @@ public class RdfScheduler {
 
                     log.info("Start processing of '{}' repository", entity.getRepositoryName());
 
-                    if (entity.getNumberOfTries() > 9) {
+                    // Fetch repository again and check, that the OrderStatus is still 'Received'
+                    Optional<GithubRepositoryOrderEntity> optionalWorkEntity
+                            = githubRepositoryOrderRepository.findById(entity.getId());
+
+                    if (optionalWorkEntity.isEmpty()) {
+                        throw new RuntimeException("Failed to retrieve github repository order entry again after " +
+                                "locking, to check whether the repo is still in status 'Received'");
+                    }
+
+                    GithubRepositoryOrderEntity workEntity = optionalWorkEntity.get();
+
+                    if (workEntity.getStatus() != GitRepositoryOrderStatus.RECEIVED) {
+                        log.info("Aborting processing of '{}' repository. " +
+                                "Repository is not in status 'Received' anymore",
+                                workEntity.getRepositoryName());
+                        continue;
+                    }
+
+                    if (workEntity.getNumberOfTries() > 9) {
 
                         log.warn("Processing of '{}' repository aborted. " +
                                 "There are already more than 9 conversion attempts. " +
                                 "Setting status to '{}'",
-                                entity.getRepositoryName(),
+                                workEntity.getRepositoryName(),
                                 GitRepositoryOrderStatus.FAILED);
 
-                        entity.setStatus(GitRepositoryOrderStatus.FAILED);
-                        githubRepositoryOrderRepository.save(entity);
+                        workEntity.setStatus(GitRepositoryOrderStatus.FAILED);
+                        githubRepositoryOrderRepository.save(workEntity);
 
                     } else {
 
                         TimeLog timeLog = new TimeLog(false);
-                        timeLog.setIdentifier(entity.getOwnerName() + " " + entity.getRepositoryName());
+                        timeLog.setIdentifier(workEntity.getOwnerName() + " " + workEntity.getRepositoryName());
 
                         StopWatch watch = new StopWatch();
                         watch.start();
 
-                        entity.setStatus(GitRepositoryOrderStatus.PROCESSING);
-                        entity.setNumberOfTries(entity.getNumberOfTries() + 1);
-                        githubRepositoryOrderRepository.save(entity);
+                        workEntity.setStatus(GitRepositoryOrderStatus.PROCESSING);
+                        workEntity.setNumberOfTries(workEntity.getNumberOfTries() + 1);
+                        githubRepositoryOrderRepository.save(workEntity);
 
-                        githubConversionService.performGithubRepoToRdfConversion(entity.getId(), timeLog);
+                        githubConversionService.performGithubRepoToRdfConversion(workEntity.getId(), timeLog);
 
                         watch.stop();
 
