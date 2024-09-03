@@ -226,7 +226,7 @@ public class RdfScheduler {
                 }
 
             } else {
-                log.info("Lock with the id '{}' was already acquired. Skipping this specific lock and continuing.", lockId);
+                log.info("Github conversion scheduler: Lock with the id '{}' was already acquired. Skipping this specific lock and continuing.", lockId);
                 continue;
             }
 
@@ -351,7 +351,7 @@ public class RdfScheduler {
                 }
 
             } else {
-                log.info("Lock with the id '{}' was already acquired. Skipping this specific lock and continuing.", lockId);
+                log.info("Github cleanup: Lock with the id '{}' was already acquired. Skipping this specific lock and continuing.", lockId);
                 continue;
             }
 
