@@ -8,6 +8,7 @@ import de.leipzig.htwk.gitrdf.database.common.entity.lob.GithubRepositoryOrderEn
 import de.leipzig.htwk.gitrdf.worker.calculator.BranchSnapshotCalculator;
 import de.leipzig.htwk.gitrdf.worker.calculator.CommitBranchCalculator;
 import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
+import de.leipzig.htwk.gitrdf.worker.handler.LockHandler;
 import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
@@ -104,7 +105,7 @@ public class GithubRdfConversionTransactionService {
     // TODO (ccr): Refactor -> code is currently not in use -> maybe delete or refactor to a cleaner state
     @Transactional(rollbackFor = {IOException.class, GitAPIException.class, URISyntaxException.class, InterruptedException.class}) // Runtime-Exceptions are rollbacked by default; Checked-Exceptions not
     public InputStream performGithubRepoToRdfConversionAndReturnCloseableInputStream(
-            long id, File rdfTempFile) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
+            long id, File rdfTempFile, LockHandler lockHandler) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
 
         GitHub githubHandle = githubHandlerService.getGithub();
 
@@ -125,7 +126,7 @@ public class GithubRdfConversionTransactionService {
         File gitFile = getDotGitFileFromGithubRepositoryHandle(targetRepo, id, owner, repo);
 
         InputStream needsToBeClosedOutsideOfTransaction
-                = writeRdf(gitFile, githubRepositoryOrderEntity, githubRepositoryOrderEntityLobs, rdfTempFile, new TimeLog(false));
+                = writeRdf(gitFile, githubRepositoryOrderEntity, githubRepositoryOrderEntityLobs, rdfTempFile, new TimeLog(false), lockHandler);
 
         githubRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.DONE);
 
@@ -137,7 +138,8 @@ public class GithubRdfConversionTransactionService {
             long id,
             File gitWorkingDirectory,
             File rdfTempFile,
-            TimeLog timeLog) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
+            TimeLog timeLog,
+            LockHandler lockHandler) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
 
         Git gitHandler = null;
 
@@ -152,6 +154,8 @@ public class GithubRdfConversionTransactionService {
             String owner = githubRepositoryOrderEntity.getOwnerName();
             String repo = githubRepositoryOrderEntity.getRepositoryName();
 
+            lockHandler.renewLockOnRenewTimeFulfillment();
+
             StopWatch downloadWatch = new StopWatch();
 
             downloadWatch.start();
@@ -159,6 +163,8 @@ public class GithubRdfConversionTransactionService {
             gitHandler = performGitClone(owner, repo, gitWorkingDirectory);
 
             downloadWatch.stop();
+
+            lockHandler.renewLockOnRenewTimeFulfillment();
 
             //log.info("TIME MEASUREMENT DONE: Download time in milliseconds is: '{}'", downloadWatch.getTime());
             timeLog.setDownloadTime(downloadWatch.getTime());
@@ -168,7 +174,7 @@ public class GithubRdfConversionTransactionService {
             conversionWatch.start();
 
             InputStream needsToBeClosedOutsideOfTransaction
-                    = writeRdf(gitHandler, githubRepositoryOrderEntity, githubRepositoryOrderEntityLobs, rdfTempFile, timeLog);
+                    = writeRdf(gitHandler, githubRepositoryOrderEntity, githubRepositoryOrderEntityLobs, rdfTempFile, timeLog, lockHandler);
 
             conversionWatch.stop();
 
@@ -317,12 +323,13 @@ public class GithubRdfConversionTransactionService {
             GithubRepositoryOrderEntity entity,
             GithubRepositoryOrderEntityLobs entityLobs,
             File rdfTempFile,
-            TimeLog timeLog) throws GitAPIException, IOException, URISyntaxException, InterruptedException {
+            TimeLog timeLog,
+            LockHandler lockHandler) throws GitAPIException, IOException, URISyntaxException, InterruptedException {
 
         Repository gitRepository = new FileRepositoryBuilder().setGitDir(gitFile).build();
         Git gitHandler = new Git(gitRepository);
 
-        return writeRdf(gitHandler, entity, entityLobs, rdfTempFile, timeLog);
+        return writeRdf(gitHandler, entity, entityLobs, rdfTempFile, timeLog, lockHandler);
     }
 
     private InputStream writeRdf(
@@ -330,7 +337,8 @@ public class GithubRdfConversionTransactionService {
             GithubRepositoryOrderEntity entity,
             GithubRepositoryOrderEntityLobs entityLobs,
             File rdfTempFile,
-            TimeLog timeLog) throws GitAPIException, IOException, URISyntaxException, InterruptedException {
+            TimeLog timeLog,
+            LockHandler lockHandler) throws GitAPIException, IOException, URISyntaxException, InterruptedException {
 
         String owner = entity.getOwnerName();
         String repositoryName = entity.getRepositoryName();
@@ -351,6 +359,8 @@ public class GithubRdfConversionTransactionService {
 
             //GithubHandle githubHandle = githubHandlerService.getGithubHandle();
             GitHub gitHubHandle = githubHandlerService.getGithub();
+
+            lockHandler.renewLockOnRenewTimeFulfillment();
 
             String githubRepositoryName = String.format("%s/%s", owner, repositoryName);
             String repositoryUri = getGithubRepositoryUri(owner, repositoryName);
@@ -380,6 +390,8 @@ public class GithubRdfConversionTransactionService {
                 commitBranchCalculator = new CommitBranchCalculator(branches, revWalk);
             }
 
+            lockHandler.renewLockOnRenewTimeFulfillment();
+
             log.info("Start conversion run of '{}' repository", repositoryName);
 
             StopWatch commitConversionWatch = new StopWatch();
@@ -397,6 +409,8 @@ public class GithubRdfConversionTransactionService {
 
                 tagNames.put(tagObjectId, tag.getName());
             }
+
+            lockHandler.renewLockOnRenewTimeFulfillment();
 
             // Metadata
 
@@ -417,6 +431,8 @@ public class GithubRdfConversionTransactionService {
             log.info("Repository Metadata - Encoding: {}", encoding);
 
             writer.finish();
+
+            lockHandler.renewLockOnRenewTimeFulfillment();
 
             // Submodules
 
@@ -455,6 +471,8 @@ public class GithubRdfConversionTransactionService {
             }
 
             writer.finish();
+
+            lockHandler.renewLockOnRenewTimeFulfillment();
 
             // git commits
             for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
@@ -607,6 +625,8 @@ public class GithubRdfConversionTransactionService {
 
                 writer.finish();
 
+                lockHandler.renewLockOnRenewTimeFulfillment();
+
                 if (finished) {
                     break;
                 }
@@ -623,6 +643,8 @@ public class GithubRdfConversionTransactionService {
 
             //log.info("TIME MEASUREMENT DONE: Git-Commit conversion time in milliseconds is: '{}'", commitConversionWatch.getTime());
             timeLog.setGitCommitConversionTime(commitConversionWatch.getTime());
+
+            lockHandler.renewLockOnRenewTimeFulfillment();
 
             // Submodules
 
@@ -644,7 +666,8 @@ public class GithubRdfConversionTransactionService {
                 BranchSnapshotCalculator branchSnapshotCalculator = new BranchSnapshotCalculator(
                         writer,
                         gitRepository,
-                        getGithubCommitUri(owner, repositoryName, headCommitId.getName()));
+                        getGithubCommitUri(owner, repositoryName, headCommitId.getName()),
+                        lockHandler);
 
                 branchSnapshotCalculator.calculateBranchSnapshot();
 
@@ -657,6 +680,7 @@ public class GithubRdfConversionTransactionService {
 
             }
 
+            lockHandler.renewLockOnRenewTimeFulfillment();
 
             // issues
 
@@ -771,6 +795,7 @@ public class GithubRdfConversionTransactionService {
                             writer.finish();
                             doesWriterContainNonWrittenRdfStreamElements = false;
                             issueCounter = 0;
+                            lockHandler.renewLockOnRenewTimeFulfillment();
                         }
                     }
 
@@ -782,6 +807,8 @@ public class GithubRdfConversionTransactionService {
             }
 
             issueWatch.stop();
+
+            lockHandler.renewLockOnRenewTimeFulfillment();
 
             //log.info("TIME MEASUREMENT DONE: Github-Issue conversion time in milliseconds is: '{}'", issueWatch.getTime());
             timeLog.setGithubIssueConversionTime(issueWatch.getTime());

@@ -6,6 +6,7 @@ import de.leipzig.htwk.gitrdf.database.common.entity.enums.GitRepositoryOrderSta
 import de.leipzig.htwk.gitrdf.database.common.repository.GitRepositoryOrderRepository;
 import de.leipzig.htwk.gitrdf.database.common.repository.GithubRepositoryOrderRepository;
 import de.leipzig.htwk.gitrdf.worker.config.SchedulerConfig;
+import de.leipzig.htwk.gitrdf.worker.handler.LockHandler;
 import de.leipzig.htwk.gitrdf.worker.service.GitRdfConversionService;
 import de.leipzig.htwk.gitrdf.worker.service.impl.GithubConversionServiceImpl;
 import de.leipzig.htwk.gitrdf.worker.service.impl.GithubHandlerService;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.StopWatch;
 import org.springframework.integration.jdbc.lock.JdbcLockRegistry;
 import org.springframework.integration.support.locks.LockRegistry;
+import org.springframework.integration.support.locks.RenewableLockRegistry;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -201,6 +203,11 @@ public class RdfScheduler {
                         TimeLog timeLog = new TimeLog(false);
                         timeLog.setIdentifier(workEntity.getOwnerName() + " " + workEntity.getRepositoryName());
 
+                        RenewableLockRegistry renewableLockRegistry = getRenewableLockRegistryOrThrowException();
+
+                        LockHandler lockHandler
+                                = new LockHandler(LockHandler.THIRTY_MINUTES, clock, renewableLockRegistry, lockId);
+
                         StopWatch watch = new StopWatch();
                         watch.start();
 
@@ -208,7 +215,8 @@ public class RdfScheduler {
                         workEntity.setNumberOfTries(workEntity.getNumberOfTries() + 1);
                         githubRepositoryOrderRepository.save(workEntity);
 
-                        githubConversionService.performGithubRepoToRdfConversion(workEntity.getId(), timeLog);
+                        githubConversionService.performGithubRepoToRdfConversion(
+                                workEntity.getId(), timeLog, lockHandler);
 
                         watch.stop();
 
@@ -365,6 +373,17 @@ public class RdfScheduler {
 
     private String getGithubToRdfLockId(long id) {
         return id + GITHUB_TO_RDF_LOCK_ID_SUFFIX;
+    }
+
+    private RenewableLockRegistry getRenewableLockRegistryOrThrowException() {
+
+        if (!(this.lockRegistry instanceof RenewableLockRegistry)) {
+            throw new RuntimeException("Github conversion scheduler: Failed cast the used lock " +
+                    "registry to a renewable lock registry (for future lock renewal if needed)." +
+                    "This should be possible, as the used registry should be a renewable lock registry");
+        }
+
+        return (RenewableLockRegistry) this.lockRegistry;
     }
 
 }

@@ -1,5 +1,6 @@
 package de.leipzig.htwk.gitrdf.worker.service.impl;
 
+import de.leipzig.htwk.gitrdf.worker.handler.LockHandler;
 import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -21,7 +22,10 @@ public class GithubConversionServiceImpl {
     }
 
     //@Override
-    public void performGithubRepoToRdfConversion(long id, TimeLog timelog) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
+    public void performGithubRepoToRdfConversion(
+            long id,
+            TimeLog timelog,
+            LockHandler lockHandler) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
 
         InputStream needsToBeClosed = null;
         File gitWorkingDirectory = Files.createTempDirectory("git-working-directory").toFile();
@@ -33,7 +37,8 @@ public class GithubConversionServiceImpl {
                     id,
                     gitWorkingDirectory,
                     rdfTempFile,
-                    timelog);
+                    timelog,
+                    lockHandler);
 
         } finally {
 

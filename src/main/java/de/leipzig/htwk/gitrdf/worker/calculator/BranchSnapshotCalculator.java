@@ -1,5 +1,6 @@
 package de.leipzig.htwk.gitrdf.worker.calculator;
 
+import de.leipzig.htwk.gitrdf.worker.handler.LockHandler;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.graph.Node;
@@ -25,11 +26,18 @@ public class BranchSnapshotCalculator {
     private final StreamRDF writer;
     private final Repository gitRepository;
     private final String branchSnapshotUri;
+    private final LockHandler lockHandler;
 
-    public BranchSnapshotCalculator(StreamRDF writer, Repository gitRepository, String targetCommitUri) {
+    public BranchSnapshotCalculator(
+            StreamRDF writer,
+            Repository gitRepository,
+            String targetCommitUri,
+            LockHandler lockHandler) {
+
         this.writer = writer;
         this.gitRepository = gitRepository;
         this.branchSnapshotUri = targetCommitUri;
+        this.lockHandler = lockHandler;
     }
 
     public void calculateBranchSnapshot() throws IOException {
@@ -50,6 +58,8 @@ public class BranchSnapshotCalculator {
         writer.triple(RdfCommitUtils.createBranchSnapshotDateProperty(branchSnapshotNode, LocalDateTime.now()));
 
         writer.finish();
+
+        lockHandler.renewLockOnRenewTimeFulfillment();
 
         List<String> fileNames = listRepositoryContents(gitRepository);
 
@@ -163,6 +173,8 @@ public class BranchSnapshotCalculator {
                 writer.finish();
                 branchSnapshotCounter = 0;
             }
+
+            lockHandler.renewLockOnRenewTimeFulfillment();
 
         }
 

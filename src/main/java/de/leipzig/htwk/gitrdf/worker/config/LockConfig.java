@@ -11,13 +11,13 @@ import javax.sql.DataSource;
 @Configuration
 public class LockConfig {
 
-    private static final int THIRTY_MINUTES = 1000 * 60 * 30;
+    private static final int ONE_HOUR = 1000 * 60 * 60;
 
     @Bean
     public DefaultLockRepository defaultLockRepository(DataSource dataSource) {
 
         DefaultLockRepository defaultLockRepository = new DefaultLockRepository(dataSource);
-        defaultLockRepository.setTimeToLive(THIRTY_MINUTES);
+        defaultLockRepository.setTimeToLive(ONE_HOUR);
 
         return defaultLockRepository;
     }
