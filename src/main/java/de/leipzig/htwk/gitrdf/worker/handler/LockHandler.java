@@ -40,7 +40,7 @@ public class LockHandler {
 
         if (minutes >= renewTime) {
 
-            log.info("Renewing lock with id '{}'. Time fulfillment of '{}' milliseconds was reached", lockId, renewTime);
+            log.info("Renewing lock with id '{}'. Time fulfillment of '{}' minutes was reached", lockId, renewTime);
 
             this.lastLock = now;
             renewableLockRegistry.renewLock(lockId);
