@@ -35,6 +35,8 @@ import org.eclipse.jgit.errors.ConfigInvalidException;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevObject;
+import org.eclipse.jgit.revwalk.RevTag;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.submodule.SubmoduleWalk;
@@ -398,17 +400,24 @@ public class GithubRdfConversionTransactionService {
 
             commitConversionWatch.start();
 
-            // Tags (annotated only)
-            List<Ref> tags = gitHandler.tagList().call();
-            Map<ObjectId,String> tagNames = new HashMap<>();
+            //// Tags (annotated only)
+            //List<Ref> tags = gitHandler.tagList().call();
+            //Map<ObjectId,String> tagNames = new HashMap<>();
+            //
+            //for (Ref tag : tags) {
+            //    ObjectId tagObjectId = tag.getObjectId();
+            //
+            //    if (tagObjectId == null) continue;
+            //
+            //    String tagName = tag.getName();
+            //    String tagCommitHash = tagObjectId.getName();
+            //
+            //    tagNames.put(tagObjectId, tagName);
+            //
+            //    log.info("Added Tag '{}' #{}", tagName, tagCommitHash);
+            //}
 
-            for (Ref tag : tags) {
-                ObjectId tagObjectId = tag.getObjectId();
-
-                if (tagObjectId == null) continue;
-
-                tagNames.put(tagObjectId, tag.getName());
-            }
+            Map<ObjectId, List<String>> commitToTags = getTagsForCommits(gitRepository);
 
             lockHandler.renewLockOnRenewTimeFulfillment();
 
@@ -603,12 +612,24 @@ public class GithubRdfConversionTransactionService {
                     }
 
                     // Tag
-                    if(gitCommitRepositoryFilter.isEnableCommitTag()) {
-                        if (tagNames.containsKey(commitId)) {
-                            String tagName = tagNames.get(commitId);
+
+                    //if(gitCommitRepositoryFilter.isEnableCommitTag()) {
+                    //    if (tagNames.containsKey(commitId)) {
+                    //        String tagName = tagNames.get(commitId);
+                    //        writer.triple(RdfCommitUtils.createCommitTagProperty(commitUri, tagName));
+                    //    }
+                    //}
+
+                    List<String> tagNames = commitToTags.get(commitId);
+
+                    if (tagNames != null && !tagNames.isEmpty()) {
+
+                        for (String tagName : tagNames) {
                             writer.triple(RdfCommitUtils.createCommitTagProperty(commitUri, tagName));
+                            log.info("Added Tag '{}' to commit #{}", tagName, commitId.getName());
                         }
                     }
+
 
                     // Commit Diffs
                     // See: https://www.codeaffine.com/2016/06/16/jgit-diff/
@@ -822,6 +843,41 @@ public class GithubRdfConversionTransactionService {
         entityLobs.setRdfFile(BlobProxy.generateProxy(bufferedInputStream, rdfTempFile.length()));
 
         return bufferedInputStream;
+    }
+
+    public static Map<ObjectId, List<String>> getTagsForCommits(Repository repository) throws IOException {
+
+        Map<ObjectId, List<String>> commitToTags = new HashMap<>();
+        Map<String, Ref> tags = repository.getRefDatabase().getRefs(Constants.R_TAGS);
+        RevWalk revWalk = new RevWalk(repository);
+
+        try {
+            for (Map.Entry<String, Ref> entry : tags.entrySet()) {
+
+                String tagName = entry.getKey();
+                Ref tagRef = entry.getValue();
+
+                try {
+                    RevObject obj = revWalk.parseAny(tagRef.getObjectId());
+                    if (obj instanceof RevTag) {
+                        RevTag tag = (RevTag) obj;
+                        obj = revWalk.peel(tag);
+                    }
+
+                    if (obj instanceof RevCommit) {
+                        ObjectId commitId = obj.getId();
+                        commitToTags.computeIfAbsent(commitId, k -> new ArrayList<>()).add(tagName);
+                        log.info("Found Tag '{}' for commit #{}", tagName, commitId.getName());
+                    }
+                } catch (IOException e) {
+                    log.error("Error processing tag " + tagName + ": " + e.getMessage());
+                }
+            }
+        } finally {
+            revWalk.dispose();
+        }
+
+        return commitToTags;
     }
 
     private void calculateAuthorEmail(
