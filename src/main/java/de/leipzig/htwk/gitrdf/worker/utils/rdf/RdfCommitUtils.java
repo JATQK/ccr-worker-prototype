@@ -36,7 +36,7 @@ public final class RdfCommitUtils {
     }
 
     public static Node repositoryNameProperty() {
-        return uri(PF_NS + "repositoryName");
+        return uri(GH_NS + "repositoryName");
     }
 
     public static Node repositoryOwnerProperty() {
