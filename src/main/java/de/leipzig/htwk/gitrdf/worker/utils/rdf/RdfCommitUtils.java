@@ -49,16 +49,8 @@ public final class RdfCommitUtils {
 
     private static Node rdfSubmoduleProperty() { return uri(NS + "submodule"); }
 
-    public static Node rdfSubmoduleNameProperty() {
-        return uri(NS + "submoduleName");
-    }
-
     public static Node rdfSubmodulePathProperty() {
         return uri(NS + "submodulePath");
-    }
-
-    public static Node rdfSubmoduleUrlProperty() {
-        return uri(NS + "submoduleUrl");
     }
 
     public static Node rdfSubmoduleCommitProperty() {
@@ -380,16 +372,8 @@ public final class RdfCommitUtils {
         return Triple.create(submoduleNode, rdfTypeProperty(), RdfUtils.uri( NS + "Submodule" ));
     }
 
-    public static Triple createSubmoduleNameProperty(Node submoduleNode, String name) {
-        return Triple.create(submoduleNode, rdfSubmoduleNameProperty(), stringLiteral(name));
-    }
-
     public static Triple createSubmodulePathProperty(Node submoduleNode, String pathName) {
         return Triple.create(submoduleNode, rdfSubmodulePathProperty(), stringLiteral(pathName));
-    }
-
-    public static Triple createSubmoduleUrlProperty(Node submoduleNode, String submoduleUrl) {
-        return Triple.create(submoduleNode, rdfSubmoduleUrlProperty(), stringLiteral(submoduleUrl));
     }
 
     public static Triple createSubmoduleCommitProperty(Node submoduleNode, String commitHash) {
@@ -403,7 +387,4 @@ public final class RdfCommitUtils {
     public static Triple createSubmoduleRepositoryEntryProperty(Node submoduleNode, String submoduleUrl) {
         return Triple.create(submoduleNode, rdfSubmoduleRepositoryEntryProperty(), RdfUtils.uri(submoduleUrl));
     }
-
-
-
 }

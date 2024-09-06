@@ -456,26 +456,25 @@ public class GithubRdfConversionTransactionService {
                     String submoduleUrl = submoduleWalk.getModulesUrl();
                     String submoduleCommitHash = submoduleWalk.getObjectId().getName();
                     String submoduleCommitHashUri = getGithubCommitUri(owner, repositoryName, submoduleCommitHash);
-                    String submoduleRepositoryUri = getGithubRepositoryUri(owner, repositoryName);
 
                     Resource submoduleResource = ResourceFactory.createResource();
                     Node submoduleNode = submoduleResource.asNode();
 
                     writer.triple(RdfCommitUtils.createRepositorySubmoduleProperty(repositoryUri, submoduleNode));
                     writer.triple(RdfCommitUtils.createSubmoduleRdfTypeProperty(submoduleNode));
+
                     writer.triple(RdfCommitUtils.createSubmodulePathProperty(submoduleNode, submodulePath));
-                    writer.triple(RdfCommitUtils.createSubmoduleUrlProperty(submoduleNode, submoduleUrl));
-                    writer.triple(RdfCommitUtils.createSubmoduleCommitProperty(submoduleNode, submoduleCommitHash));
+                    writer.triple(RdfCommitUtils.createSubmoduleRepositoryEntryProperty(submoduleNode, submoduleUrl));
                     writer.triple(RdfCommitUtils.createSubmoduleCommitEntryProperty(submoduleNode, submoduleCommitHashUri));
-                    writer.triple(RdfCommitUtils.createSubmoduleRepositoryEntryProperty(submoduleNode, submoduleRepositoryUri));
+                    writer.triple(RdfCommitUtils.createSubmoduleCommitProperty(submoduleNode, submoduleCommitHash));
 
                     log.info("Submodule: path: {} url: {} commit-hash: {}", submodulePath, submoduleUrl, submoduleCommitHash);
                 }
                 catch (ConfigInvalidException e) {
-                    log.info("Submodule Invalid Config Error: {}", e.getMessage());
+                    log.error("Submodule Invalid Config Error: {}", e.getMessage());
                 }
                 catch (Exception e) {
-                    log.info("Submodule Error: {}", e.getMessage());
+                    log.error("Submodule Error: {}", e.getMessage());
                 }
             }
 
