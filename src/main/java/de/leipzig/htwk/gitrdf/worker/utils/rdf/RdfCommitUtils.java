@@ -36,15 +36,15 @@ public final class RdfCommitUtils {
     }
 
     public static Node repositoryNameProperty() {
-        return uri(PF_NS + "name");
+        return uri(PF_NS + "repositoryName");
     }
 
     public static Node repositoryOwnerProperty() {
-        return uri(GH_NS + "owner");
+        return uri(GH_NS + "repositoryOwner");
     }
 
     public static Node repositoryEncodingProperty() {
-        return uri(NS + "encoding");
+        return uri(NS + "repositoryEncoding");
     }
 
     private static Node rdfSubmoduleProperty() { return uri(NS + "submodule"); }
