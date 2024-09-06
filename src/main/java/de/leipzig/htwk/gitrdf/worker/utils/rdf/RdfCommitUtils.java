@@ -285,7 +285,8 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createCommiterGitHubUserProperty(String commitUri, String commiterGitHubUser) {
-        return Triple.create(uri(commitUri), commitGitHubUserProperty(), stringLiteral(commiterGitHubUser));
+        //return Triple.create(uri(commitUri), commitGitHubUserProperty(), stringLiteral(commiterGitHubUser));
+        return Triple.create(uri(commitUri), commitGitHubUserProperty(), uri(commiterGitHubUser));
     }
     public static Triple createCommitResource(String commitUri, Node commitNode) {
         return Triple.create(uri(commitUri), commitResource(), commitNode);

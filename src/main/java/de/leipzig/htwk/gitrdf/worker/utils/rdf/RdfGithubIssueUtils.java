@@ -40,33 +40,33 @@ public final class RdfGithubIssueUtils {
     }
 
     public static Node stateProperty() {
-        return RdfUtils.uri(GH_NS + "state");
+        return RdfUtils.uri(GH_NS + "issueState");
     }
 
     public static Node userProperty() { return RdfUtils.uri(GH_NS + "user"); }
 
     public static Node labelProperty() {
-        return RdfUtils.uri(GH_NS + "label");
+        return RdfUtils.uri(GH_NS + "issueLabel");
     }
 
     public static Node assigneeProperty() {
-        return RdfUtils.uri(GH_NS + "assignee");
+        return RdfUtils.uri(GH_NS + "issueAssignee");
     }
 
     public static Node milestoneProperty() {
-        return RdfUtils.uri(GH_NS + "milestone");
+        return RdfUtils.uri(GH_NS + "issueMilestone");
     }
 
     public static Node createdAtProperty() {
-        return RdfUtils.uri(GH_NS + "createdAt");
+        return RdfUtils.uri(GH_NS + "issueCreatedAt");
     }
 
     public static Node updatedAtProperty() {
-        return RdfUtils.uri(GH_NS + "updatedAt");
+        return RdfUtils.uri(GH_NS + "issueUpdatedAt");
     }
 
     public static Node closedAtProperty() {
-        return RdfUtils.uri(GH_NS + "closedAt");
+        return RdfUtils.uri(GH_NS + "issueClosedAt");
     }
 
 
@@ -97,25 +97,26 @@ public final class RdfGithubIssueUtils {
     }
 
     public static Triple createIssueUserProperty(String issueUri, String userUri) {
-        //return Triple.create(RdfUtils.uri(issueUri), userProperty(), RdfUtils.uri(userUri));
-        return Triple.create(RdfUtils.uri(issueUri), userProperty(), RdfUtils.stringLiteral(userUri));
+        return Triple.create(RdfUtils.uri(issueUri), userProperty(), RdfUtils.uri(userUri));
+        //return Triple.create(RdfUtils.uri(issueUri), userProperty(), RdfUtils.stringLiteral(userUri));
     }
 
     public static Triple createIssueLabelProperty(String issueUri, String labelUri) {
-        //return Triple.create(RdfUtils.uri(issueUri), labelProperty(), RdfUtils.uri(labelUri));
-        return Triple.create(RdfUtils.uri(issueUri), labelProperty(), RdfUtils.stringLiteral(labelUri));
+        return Triple.create(RdfUtils.uri(issueUri), labelProperty(), RdfUtils.uri(labelUri));
+        //return Triple.create(RdfUtils.uri(issueUri), labelProperty(), RdfUtils.stringLiteral(labelUri));
     }
 
     public static Triple createIssueAssigneeProperty(String issueUri, String userUri) {
-        //return Triple.create(RdfUtils.uri(issueUri), assigneeProperty(), RdfUtils.uri(userUri));
-        return Triple.create(RdfUtils.uri(issueUri), assigneeProperty(), RdfUtils.stringLiteral(userUri));
+        return Triple.create(RdfUtils.uri(issueUri), assigneeProperty(), RdfUtils.uri(userUri));
+        //return Triple.create(RdfUtils.uri(issueUri), assigneeProperty(), RdfUtils.stringLiteral(userUri));
     }
 
     public static Triple createIssueMilestoneProperty(String issueUri, String milestoneUri) {
-        //return Triple.create(RdfUtils.uri(issueUri), milestoneProperty(), RdfUtils.uri(milestoneUri));
-        return Triple.create(RdfUtils.uri(issueUri), milestoneProperty(), RdfUtils.stringLiteral(milestoneUri));
+        return Triple.create(RdfUtils.uri(issueUri), milestoneProperty(), RdfUtils.uri(milestoneUri));
+        //return Triple.create(RdfUtils.uri(issueUri), milestoneProperty(), RdfUtils.stringLiteral(milestoneUri));
     }
 
+    // TODO: should this be changed later on? Use schema instead of ^^literalType
     public static Triple createIssueCreatedAtProperty(String issueUri, LocalDateTime createdAtDateTime) {
         return Triple.create(RdfUtils.uri(issueUri), createdAtProperty(), RdfUtils.dateTimeLiteral(createdAtDateTime));
         //return Triple.create(RdfUtils.uri(issueUri), createdAtProperty(), RdfUtils.stringLiteral(createdAtDateTime.toString()));
