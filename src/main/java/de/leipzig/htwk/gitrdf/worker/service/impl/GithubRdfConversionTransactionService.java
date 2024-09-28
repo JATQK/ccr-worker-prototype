@@ -866,7 +866,7 @@ public class GithubRdfConversionTransactionService {
                     if (obj instanceof RevCommit) {
                         ObjectId commitId = obj.getId();
                         commitToTags.computeIfAbsent(commitId, k -> new ArrayList<>()).add(tagName);
-                        log.info("Found Tag '{}' for commit #{}", tagName, commitId.getName());
+                        log.debug("Found Tag '{}' for commit #{}", tagName, commitId.getName());
                     }
                 } catch (IOException e) {
                     log.error("Error processing tag " + tagName + ": " + e.getMessage());
