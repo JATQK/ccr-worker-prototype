@@ -625,7 +625,7 @@ public class GithubRdfConversionTransactionService {
 
                         for (String tagName : tagNames) {
                             writer.triple(RdfCommitUtils.createCommitTagProperty(commitUri, tagName));
-                            log.info("Added Tag '{}' to commit #{}", tagName, commitId.getName());
+                            log.debug("Added Tag '{}' to commit #{}", tagName, commitId.getName());
                         }
                     }
 
