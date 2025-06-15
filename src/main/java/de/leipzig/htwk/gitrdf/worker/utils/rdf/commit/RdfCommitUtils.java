@@ -1,4 +1,4 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.commit;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -11,6 +11,8 @@ import org.apache.jena.riot.system.PrefixMapFactory;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.patch.FileHeader;
+
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -26,10 +28,7 @@ public final class RdfCommitUtils {
     private static final String PF_NS = PLATFORM_NAMESPACE + ":";
     private static final String RDF_NS = RDF_SCHEMA_NAMESPACE + ":";
 
-
-    // org.apache.jena.datatypes.xsd.XSDDatatype -> static xsd Datatype collection from apache jena
-
-    // somewhat of an applicable base uri to the contents of git: https://git-scm.com/docs/gitglossary
+    // Base Properties
 
     public static Node rdfTypeProperty() {
         return RdfUtils.uri(RDF_NS + "type");
@@ -47,7 +46,9 @@ public final class RdfCommitUtils {
         return uri(NS + "repositoryEncoding");
     }
 
-    private static Node rdfSubmoduleProperty() { return uri(NS + "submodule"); }
+    private static Node rdfSubmoduleProperty() {
+        return uri(NS + "submodule");
+    }
 
     public static Node rdfSubmodulePathProperty() {
         return uri(NS + "submodulePath");
@@ -65,10 +66,12 @@ public final class RdfCommitUtils {
         return uri(NS + "submoduleRepositoryUri");
     }
 
-    public static Node commitHashProperty() { return uri(NS + "commitHash"); }
-    
+    public static Node commitHashProperty() {
+        return uri(NS + "commitHash");
+    }
+
     public static Node authorNameProperty() {
-       return uri(NS + "authorName");
+        return uri(NS + "authorName");
     }
 
     public static Node authorEmailProperty() {
@@ -114,6 +117,7 @@ public final class RdfCommitUtils {
     public static Node commitGitHubUserProperty() {
         return uri(GH_NS + "user");
     }
+
     public static Node tagResource() {
         return uri(NS + "tag");
     }
@@ -194,11 +198,18 @@ public final class RdfCommitUtils {
         return uri(NS + "tagName");
     }
 
+    public static Node mergeTargetBranchProperty() {
+        return uri(NS + "mergeTargetBranch");
+    }
 
-    // Branch Snapshot
+    public static Node commiterHtmlUriProperty() {
+        return uri(NS + "commiterHtmlUri");
+    }
+
+    // Branch Snapshot Triples
 
     public static Triple createBranchSnapshotProperty(Node snapshotNode) {
-        return Triple.create(snapshotNode, rdfTypeProperty(), RdfUtils.uri(NS + "BranchSnapshot" ));
+        return Triple.create(snapshotNode, rdfTypeProperty(), RdfUtils.uri(NS + "BranchSnapshot"));
     }
 
     public static Triple createBranchSnapshotDateProperty(Node snapshotNode, LocalDateTime dateTimeValue) {
@@ -218,25 +229,28 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createBranchSnapshotLineProperty(Node snapshotLineEntryNode, int line) {
-        return Triple.create(snapshotLineEntryNode, branchSnapshotLineProperty(), stringLiteral(Integer.toString(line)));
+        return Triple.create(snapshotLineEntryNode, branchSnapshotLineProperty(),
+                stringLiteral(Integer.toString(line)));
     }
 
     public static Triple createBranchSnapshotLinenumberBeginProperty(Node snapshotLineEntryNode, int linenumberBegin) {
-        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberBeginProperty(), stringLiteral(Integer.toString(linenumberBegin)));
+        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberBeginProperty(),
+                stringLiteral(Integer.toString(linenumberBegin)));
     }
 
     public static Triple createBranchSnapshotLinenumberEndProperty(Node snapshotLineEntryNode, int linenumberEnd) {
-        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberEndProperty(), stringLiteral(Integer.toString(linenumberEnd)));
+        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberEndProperty(),
+                stringLiteral(Integer.toString(linenumberEnd)));
     }
 
     public static Triple createBranchSnapshotCommitHashProperty(Node snapshotLineEntryNode, String commitHash) {
         return Triple.create(snapshotLineEntryNode, branchSnapshotCommitHashProperty(), stringLiteral(commitHash));
     }
 
-    // Commit
+    // Commit Triples (using a String commitUri as subject)
 
-    public static Triple createRdfTypeProperty(String issueUri) {
-        return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri( GH_NS + "GitCommit" ));
+    public static Triple createRdfTypeProperty(String commitUri) {
+        return Triple.create(RdfUtils.uri(commitUri), rdfTypeProperty(), RdfUtils.uri(GH_NS + "GitCommit"));
     }
 
     public static Triple createCommitHashProperty(String commitUri, String commitHash) {
@@ -271,20 +285,43 @@ public final class RdfCommitUtils {
         return Triple.create(uri(commitUri), commitMessageProperty(), stringLiteral(commitMessageValue));
     }
 
+    // Overloaded Commit Triple Methods (using a Node as subject, for commit
+    // subtrees)
+
+    public static Triple createCommitHashProperty(Node commitNode, String commitHash) {
+        return Triple.create(commitNode, commitHashProperty(), stringLiteral(commitHash));
+    }
+
+    public static Triple createCommitDateProperty(Node commitNode, LocalDateTime commitDateTimeValue) {
+        return Triple.create(commitNode, commitDateProperty(), dateTimeLiteral(commitDateTimeValue));
+    }
+
+    public static Triple createCommitterNameProperty(Node commitNode, String committerNameValue) {
+        return Triple.create(commitNode, committerNameProperty(), stringLiteral(committerNameValue));
+    }
+
+    public static Triple createCommitterEmailProperty(Node commitNode, String committerEmailValue) {
+        return Triple.create(commitNode, committerEmailProperty(), stringLiteral(committerEmailValue));
+    }
+
+    public static Triple createCommitMessageProperty(Node commitNode, String commitMessageValue) {
+        return Triple.create(commitNode, commitMessageProperty(), stringLiteral(commitMessageValue));
+    }
+
     public static Triple createCommitDiffEntryEditTypeProperty(Node diffEntryNode, DiffEntry.ChangeType changeType) {
-        //return Triple.create(diffEntryNode, commitDiffEntryEditTypeProperty(), changeTypeLiteral(changeType));
-        return Triple.create(diffEntryNode, commitDiffEntryEditTypeProperty(), uri(NS + changeType.toString().toLowerCase()));
+        return Triple.create(diffEntryNode, commitDiffEntryEditTypeProperty(),
+                uri(NS + changeType.toString().toLowerCase()));
     }
 
     public static Triple createCommiterGitHubUserProperty(String commitUri, String commiterGitHubUser) {
-        //return Triple.create(uri(commitUri), commitGitHubUserProperty(), stringLiteral(commiterGitHubUser));
         return Triple.create(uri(commitUri), commitGitHubUserProperty(), uri(commiterGitHubUser));
     }
+
     public static Triple createCommitResource(String commitUri, Node commitNode) {
         return Triple.create(uri(commitUri), commitResource(), commitNode);
     }
 
-    // Diff
+    // Diff Triples
 
     public static Triple createCommitDiffEntryResource(Node commitNode, Node diffEntryNode) {
         return Triple.create(commitNode, commitDiffEntryResource(), diffEntryNode);
@@ -295,11 +332,13 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createCommitDiffEntryOldFileNameProperty(Node diffEntryNode, FileHeader fileHeader) {
-        return Triple.create(diffEntryNode, commitDiffEntryOldFileNameProperty(), stringLiteral(fileHeader.getOldPath()));
+        return Triple.create(diffEntryNode, commitDiffEntryOldFileNameProperty(),
+                stringLiteral(fileHeader.getOldPath()));
     }
 
     public static Triple createCommitDiffEntryNewFileNameProperty(Node diffEntryNode, FileHeader fileHeader) {
-        return Triple.create(diffEntryNode, commitDiffEntryNewFileNameProperty(), stringLiteral(fileHeader.getNewPath()));
+        return Triple.create(diffEntryNode, commitDiffEntryNewFileNameProperty(),
+                stringLiteral(fileHeader.getNewPath()));
     }
 
     public static Triple createCommitDiffEditResource(Node diffEntryNode, Node diffEditNode) {
@@ -310,19 +349,21 @@ public final class RdfCommitUtils {
         return Triple.create(editNode, commitDiffEntryEditTypeProperty(), uri(NS + editType.toString().toLowerCase()));
     }
 
-    public static Triple createEditOldLinenumberBeginProperty(Node editNode, int lineNumberBegin ) {
-        return Triple.create(editNode, editOldLinenumberBeginProperty(), stringLiteral(Integer.toString(lineNumberBegin)));
+    public static Triple createEditOldLinenumberBeginProperty(Node editNode, int lineNumberBegin) {
+        return Triple.create(editNode, editOldLinenumberBeginProperty(),
+                stringLiteral(Integer.toString(lineNumberBegin)));
     }
 
-    public static Triple createEditNewLinenumberBeginProperty(Node editNode, int lineNumberBegin ) {
-        return Triple.create(editNode, editNewLinenumberBeginProperty(), stringLiteral(Integer.toString(lineNumberBegin)));
+    public static Triple createEditNewLinenumberBeginProperty(Node editNode, int lineNumberBegin) {
+        return Triple.create(editNode, editNewLinenumberBeginProperty(),
+                stringLiteral(Integer.toString(lineNumberBegin)));
     }
 
-    public static Triple createEditOldLinenumberEndProperty(Node editNode, int lineNumberEnd ) {
+    public static Triple createEditOldLinenumberEndProperty(Node editNode, int lineNumberEnd) {
         return Triple.create(editNode, editOldLinenumberEndProperty(), stringLiteral(Integer.toString(lineNumberEnd)));
     }
 
-    public static Triple createEditNewLinenumberEndProperty(Node editNode, int lineNumberEnd ) {
+    public static Triple createEditNewLinenumberEndProperty(Node editNode, int lineNumberEnd) {
         return Triple.create(editNode, editNewLinenumberEndProperty(), stringLiteral(Integer.toString(lineNumberEnd)));
     }
 
@@ -338,16 +379,16 @@ public final class RdfCommitUtils {
         return Triple.create(tagNode, tagResource(), stringLiteral(tagName));
     }
 
-    // Tag
+    // Tag Triple
 
     public static Triple createCommitTagProperty(String commitUri, String tagName) {
         return Triple.create(uri(commitUri), commitTagNameProperty(), stringLiteral(tagName));
     }
 
-    // Metadata
+    // Repository Metadata Triples
 
     public static Triple createRepositoryRdfTypeProperty(String repoUri) {
-        return Triple.create(RdfUtils.uri(repoUri), rdfTypeProperty(), RdfUtils.uri( GH_NS + "GitRepository" ));
+        return Triple.create(RdfUtils.uri(repoUri), rdfTypeProperty(), RdfUtils.uri(GH_NS + "GitRepository"));
     }
 
     public static Triple createRepositoryEncodingProperty(String repoUri, String encoding) {
@@ -362,14 +403,14 @@ public final class RdfCommitUtils {
         return Triple.create(uri(repoUri), repositoryNameProperty(), stringLiteral(repositoryName));
     }
 
-    // Submodule
+    // Submodule Triples
 
     public static Triple createRepositorySubmoduleProperty(String repoUri, Node submoduleNode) {
         return Triple.create(uri(repoUri), rdfSubmoduleProperty(), submoduleNode);
     }
 
     public static Triple createSubmoduleRdfTypeProperty(Node submoduleNode) {
-        return Triple.create(submoduleNode, rdfTypeProperty(), RdfUtils.uri( NS + "Submodule" ));
+        return Triple.create(submoduleNode, rdfTypeProperty(), RdfUtils.uri(NS + "Submodule"));
     }
 
     public static Triple createSubmodulePathProperty(Node submoduleNode, String pathName) {
@@ -387,4 +428,13 @@ public final class RdfCommitUtils {
     public static Triple createSubmoduleRepositoryEntryProperty(Node submoduleNode, String submoduleUrl) {
         return Triple.create(submoduleNode, rdfSubmoduleRepositoryEntryProperty(), RdfUtils.uri(submoduleUrl));
     }
+
+    public static Triple createMergeTargetBranchProperty(Node commitNode, String branchName) {
+        return Triple.create(commitNode, mergeTargetBranchProperty(), stringLiteral(branchName));
+    }
+
+    public static Triple createCommiterIdProperty(Node commitNode, String commiterHtmlUri) {
+        return Triple.create(commitNode, commiterHtmlUriProperty(), stringLiteral(commiterHtmlUri));
+    }
+
 }

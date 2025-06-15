@@ -1,7 +1,7 @@
 package de.leipzig.htwk.gitrdf.worker.calculator;
 
 import de.leipzig.htwk.gitrdf.worker.handler.LockHandler;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.commit.RdfCommitUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.graph.Node;
 import org.apache.jena.rdf.model.Resource;
@@ -44,12 +44,13 @@ public class BranchSnapshotCalculator {
 
         writer.start();
 
-        //ObjectId headCommitId = gitRepository.resolve("HEAD");
-        //String commitUri = getGithubCommitUri(owner, repositoryName, headCommitId.getName());
+        // ObjectId headCommitId = gitRepository.resolve("HEAD");
+        // String commitUri = getGithubCommitUri(owner, repositoryName,
+        // headCommitId.getName());
 
-        //String branchSnapshotUri = targetCommitUri;
-        //String branchSnapshotUri = GIT_NS + ":blame";
-        //String branchSnapshotUri = "";
+        // String branchSnapshotUri = targetCommitUri;
+        // String branchSnapshotUri = GIT_NS + ":blame";
+        // String branchSnapshotUri = "";
 
         Resource branchSnapshotResource = ResourceFactory.createResource(branchSnapshotUri);
         Node branchSnapshotNode = branchSnapshotResource.asNode();
@@ -90,7 +91,8 @@ public class BranchSnapshotCalculator {
             Resource branchSnapshotFileResource = ResourceFactory.createResource();
             Node branchSnapshotFileNode = branchSnapshotFileResource.asNode();
 
-            writer.triple(RdfCommitUtils.createBranchSnapshotFileEntryProperty(branchSnapshotNode, branchSnapshotFileNode));
+            writer.triple(
+                    RdfCommitUtils.createBranchSnapshotFileEntryProperty(branchSnapshotNode, branchSnapshotFileNode));
             writer.triple(RdfCommitUtils.createBranchSnapshotFilenameProperty(branchSnapshotFileNode, fileName));
 
             BlameResult blameResult;
@@ -141,26 +143,38 @@ public class BranchSnapshotCalculator {
 
                         lineNumberEnd += 1;
 
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, prevCommitHash));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, linenumberBegin));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
+                        writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode,
+                                branchSnapshotLineEntryNode));
+                        writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode,
+                                prevCommitHash));
+                        writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(
+                                branchSnapshotLineEntryNode, linenumberBegin));
+                        writer.triple(RdfCommitUtils
+                                .createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
 
                         if (isNewCommit) {
 
-                            writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
-                            writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, currentCommitHash));
-                            writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, lineNumberEnd));
-                            writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
+                            writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode,
+                                    branchSnapshotLineEntryNode));
+                            writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(
+                                    branchSnapshotLineEntryNode, currentCommitHash));
+                            writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(
+                                    branchSnapshotLineEntryNode, lineNumberEnd));
+                            writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(
+                                    branchSnapshotLineEntryNode, lineNumberEnd));
                         }
                     }
 
                     if (isNewCommit) {
 
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, prevCommitHash));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, linenumberBegin));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
+                        writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode,
+                                branchSnapshotLineEntryNode));
+                        writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode,
+                                prevCommitHash));
+                        writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(
+                                branchSnapshotLineEntryNode, linenumberBegin));
+                        writer.triple(RdfCommitUtils
+                                .createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
 
                         prevCommitHash = currentCommitHash;
                     }

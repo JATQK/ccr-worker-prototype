@@ -1,9 +1,11 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.githubUtils;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
+
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -27,7 +29,9 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(PLATFORM_NS + "ticketTitle");
     }
 
-    public static Node bodyProperty() { return RdfUtils.uri(PLATFORM_NS + "ticketBody"); }
+    public static Node bodyProperty() {
+        return RdfUtils.uri(PLATFORM_NS + "ticketBody");
+    }
 
     // Platform - GitHub
 
@@ -43,7 +47,9 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "issueState");
     }
 
-    public static Node userProperty() { return RdfUtils.uri(GH_NS + "user"); }
+    public static Node userProperty() {
+        return RdfUtils.uri(GH_NS + "user");
+    }
 
     public static Node labelProperty() {
         return RdfUtils.uri(GH_NS + "issueLabel");
@@ -69,22 +75,34 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "issueClosedAt");
     }
 
+    public static Node issueCreatedByProperty() {
+        return RdfUtils.uri("github:issueCreatedBy");
+    }
+
+    public static Node issueUpdatedByProperty() {
+        return RdfUtils.uri("github:issueUpdatedBy");
+    }
+
+    public static Node issueClosedByProperty() {
+        return RdfUtils.uri("github:issueClosedBy");
+    }
+
+    // Existing Triple Creator Methods
 
     public static Triple createRdfTypeProperty(String issueUri) {
-        return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri( "github:GithubIssue" ));
+        return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri("github:GithubIssue"));
     }
 
     public static Triple createIssueIdProperty(String issueUri, long id) {
-        //return Triple.create(RdfUtils.uri(issueUri), issueIdProperty(), RdfUtils.longLiteral(id));
         return Triple.create(RdfUtils.uri(issueUri), issueIdProperty(), RdfUtils.stringLiteral(Long.toString(id)));
     }
 
     public static Triple createIssueNumberProperty(String issueUri, int number) {
-        return Triple.create(RdfUtils.uri(issueUri), issueNumberProperty(), RdfUtils.stringLiteral(Integer.toString(number)));
+        return Triple.create(RdfUtils.uri(issueUri), issueNumberProperty(),
+                RdfUtils.stringLiteral(Integer.toString(number)));
     }
 
     public static Triple createIssueStateProperty(String issueUri, String state) {
-        //return Triple.create(RdfUtils.uri(issueUri), stateProperty(), RdfUtils.stringLiteral(state));
         return Triple.create(RdfUtils.uri(issueUri), stateProperty(), uri(GH_NS + state.toLowerCase()));
     }
 
@@ -98,38 +116,46 @@ public final class RdfGithubIssueUtils {
 
     public static Triple createIssueUserProperty(String issueUri, String userUri) {
         return Triple.create(RdfUtils.uri(issueUri), userProperty(), RdfUtils.uri(userUri));
-        //return Triple.create(RdfUtils.uri(issueUri), userProperty(), RdfUtils.stringLiteral(userUri));
     }
 
     public static Triple createIssueLabelProperty(String issueUri, String labelUri) {
         return Triple.create(RdfUtils.uri(issueUri), labelProperty(), RdfUtils.uri(labelUri));
-        //return Triple.create(RdfUtils.uri(issueUri), labelProperty(), RdfUtils.stringLiteral(labelUri));
     }
 
     public static Triple createIssueAssigneeProperty(String issueUri, String userUri) {
         return Triple.create(RdfUtils.uri(issueUri), assigneeProperty(), RdfUtils.uri(userUri));
-        //return Triple.create(RdfUtils.uri(issueUri), assigneeProperty(), RdfUtils.stringLiteral(userUri));
     }
 
     public static Triple createIssueMilestoneProperty(String issueUri, String milestoneUri) {
         return Triple.create(RdfUtils.uri(issueUri), milestoneProperty(), RdfUtils.uri(milestoneUri));
-        //return Triple.create(RdfUtils.uri(issueUri), milestoneProperty(), RdfUtils.stringLiteral(milestoneUri));
     }
 
-    // TODO: should this be changed later on? Use schema instead of ^^literalType
     public static Triple createIssueCreatedAtProperty(String issueUri, LocalDateTime createdAtDateTime) {
         return Triple.create(RdfUtils.uri(issueUri), createdAtProperty(), RdfUtils.dateTimeLiteral(createdAtDateTime));
-        //return Triple.create(RdfUtils.uri(issueUri), createdAtProperty(), RdfUtils.stringLiteral(createdAtDateTime.toString()));
     }
 
     public static Triple createIssueUpdatedAtProperty(String issueUri, LocalDateTime updatedAtDateTime) {
         return Triple.create(RdfUtils.uri(issueUri), updatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAtDateTime));
-        //return Triple.create(RdfUtils.uri(issueUri), updatedAtProperty(), RdfUtils.stringLiteral(updatedAtDateTime.toString()));
     }
 
     public static Triple createIssueClosedAtProperty(String issueUri, LocalDateTime closedAtDateTime) {
         return Triple.create(RdfUtils.uri(issueUri), closedAtProperty(), RdfUtils.dateTimeLiteral(closedAtDateTime));
-        //return Triple.create(RdfUtils.uri(issueUri), closedAtProperty(), RdfUtils.stringLiteral(closedAtDateTime.toString()));
+    }
+
+    public static Triple createIssueCommitEntryProperty(String issueUri, Node commitEntryNode) {
+        return Triple.create(RdfUtils.uri(issueUri), RdfUtils.uri(GH_NS + "merge"), commitEntryNode);
+    }
+
+    public static Triple createIssueCreatedByProperty(String issueUri, String userUri) {
+        return Triple.create(RdfUtils.uri(issueUri), issueCreatedByProperty(), RdfUtils.uri(userUri));
+    }
+
+    public static Triple createIssueUpdatedByProperty(String issueUri, String userUri) {
+        return Triple.create(RdfUtils.uri(issueUri), issueUpdatedByProperty(), RdfUtils.uri(userUri));
+    }
+
+    public static Triple createIssueClosedByProperty(String issueUri, String userUri) {
+        return Triple.create(RdfUtils.uri(issueUri), issueClosedByProperty(), RdfUtils.uri(userUri));
     }
 
 }

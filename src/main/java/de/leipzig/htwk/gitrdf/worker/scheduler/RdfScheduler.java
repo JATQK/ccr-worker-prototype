@@ -80,12 +80,13 @@ public class RdfScheduler {
     @Scheduled(fixedDelay = THREE_SECONDS)
     public void rdfGitRepoTask() {
 
-        if (!schedulerConfig.isRdfGitRepoTaskEnabled()) return;
+        if (!schedulerConfig.isRdfGitRepoTaskEnabled())
+            return;
 
         log.trace("Triggering git repository rdf task run at {}", LocalDateTime.now(clock));
 
-        List<GitRepositoryOrderEntity> entitiesInStatusReceived
-                = gitRepositoryOrderRepository.findAllByStatus(GitRepositoryOrderStatus.RECEIVED);
+        List<GitRepositoryOrderEntity> entitiesInStatusReceived = gitRepositoryOrderRepository
+                .findAllByStatus(GitRepositoryOrderStatus.RECEIVED);
 
         log.trace("Found {} repositories in status 'RECEIVED'", entitiesInStatusReceived.size());
 
@@ -95,7 +96,8 @@ public class RdfScheduler {
 
         for (GitRepositoryOrderEntity entity : entitiesInStatusReceived) {
 
-            if (runPerformed) break;
+            if (runPerformed)
+                break;
 
             lock = null;
             String lockId = getGitToRdfLockId(entity.getId());
@@ -125,7 +127,8 @@ public class RdfScheduler {
                 }
 
             } else {
-                log.info("Lock with the id '{}' was already acquired. Skipping this specific lock and continuing.", lockId);
+                log.info("Lock with the id '{}' was already acquired. Skipping this specific lock and continuing.",
+                        lockId);
                 continue;
             }
 
@@ -134,14 +137,16 @@ public class RdfScheduler {
     }
 
     @Scheduled(fixedDelay = THREE_SECONDS)
-    public void rdfGithubRepoTask() throws NoSuchAlgorithmException, InvalidKeySpecException, URISyntaxException, IOException, InterruptedException {
+    public void rdfGithubRepoTask() throws NoSuchAlgorithmException, InvalidKeySpecException, URISyntaxException,
+            IOException, InterruptedException {
 
-        if (!schedulerConfig.isRdfGithubRepoTaskEnabled()) return;
+        if (!schedulerConfig.isRdfGithubRepoTaskEnabled())
+            return;
 
         log.trace("Triggering github repository rdf task run at {}", LocalDateTime.now(clock));
 
-        List<GithubRepositoryOrderEntity> entitiesInStatusReceived
-                = githubRepositoryOrderRepository.findAllByStatus(GitRepositoryOrderStatus.RECEIVED);
+        List<GithubRepositoryOrderEntity> entitiesInStatusReceived = githubRepositoryOrderRepository
+                .findAllByStatus(GitRepositoryOrderStatus.RECEIVED);
 
         log.trace("Found {} repositories in status 'RECEIVED'", entitiesInStatusReceived.size());
 
@@ -151,7 +156,8 @@ public class RdfScheduler {
 
         for (GithubRepositoryOrderEntity entity : entitiesInStatusReceived) {
 
-            if (runPerformed) break;
+            if (runPerformed)
+                break;
 
             lock = null;
             String lockId = getGithubToRdfLockId(entity.getId());
@@ -170,8 +176,8 @@ public class RdfScheduler {
                     log.info("Start processing of '{}' repository", entity.getRepositoryName());
 
                     // Fetch repository again and check, that the OrderStatus is still 'Received'
-                    Optional<GithubRepositoryOrderEntity> optionalWorkEntity
-                            = githubRepositoryOrderRepository.findById(entity.getId());
+                    Optional<GithubRepositoryOrderEntity> optionalWorkEntity = githubRepositoryOrderRepository
+                            .findById(entity.getId());
 
                     if (optionalWorkEntity.isEmpty()) {
                         throw new RuntimeException("Failed to retrieve github repository order entry again after " +
@@ -205,8 +211,8 @@ public class RdfScheduler {
 
                         RenewableLockRegistry renewableLockRegistry = getRenewableLockRegistryOrThrowException();
 
-                        LockHandler lockHandler
-                                = new LockHandler(LockHandler.THIRTY_MINUTES, clock, renewableLockRegistry, lockId);
+                        LockHandler lockHandler = new LockHandler(LockHandler.THIRTY_MINUTES, clock,
+                                renewableLockRegistry, lockId);
 
                         StopWatch watch = new StopWatch();
                         watch.start();
@@ -221,7 +227,8 @@ public class RdfScheduler {
                         watch.stop();
 
                         timeLog.setTotalTime(watch.getTime());
-                        //log.info("TIME MEASUREMENT DONE: Total time in milliseconds is: '{}'", watch.getTime());
+                        // log.info("TIME MEASUREMENT DONE: Total time in milliseconds is: '{}'",
+                        // watch.getTime());
                         timeLog.printTimes();
 
                     }
@@ -234,12 +241,13 @@ public class RdfScheduler {
                 }
 
             } else {
-                log.info("Github conversion scheduler: Lock with the id '{}' was already acquired. Skipping this specific lock and continuing.", lockId);
+                log.info(
+                        "Github conversion scheduler: Lock with the id '{}' was already acquired. Skipping this specific lock and continuing.",
+                        lockId);
                 continue;
             }
 
         }
-
 
     }
 
@@ -248,8 +256,8 @@ public class RdfScheduler {
 
         log.trace("Triggering failure cleanup run at {}", LocalDateTime.now(clock));
 
-        List<GitRepositoryOrderEntity> entitiesInStatusProcessing
-                = gitRepositoryOrderRepository.findAllByStatus(GitRepositoryOrderStatus.PROCESSING);
+        List<GitRepositoryOrderEntity> entitiesInStatusProcessing = gitRepositoryOrderRepository
+                .findAllByStatus(GitRepositoryOrderStatus.PROCESSING);
 
         log.trace("Found {} repositories in status 'PROCESSING'", entitiesInStatusProcessing.size());
 
@@ -271,8 +279,8 @@ public class RdfScheduler {
 
                 try {
 
-                    Optional<GitRepositoryOrderEntity> optionalGitRepoEntry
-                            = gitRepositoryOrderRepository.findById(entity.getId());
+                    Optional<GitRepositoryOrderEntity> optionalGitRepoEntry = gitRepositoryOrderRepository
+                            .findById(entity.getId());
 
                     if (optionalGitRepoEntry.isPresent()) {
 
@@ -297,7 +305,8 @@ public class RdfScheduler {
                 }
 
             } else {
-                log.info("Lock with the id '{}' was already acquired. Skipping this specific lock and continuing.", lockId);
+                log.info("Lock with the id '{}' was already acquired. Skipping this specific lock and continuing.",
+                        lockId);
                 continue;
             }
 
@@ -310,8 +319,8 @@ public class RdfScheduler {
 
         log.trace("Triggering failure cleanup run at {}", LocalDateTime.now(clock));
 
-        List<GithubRepositoryOrderEntity> entitiesInStatusProcessing
-                = githubRepositoryOrderRepository.findAllByStatus(GitRepositoryOrderStatus.PROCESSING);
+        List<GithubRepositoryOrderEntity> entitiesInStatusProcessing = githubRepositoryOrderRepository
+                .findAllByStatus(GitRepositoryOrderStatus.PROCESSING);
 
         log.trace("Found {} repositories in status 'PROCESSING'", entitiesInStatusProcessing.size());
 
@@ -333,8 +342,8 @@ public class RdfScheduler {
 
                 try {
 
-                    Optional<GithubRepositoryOrderEntity> optionalGithubRepoEntry
-                            = githubRepositoryOrderRepository.findById(entity.getId());
+                    Optional<GithubRepositoryOrderEntity> optionalGithubRepoEntry = githubRepositoryOrderRepository
+                            .findById(entity.getId());
 
                     if (optionalGithubRepoEntry.isPresent()) {
 
@@ -359,7 +368,9 @@ public class RdfScheduler {
                 }
 
             } else {
-                log.info("Github cleanup: Lock with the id '{}' was already acquired. Skipping this specific lock and continuing.", lockId);
+                log.info(
+                        "Github cleanup: Lock with the id '{}' was already acquired. Skipping this specific lock and continuing.",
+                        lockId);
                 continue;
             }
 

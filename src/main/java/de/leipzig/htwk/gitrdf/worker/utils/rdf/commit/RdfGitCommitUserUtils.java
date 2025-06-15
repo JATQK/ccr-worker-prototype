@@ -1,4 +1,4 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.commit;
 
 import lombok.extern.slf4j.Slf4j;
 import org.kohsuke.github.GHCommit;
