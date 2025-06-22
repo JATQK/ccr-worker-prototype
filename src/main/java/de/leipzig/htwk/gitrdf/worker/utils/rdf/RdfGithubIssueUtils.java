@@ -1,16 +1,16 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.uri;
+
+import java.time.LocalDateTime;
+
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.util.Date;
-
-import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.*;
-import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.uri;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfGithubIssueUtils {
@@ -53,13 +53,6 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "issueAssignee");
     }
 
-    public static Node reviewerProperty() {
-        return RdfUtils.uri(GH_NS + "issueReviewer");
-    }
-
-    public static Node mergedByProperty() {
-        return RdfUtils.uri(GH_NS + "issueMergedBy");
-    }
 
     public static Node milestoneProperty() {
         return RdfUtils.uri(GH_NS + "issueMilestone");
@@ -120,14 +113,6 @@ public final class RdfGithubIssueUtils {
 
     public static Triple createIssueAssigneeProperty(String issueUri, String userUri) {
         return Triple.create(RdfUtils.uri(issueUri), assigneeProperty(), RdfUtils.uri(userUri));
-    }
-
-    public static Triple createIssueReviewerProperty(String issueUri, String userUri) {
-        return Triple.create(RdfUtils.uri(issueUri), reviewerProperty(), RdfUtils.uri(userUri));
-    }
-
-    public static Triple createIssueMergedByProperty(String issueUri, String userUri) {
-        return Triple.create(RdfUtils.uri(issueUri), mergedByProperty(), RdfUtils.uri(userUri));
     }
 
     public static Triple createIssueMilestoneProperty(String issueUri, String milestoneUri) {
