@@ -77,6 +77,14 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "issueClosedAt");
     }
 
+    public static Node reviewerProperty() {
+        return RdfUtils.uri(GH_NS + "issueReviewer");
+    }
+
+    public static Node mergedByProperty() {
+        return RdfUtils.uri(GH_NS + "issueMergedBy");
+    }
+
 
     public static Triple createRdfTypeProperty(String issueUri) {
         return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri( "github:GithubIssue" ));
@@ -137,6 +145,14 @@ public final class RdfGithubIssueUtils {
 
     public static Triple createIssueClosedAtProperty(String issueUri, LocalDateTime closedAtDateTime) {
         return Triple.create(RdfUtils.uri(issueUri), closedAtProperty(), RdfUtils.dateTimeLiteral(closedAtDateTime));
+    }
+
+    public static Triple createIssueReviewerProperty(String issueUri, String reviewerUri) {
+        return Triple.create(RdfUtils.uri(issueUri), reviewerProperty(), RdfUtils.uri(reviewerUri));
+    }
+
+    public static Triple createIssueMergedByProperty(String issueUri, String userUri) {
+        return Triple.create(RdfUtils.uri(issueUri), mergedByProperty(), RdfUtils.uri(userUri));
     }
 
 }

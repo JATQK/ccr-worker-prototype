@@ -739,6 +739,31 @@ public class GithubRdfConversionTransactionService {
                         String githubIssueUri = ghIssue.getHtmlUrl().toString();
                         //String githubIssueUri = PLATFORM_GITHUB_NAMESPACE + ":GithubIssue";
 
+                        if (ghIssue.isPullRequest()) {
+                            boolean reviewersEnabled = false;
+                            boolean mergedByEnabled = false;
+                            try {
+                                reviewersEnabled = githubIssueRepositoryFilter.isEnableIssueReviewers();
+                                mergedByEnabled = githubIssueRepositoryFilter.isEnableIssueMergedBy();
+                            } catch (Exception ignore) {
+                                // optional filter flags may not be present
+                            }
+
+                            if (reviewersEnabled || mergedByEnabled) {
+                                GHPullRequest pr = githubRepositoryHandle.getPullRequest(issueNumber);
+
+                                if (reviewersEnabled) {
+                                    writeReviewersAsTripleToIssue(writer, githubIssueUri, pr.getRequestedReviewers());
+                                }
+
+                                if (mergedByEnabled && pr.getMergedBy() != null) {
+                                    writer.triple(RdfGithubIssueUtils.createIssueMergedByProperty(
+                                            githubIssueUri,
+                                            pr.getMergedBy().getHtmlUrl().toString()));
+                                }
+                            }
+                        }
+
                         writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(githubIssueUri));
 
                         if (githubIssueRepositoryFilter.isEnableIssueId()) {
@@ -1129,6 +1154,17 @@ public class GithubRdfConversionTransactionService {
 
         for (GHUser assignee : assignees) {
             writer.triple(RdfGithubIssueUtils.createIssueAssigneeProperty(issueUri, assignee.getHtmlUrl().toString()));
+        }
+
+    }
+
+    private void writeReviewersAsTripleToIssue(
+            StreamRDF writer,
+            String issueUri,
+            Collection<GHUser> reviewers) {
+
+        for (GHUser reviewer : reviewers) {
+            writer.triple(RdfGithubIssueUtils.createIssueReviewerProperty(issueUri, reviewer.getHtmlUrl().toString()));
         }
 
     }
