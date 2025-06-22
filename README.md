@@ -15,6 +15,11 @@ cd database-shared-common
 mvn package
 ```
 
+```DockerImage
+docker build -t git2rdf-worker-service:1.0.0 .
+
+```
+
 See the folder `target` for the executable JAR file.
 
 **Dependency notice:** To remove duplicate database [JPA](https://spring.io/projects/spring-data-jpa) definitions, a shared database commons project was introduced. See [database-shared-common](https://github.com/git2RDFLab/database-shared-common/) for installing this GitLotus-specific dependency.
