@@ -17,8 +17,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.jena.graph.Node;
@@ -1210,17 +1212,28 @@ public class GithubRdfConversionTransactionService {
 
     }
 
+
     private void writeReviewsAsTriplesToIssue(
             StreamRDF writer,
             String issueUri,
             PagedIterable<GHPullRequestReview> reviews) throws IOException {
 
+        Set<Long> writtenIds = new HashSet<>();
+
         for (GHPullRequestReview review : reviews) {
-            String reviewUri = review.getHtmlUrl().toString();
+            long reviewId = review.getId();
+            if (!writtenIds.add(reviewId)) {
+                // avoid duplicate entries for the same review
+                continue;
+            }
+
+            String reviewUri = issueUri + "#pullrequestreview-" + reviewId;
+
             writer.triple(RdfGithubIssueUtils.createIssueReviewProperty(issueUri, reviewUri));
             writer.triple(RdfGithubIssueUtils.createReviewRdfTypeProperty(reviewUri));
             writer.triple(RdfGithubIssueUtils.createReviewOfProperty(reviewUri, issueUri));
-            writer.triple(RdfGithubIssueUtils.createReviewIdProperty(reviewUri, review.getId()));
+            writer.triple(RdfGithubIssueUtils.createReviewIdProperty(reviewUri, reviewId));
+
 
             GHUser user = review.getUser();
             if (user != null) {
