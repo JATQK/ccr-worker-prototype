@@ -1224,9 +1224,11 @@ public class GithubRdfConversionTransactionService {
             String issueUri,
             PagedIterable<GHPullRequestReview> reviews) throws IOException {
 
+
         for (GHPullRequestReview review : reviews) {
             long reviewId = review.getId();
             if (!seenReviewIds.add(reviewId)) {
+
                 // avoid duplicate entries for the same review
                 continue;
             }
@@ -1238,6 +1240,7 @@ public class GithubRdfConversionTransactionService {
             writer.triple(RdfGithubIssueUtils.createReviewOfProperty(reviewUri, issueUri));
             writer.triple(RdfGithubIssueUtils.createReviewIdProperty(reviewUri, reviewId));
 
+
             if (review.getHtmlUrl() != null) {
                 writer.triple(RdfGithubIssueUtils.createReviewHtmlUrlProperty(reviewUri,
                         review.getHtmlUrl().toString()));
@@ -1247,6 +1250,7 @@ public class GithubRdfConversionTransactionService {
                 writer.triple(RdfGithubIssueUtils.createReviewCommitIdProperty(reviewUri,
                         review.getCommitId()));
             }
+
 
             GHUser user = review.getUser();
             if (user != null) {
@@ -1259,7 +1263,9 @@ public class GithubRdfConversionTransactionService {
             }
 
             if (review.getState() != null) {
-                writer.triple(RdfGithubIssueUtils.createReviewStateProperty(reviewUri, review.getState()));
+
+                writer.triple(RdfGithubIssueUtils.createReviewStateProperty(reviewUri, review.getState().toString()));
+
             }
 
             if (review.getSubmittedAt() != null) {
