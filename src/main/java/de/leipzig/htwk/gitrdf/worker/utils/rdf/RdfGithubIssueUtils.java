@@ -76,6 +76,43 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "reviewer");
     }
 
+    // Review related nodes
+    public static Node reviewProperty() {
+        return RdfUtils.uri(GH_NS + "review");
+    }
+
+    public static Node reviewOfProperty() {
+        return RdfUtils.uri(GH_NS + "reviewOf");
+    }
+
+    public static Node reviewIdProperty() {
+        return RdfUtils.uri(GH_NS + "reviewId");
+    }
+
+    public static Node reviewHtmlUrlProperty() {
+        return RdfUtils.uri(GH_NS + "reviewHtmlUrl");
+    }
+
+    public static Node reviewCommitIdProperty() {
+        return RdfUtils.uri(GH_NS + "reviewCommitId");
+    }
+
+    public static Node reviewBodyProperty() {
+        return RdfUtils.uri(GH_NS + "reviewBody");
+    }
+
+    public static Node reviewStateProperty() {
+        return RdfUtils.uri(GH_NS + "reviewState");
+    }
+
+    public static Node reviewUserProperty() {
+        return RdfUtils.uri(GH_NS + "reviewUser");
+    }
+
+    public static Node reviewSubmittedAtProperty() {
+        return RdfUtils.uri(GH_NS + "reviewSubmittedAt");
+    }
+
     public static Node mergedByProperty() {
         return RdfUtils.uri(GH_NS + "mergedBy");
     }
@@ -194,6 +231,47 @@ public final class RdfGithubIssueUtils {
 
     public static Triple createIssueReviewerProperty(String issueUri, String reviewerUri) {
         return Triple.create(RdfUtils.uri(issueUri), reviewerProperty(), RdfUtils.uri(reviewerUri));
+    }
+
+    // Review related triple creators
+    public static Triple createIssueReviewProperty(String issueUri, String reviewUri) {
+        return Triple.create(RdfUtils.uri(issueUri), reviewProperty(), RdfUtils.uri(reviewUri));
+    }
+
+    public static Triple createReviewRdfTypeProperty(String reviewUri) {
+        return Triple.create(RdfUtils.uri(reviewUri), rdfTypeProperty(), RdfUtils.uri("github:GithubReview"));
+    }
+
+    public static Triple createReviewOfProperty(String reviewUri, String issueUri) {
+        return Triple.create(RdfUtils.uri(reviewUri), reviewOfProperty(), RdfUtils.uri(issueUri));
+    }
+
+    public static Triple createReviewIdProperty(String reviewUri, long id) {
+        return Triple.create(RdfUtils.uri(reviewUri), reviewIdProperty(), RdfUtils.stringLiteral(Long.toString(id)));
+    }
+
+    public static Triple createReviewHtmlUrlProperty(String reviewUri, String url) {
+        return Triple.create(RdfUtils.uri(reviewUri), reviewHtmlUrlProperty(), RdfUtils.uri(url));
+    }
+
+    public static Triple createReviewCommitIdProperty(String reviewUri, String commitId) {
+        return Triple.create(RdfUtils.uri(reviewUri), reviewCommitIdProperty(), RdfUtils.stringLiteral(commitId));
+    }
+
+    public static Triple createReviewBodyProperty(String reviewUri, String body) {
+        return Triple.create(RdfUtils.uri(reviewUri), reviewBodyProperty(), RdfUtils.stringLiteral(body));
+    }
+
+    public static Triple createReviewStateProperty(String reviewUri, String state) {
+        return Triple.create(RdfUtils.uri(reviewUri), reviewStateProperty(), RdfUtils.uri(GH_NS + state.toLowerCase()));
+    }
+
+    public static Triple createReviewUserProperty(String reviewUri, String userUri) {
+        return Triple.create(RdfUtils.uri(reviewUri), reviewUserProperty(), RdfUtils.uri(userUri));
+    }
+
+    public static Triple createReviewSubmittedAtProperty(String reviewUri, LocalDateTime submittedAt) {
+        return Triple.create(RdfUtils.uri(reviewUri), reviewSubmittedAtProperty(), RdfUtils.dateTimeLiteral(submittedAt));
     }
 
     public static Triple createIssueMergedByProperty(String issueUri, String userUri) {
