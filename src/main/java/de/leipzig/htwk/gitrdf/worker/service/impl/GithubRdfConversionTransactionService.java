@@ -1234,6 +1234,7 @@ public class GithubRdfConversionTransactionService {
             writer.triple(RdfGithubIssueUtils.createReviewOfProperty(reviewUri, issueUri));
             writer.triple(RdfGithubIssueUtils.createReviewIdProperty(reviewUri, reviewId));
 
+
             GHUser user = review.getUser();
             if (user != null) {
                 writer.triple(RdfGithubIssueUtils.createReviewUserProperty(reviewUri, user.getHtmlUrl().toString()));
