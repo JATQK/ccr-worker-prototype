@@ -1246,7 +1246,7 @@ public class GithubRdfConversionTransactionService {
             }
 
             if (review.getState() != null) {
-                writer.triple(RdfGithubIssueUtils.createReviewStateProperty(reviewUri, review.getState()));
+                writer.triple(RdfGithubIssueUtils.createReviewStateProperty(reviewUri, review.getState().toString()));
             }
 
             if (review.getSubmittedAt() != null) {
