@@ -113,6 +113,31 @@ public final class RdfGithubIssueUtils {
         return updatedAtProperty();
     }
 
+    // Comment related nodes
+    public static Node issueCommentProperty() {
+        return RdfUtils.uri(GH_NS + "issueComment");
+    }
+
+    public static Node issueCommentIdProperty() {
+        return RdfUtils.uri(GH_NS + "issueCommentId");
+    }
+
+    public static Node issueCommentBodyProperty() {
+        return RdfUtils.uri(GH_NS + "issueCommentBody");
+    }
+
+    public static Node issueCommentUserProperty() {
+        return RdfUtils.uri(GH_NS + "issueCommentUser");
+    }
+
+    public static Node issueCommentCreatedAtProperty() {
+        return RdfUtils.uri(GH_NS + "issueCommentCreatedAt");
+    }
+
+    public static Node issueCommentUpdatedAtProperty() {
+        return RdfUtils.uri(GH_NS + "issueCommentUpdatedAt");
+    }
+
 
     public static Triple createRdfTypeProperty(String issueUri) {
         return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri("github:GithubIssue"));
@@ -212,6 +237,7 @@ public final class RdfGithubIssueUtils {
 
     public static Triple createIssueCommentUpdatedAtProperty(String commentUri, LocalDateTime updatedAt) {
         return Triple.create(RdfUtils.uri(commentUri), commentUpdatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
+
     }
 
 }
