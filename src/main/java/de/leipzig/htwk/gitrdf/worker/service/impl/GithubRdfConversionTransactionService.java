@@ -17,8 +17,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.jena.graph.Node;
@@ -59,6 +61,7 @@ import org.kohsuke.github.GHIssueState;
 import org.kohsuke.github.GHLabel;
 import org.kohsuke.github.GHMilestone;
 import org.kohsuke.github.GHPullRequest;
+import org.kohsuke.github.GHPullRequestReview;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GitHub;
@@ -783,6 +786,7 @@ public class GithubRdfConversionTransactionService {
 
                                 if (reviewersEnabled) {
                                     writeReviewersAsTripleToIssue(writer, githubIssueUri, pr.getRequestedReviewers());
+                                    writeReviewsAsTriplesToIssue(writer, githubIssueUri, pr.listReviews());
                                 }
 
                                 if (mergedByEnabled && pr.getMergedBy() != null) {
@@ -1204,6 +1208,50 @@ public class GithubRdfConversionTransactionService {
 
         for (GHUser reviewer : reviewers) {
             writer.triple(RdfGithubIssueUtils.createIssueReviewerProperty(issueUri, reviewer.getHtmlUrl().toString()));
+        }
+
+    }
+
+
+    private void writeReviewsAsTriplesToIssue(
+            StreamRDF writer,
+            String issueUri,
+            PagedIterable<GHPullRequestReview> reviews) throws IOException {
+
+        Set<Long> writtenIds = new HashSet<>();
+
+        for (GHPullRequestReview review : reviews) {
+            long reviewId = review.getId();
+            if (!writtenIds.add(reviewId)) {
+                // avoid duplicate entries for the same review
+                continue;
+            }
+
+            String reviewUri = issueUri + "#pullrequestreview-" + reviewId;
+
+            writer.triple(RdfGithubIssueUtils.createIssueReviewProperty(issueUri, reviewUri));
+            writer.triple(RdfGithubIssueUtils.createReviewRdfTypeProperty(reviewUri));
+            writer.triple(RdfGithubIssueUtils.createReviewOfProperty(reviewUri, issueUri));
+            writer.triple(RdfGithubIssueUtils.createReviewIdProperty(reviewUri, reviewId));
+
+            GHUser user = review.getUser();
+            if (user != null) {
+                writer.triple(RdfGithubIssueUtils.createReviewUserProperty(reviewUri, user.getHtmlUrl().toString()));
+            }
+
+            String body = review.getBody();
+            if (body != null) {
+                writer.triple(RdfGithubIssueUtils.createReviewBodyProperty(reviewUri, body));
+            }
+
+            if (review.getState() != null) {
+                writer.triple(RdfGithubIssueUtils.createReviewStateProperty(reviewUri, review.getState()));
+            }
+
+            if (review.getSubmittedAt() != null) {
+                LocalDateTime submitted = localDateTimeFrom(review.getSubmittedAt());
+                writer.triple(RdfGithubIssueUtils.createReviewSubmittedAtProperty(reviewUri, submitted));
+            }
         }
 
     }
