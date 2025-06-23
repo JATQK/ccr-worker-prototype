@@ -1,5 +1,72 @@
 package de.leipzig.htwk.gitrdf.worker.service.impl;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URISyntaxException;
+import java.nio.charset.IllegalCharsetNameException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang3.time.StopWatch;
+import org.apache.jena.graph.Node;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.riot.RDFFormat;
+import org.apache.jena.riot.system.StreamRDF;
+import org.apache.jena.riot.system.StreamRDFWriter;
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.ListBranchCommand;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.diff.DiffEntry;
+import org.eclipse.jgit.diff.DiffFormatter;
+import org.eclipse.jgit.diff.Edit;
+import org.eclipse.jgit.diff.EditList;
+import org.eclipse.jgit.errors.ConfigInvalidException;
+import org.eclipse.jgit.lib.Config;
+import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectReader;
+import org.eclipse.jgit.lib.PersonIdent;
+import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.patch.FileHeader;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevObject;
+import org.eclipse.jgit.revwalk.RevTag;
+import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.submodule.SubmoduleWalk;
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
+import org.eclipse.jgit.treewalk.CanonicalTreeParser;
+import org.eclipse.jgit.util.io.DisabledOutputStream;
+import org.hibernate.engine.jdbc.BlobProxy;
+import org.kohsuke.github.GHIssue;
+import org.kohsuke.github.GHIssueComment;
+import org.kohsuke.github.GHIssueState;
+import org.kohsuke.github.GHLabel;
+import org.kohsuke.github.GHMilestone;
+import org.kohsuke.github.GHPullRequest;
+import org.kohsuke.github.GHRepository;
+import org.kohsuke.github.GHUser;
+import org.kohsuke.github.GitHub;
+import org.kohsuke.github.PagedIterable;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import de.leipzig.htwk.gitrdf.database.common.entity.GitCommitRepositoryFilter;
 import de.leipzig.htwk.gitrdf.database.common.entity.GithubIssueRepositoryFilter;
 import de.leipzig.htwk.gitrdf.database.common.entity.GithubRepositoryOrderEntity;
@@ -17,45 +84,6 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.time.StopWatch;
-import org.apache.jena.graph.Node;
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.ResourceFactory;
-import org.apache.jena.riot.RDFFormat;
-import org.apache.jena.riot.system.StreamRDF;
-import org.apache.jena.riot.system.StreamRDFWriter;
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.ListBranchCommand;
-import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.diff.DiffEntry;
-import org.eclipse.jgit.diff.DiffFormatter;
-import org.eclipse.jgit.diff.Edit;
-import org.eclipse.jgit.diff.EditList;
-import org.eclipse.jgit.errors.ConfigInvalidException;
-import org.eclipse.jgit.lib.*;
-import org.eclipse.jgit.patch.FileHeader;
-import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevObject;
-import org.eclipse.jgit.revwalk.RevTag;
-import org.eclipse.jgit.revwalk.RevWalk;
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
-import org.eclipse.jgit.submodule.SubmoduleWalk;
-import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
-import org.eclipse.jgit.treewalk.CanonicalTreeParser;
-import org.eclipse.jgit.util.io.DisabledOutputStream;
-import org.hibernate.engine.jdbc.BlobProxy;
-import org.kohsuke.github.*;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.io.*;
-import java.net.URISyntaxException;
-import java.nio.charset.IllegalCharsetNameException;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.*;
 
 @Service
 @Slf4j
@@ -725,7 +753,8 @@ public class GithubRdfConversionTransactionService {
                     boolean doesWriterContainNonWrittenRdfStreamElements = false;
 
                     for (GHIssue ghIssue : githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()) {
-
+                        if (issueCounter >= 100) {
+                            continue;}
                         if (issueCounter < 1) {
                             log.info("Start issue rdf conversion batch");
                             writer.start();
@@ -842,12 +871,15 @@ public class GithubRdfConversionTransactionService {
 
                         issueCounter++;
 
-                        if (issueCounter > 99) {
+                        if (issueCounter > 100) {
                             log.info("Finish issue rdf conversion batch");
                             writer.finish();
                             doesWriterContainNonWrittenRdfStreamElements = false;
-                            issueCounter = 0;
+                            // Limit the Issue processing to 100 issues 
+                            //issueCounter = 0;
                             lockHandler.renewLockOnRenewTimeFulfillment();
+                        } else {
+                            log.info("Processed issue #{} with id {} and uri '{}'", issueCounter, issueId, githubIssueUri);
                         }
                     }
 
@@ -1176,32 +1208,39 @@ public class GithubRdfConversionTransactionService {
 
     }
 
-    private void writeCommentsAsTriplesToIssue(
-            StreamRDF writer,
+    private void writeCommentsAsTriplesToIssue(StreamRDF writer,
             String issueUri,
-            PagedIterable<GHIssueComment> comments) {
-
+            PagedIterable<GHIssueComment> comments)
+            throws IOException { // <-- propagate
         for (GHIssueComment comment : comments) {
-            String commentUri = comment.getHtmlUrl().toString().replace("#issuecomment-", "#comment-");
+            String commentUri = comment.getHtmlUrl().toString();
             writer.triple(RdfGithubIssueUtils.createIssueCommentProperty(issueUri, commentUri));
             writer.triple(RdfGithubIssueUtils.createCommentRdfTypeProperty(commentUri));
             writer.triple(RdfGithubIssueUtils.createIssueCommentOfProperty(commentUri, issueUri));
 
             writer.triple(RdfGithubIssueUtils.createIssueCommentIdProperty(commentUri, comment.getId()));
-            if (comment.getUser() != null) {
-                writer.triple(RdfGithubIssueUtils.createIssueCommentUserProperty(commentUri, comment.getUser().getHtmlUrl().toString()));
+
+            GHUser user = comment.getUser();
+            if (user != null) {
+                writer.triple(RdfGithubIssueUtils.createIssueCommentUserProperty(
+                        commentUri, user.getHtmlUrl().toString()));
             }
-            if (comment.getBody() != null) {
-                writer.triple(RdfGithubIssueUtils.createIssueCommentBodyProperty(commentUri, comment.getBody()));
+
+            String body = comment.getBody();
+            if (body != null) {
+                writer.triple(RdfGithubIssueUtils.createIssueCommentBodyProperty(commentUri, body));
             }
+
             if (comment.getCreatedAt() != null) {
-                writer.triple(RdfGithubIssueUtils.createIssueCommentCreatedAtProperty(commentUri, localDateTimeFrom(comment.getCreatedAt())));
+                LocalDateTime created = localDateTimeFrom(comment.getCreatedAt());
+                writer.triple(RdfGithubIssueUtils.createIssueCommentCreatedAtProperty(commentUri, created));
             }
+
             if (comment.getUpdatedAt() != null) {
-                writer.triple(RdfGithubIssueUtils.createIssueCommentUpdatedAtProperty(commentUri, localDateTimeFrom(comment.getUpdatedAt())));
+                LocalDateTime updated = localDateTimeFrom(comment.getUpdatedAt());
+                writer.triple(RdfGithubIssueUtils.createIssueCommentUpdatedAtProperty(commentUri, updated));
             }
         }
-
     }
 
     private int calculateSkipCountAndThrowExceptionIfIntegerOverflowIsImminent(

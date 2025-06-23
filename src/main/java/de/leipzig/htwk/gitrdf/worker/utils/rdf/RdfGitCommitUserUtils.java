@@ -1,11 +1,12 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf;
 
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+
 import org.kohsuke.github.GHCommit;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
 
-import java.io.IOException;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class RdfGitCommitUserUtils {
@@ -22,10 +23,29 @@ public class RdfGitCommitUserUtils {
         try {
             GHCommit commit = repo.getCommit(commitHash);
             GHUser author = commit.getAuthor();
-            return author != null ? "https://github.com/" + author.getLogin() : null;
+
+            if (author == null) {
+                return null;
+            }
+
+            // Check if this is a valid GitHub user account
+            String login = author.getLogin();
+            if (login == null || login.isEmpty() || isAutomatedAccount(login)) {
+                return null;
+            }
+
+            return "https://github.com/" + login;
         } catch (IOException e) {
             log.info("Could not retrieve github-user from commit hash '{}'", commitHash, e);
             return null;
         }
+    }
+
+    private static boolean isAutomatedAccount(String login) {
+        login = login.toLowerCase();
+        // Common patterns for automated accounts
+        return login.contains("[bot]") ||
+                // Add other known automation patterns
+                login.contains("copilot");
     }
 }
