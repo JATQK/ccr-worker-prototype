@@ -765,6 +765,9 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(githubIssueUri));
+                        writer.triple(RdfGithubIssueUtils.createIssueRepositoryProperty(
+                                githubIssueUri,
+                                getGithubRepositoryUri(owner, repositoryName)));
 
                         if (githubIssueRepositoryFilter.isEnableIssueId()) {
                             writer.triple(RdfGithubIssueUtils.createIssueIdProperty(githubIssueUri, issueId));
@@ -1179,8 +1182,11 @@ public class GithubRdfConversionTransactionService {
             PagedIterable<GHIssueComment> comments) {
 
         for (GHIssueComment comment : comments) {
-            String commentUri = comment.getHtmlUrl().toString();
+            String commentUri = comment.getHtmlUrl().toString().replace("#issuecomment-", "#comment-");
             writer.triple(RdfGithubIssueUtils.createIssueCommentProperty(issueUri, commentUri));
+            writer.triple(RdfGithubIssueUtils.createCommentRdfTypeProperty(commentUri));
+            writer.triple(RdfGithubIssueUtils.createIssueCommentOfProperty(commentUri, issueUri));
+
             writer.triple(RdfGithubIssueUtils.createIssueCommentIdProperty(commentUri, comment.getId()));
             if (comment.getUser() != null) {
                 writer.triple(RdfGithubIssueUtils.createIssueCommentUserProperty(commentUri, comment.getUser().getHtmlUrl().toString()));

@@ -27,55 +27,90 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(PLATFORM_NS + "ticketTitle");
     }
 
-    public static Node bodyProperty() { return RdfUtils.uri(PLATFORM_NS + "ticketBody"); }
+    public static Node bodyProperty() {
+        return RdfUtils.uri(PLATFORM_NS + "ticketBody");
+    }
 
     // Platform - GitHub
 
-    public static Node issueIdProperty() {
-        return RdfUtils.uri(GH_NS + "issueId");
+    public static Node idProperty() {
+        return RdfUtils.uri(GH_NS + "id");
     }
 
-    public static Node issueNumberProperty() {
-        return RdfUtils.uri(GH_NS + "issueNumber");
+    public static Node numberProperty() {
+        return RdfUtils.uri(GH_NS + "number");
     }
 
     public static Node stateProperty() {
-        return RdfUtils.uri(GH_NS + "issueState");
+        return RdfUtils.uri(GH_NS + "state");
     }
 
-    public static Node userProperty() { return RdfUtils.uri(GH_NS + "user"); }
+    public static Node authorProperty() { return RdfUtils.uri(GH_NS + "author"); }
 
     public static Node labelProperty() {
-        return RdfUtils.uri(GH_NS + "issueLabel");
+        return RdfUtils.uri(GH_NS + "label");
     }
 
     public static Node assigneeProperty() {
-        return RdfUtils.uri(GH_NS + "issueAssignee");
+        return RdfUtils.uri(GH_NS + "assignee");
     }
 
 
     public static Node milestoneProperty() {
-        return RdfUtils.uri(GH_NS + "issueMilestone");
+        return RdfUtils.uri(GH_NS + "milestone");
     }
 
     public static Node createdAtProperty() {
-        return RdfUtils.uri(GH_NS + "issueCreatedAt");
+        return RdfUtils.uri(GH_NS + "createdAt");
     }
 
     public static Node updatedAtProperty() {
-        return RdfUtils.uri(GH_NS + "issueUpdatedAt");
+        return RdfUtils.uri(GH_NS + "updatedAt");
     }
 
     public static Node closedAtProperty() {
-        return RdfUtils.uri(GH_NS + "issueClosedAt");
+        return RdfUtils.uri(GH_NS + "closedAt");
     }
 
     public static Node reviewerProperty() {
-        return RdfUtils.uri(GH_NS + "issueReviewer");
+        return RdfUtils.uri(GH_NS + "reviewer");
     }
 
     public static Node mergedByProperty() {
-        return RdfUtils.uri(GH_NS + "issueMergedBy");
+        return RdfUtils.uri(GH_NS + "mergedBy");
+    }
+
+    public static Node repositoryProperty() {
+        return RdfUtils.uri(GH_NS + "repository");
+    }
+
+    // Comment related nodes
+    public static Node commentsProperty() {
+        return RdfUtils.uri(GH_NS + "comments");
+    }
+
+    public static Node commentOfProperty() {
+        return RdfUtils.uri(GH_NS + "commentOf");
+    }
+
+    public static Node commentIdProperty() {
+        return idProperty();
+    }
+
+    public static Node commentBodyProperty() {
+        return bodyProperty();
+    }
+
+    public static Node commentAuthorProperty() {
+        return authorProperty();
+    }
+
+    public static Node commentCreatedAtProperty() {
+        return createdAtProperty();
+    }
+
+    public static Node commentUpdatedAtProperty() {
+        return updatedAtProperty();
     }
 
     // Comment related nodes
@@ -105,15 +140,15 @@ public final class RdfGithubIssueUtils {
 
 
     public static Triple createRdfTypeProperty(String issueUri) {
-        return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri( "github:GithubIssue" ));
+        return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri("github:GithubIssue"));
     }
 
     public static Triple createIssueIdProperty(String issueUri, long id) {
-        return Triple.create(RdfUtils.uri(issueUri), issueIdProperty(), RdfUtils.stringLiteral(Long.toString(id)));
+        return Triple.create(RdfUtils.uri(issueUri), idProperty(), RdfUtils.stringLiteral(Long.toString(id)));
     }
 
     public static Triple createIssueNumberProperty(String issueUri, int number) {
-        return Triple.create(RdfUtils.uri(issueUri), issueNumberProperty(), RdfUtils.stringLiteral(Integer.toString(number)));
+        return Triple.create(RdfUtils.uri(issueUri), numberProperty(), RdfUtils.stringLiteral(Integer.toString(number)));
     }
 
     public static Triple createIssueStateProperty(String issueUri, String state) {
@@ -129,7 +164,7 @@ public final class RdfGithubIssueUtils {
     }
 
     public static Triple createIssueUserProperty(String issueUri, String userUri) {
-        return Triple.create(RdfUtils.uri(issueUri), userProperty(), RdfUtils.uri(userUri));
+        return Triple.create(RdfUtils.uri(issueUri), authorProperty(), RdfUtils.uri(userUri));
     }
 
     public static Triple createIssueLabelProperty(String issueUri, String labelUri) {
@@ -165,30 +200,44 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(issueUri), mergedByProperty(), RdfUtils.uri(userUri));
     }
 
+    public static Triple createIssueRepositoryProperty(String issueUri, String repoUri) {
+        return Triple.create(RdfUtils.uri(issueUri), repositoryProperty(), RdfUtils.uri(repoUri));
+    }
+
     // Comment related triple creators
 
+    // Comment related triple creators
     public static Triple createIssueCommentProperty(String issueUri, String commentUri) {
-        return Triple.create(RdfUtils.uri(issueUri), issueCommentProperty(), RdfUtils.uri(commentUri));
+        return Triple.create(RdfUtils.uri(issueUri), commentsProperty(), RdfUtils.uri(commentUri));
+    }
+
+    public static Triple createCommentRdfTypeProperty(String commentUri) {
+        return Triple.create(RdfUtils.uri(commentUri), rdfTypeProperty(), RdfUtils.uri("github:GithubComment"));
+    }
+
+    public static Triple createIssueCommentOfProperty(String commentUri, String issueUri) {
+        return Triple.create(RdfUtils.uri(commentUri), commentOfProperty(), RdfUtils.uri(issueUri));
     }
 
     public static Triple createIssueCommentIdProperty(String commentUri, long id) {
-        return Triple.create(RdfUtils.uri(commentUri), issueCommentIdProperty(), RdfUtils.stringLiteral(Long.toString(id)));
+        return Triple.create(RdfUtils.uri(commentUri), commentIdProperty(), RdfUtils.stringLiteral(Long.toString(id)));
     }
 
     public static Triple createIssueCommentBodyProperty(String commentUri, String body) {
-        return Triple.create(RdfUtils.uri(commentUri), issueCommentBodyProperty(), RdfUtils.stringLiteral(body));
+        return Triple.create(RdfUtils.uri(commentUri), commentBodyProperty(), RdfUtils.stringLiteral(body));
     }
 
     public static Triple createIssueCommentUserProperty(String commentUri, String userUri) {
-        return Triple.create(RdfUtils.uri(commentUri), issueCommentUserProperty(), RdfUtils.uri(userUri));
+        return Triple.create(RdfUtils.uri(commentUri), commentAuthorProperty(), RdfUtils.uri(userUri));
     }
 
     public static Triple createIssueCommentCreatedAtProperty(String commentUri, LocalDateTime createdAt) {
-        return Triple.create(RdfUtils.uri(commentUri), issueCommentCreatedAtProperty(), RdfUtils.dateTimeLiteral(createdAt));
+        return Triple.create(RdfUtils.uri(commentUri), commentCreatedAtProperty(), RdfUtils.dateTimeLiteral(createdAt));
     }
 
     public static Triple createIssueCommentUpdatedAtProperty(String commentUri, LocalDateTime updatedAt) {
-        return Triple.create(RdfUtils.uri(commentUri), issueCommentUpdatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
+        return Triple.create(RdfUtils.uri(commentUri), commentUpdatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
+
     }
 
 }
