@@ -123,6 +123,12 @@ public class GithubRdfConversionTransactionService {
 
     private final int commitsPerIteration;
 
+    /**
+     * Track already written pull request review IDs to avoid duplicate triples
+     * when GitHub returns the same review multiple times.
+     */
+    private final Set<Long> seenReviewIds = new HashSet<>();
+
     public GithubRdfConversionTransactionService(
             GithubHandlerService githubHandlerService,
             EntityManager entityManager,
@@ -1218,11 +1224,9 @@ public class GithubRdfConversionTransactionService {
             String issueUri,
             PagedIterable<GHPullRequestReview> reviews) throws IOException {
 
-        Set<Long> writtenIds = new HashSet<>();
-
         for (GHPullRequestReview review : reviews) {
             long reviewId = review.getId();
-            if (!writtenIds.add(reviewId)) {
+            if (!seenReviewIds.add(reviewId)) {
                 // avoid duplicate entries for the same review
                 continue;
             }
@@ -1233,6 +1237,16 @@ public class GithubRdfConversionTransactionService {
             writer.triple(RdfGithubIssueUtils.createReviewRdfTypeProperty(reviewUri));
             writer.triple(RdfGithubIssueUtils.createReviewOfProperty(reviewUri, issueUri));
             writer.triple(RdfGithubIssueUtils.createReviewIdProperty(reviewUri, reviewId));
+
+            if (review.getHtmlUrl() != null) {
+                writer.triple(RdfGithubIssueUtils.createReviewHtmlUrlProperty(reviewUri,
+                        review.getHtmlUrl().toString()));
+            }
+
+            if (review.getCommitId() != null) {
+                writer.triple(RdfGithubIssueUtils.createReviewCommitIdProperty(reviewUri,
+                        review.getCommitId()));
+            }
 
 
             GHUser user = review.getUser();
