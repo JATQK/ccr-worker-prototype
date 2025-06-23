@@ -59,6 +59,7 @@ import org.kohsuke.github.GHIssueState;
 import org.kohsuke.github.GHLabel;
 import org.kohsuke.github.GHMilestone;
 import org.kohsuke.github.GHPullRequest;
+import org.kohsuke.github.GHPullRequestReview;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GitHub;
@@ -783,6 +784,7 @@ public class GithubRdfConversionTransactionService {
 
                                 if (reviewersEnabled) {
                                     writeReviewersAsTripleToIssue(writer, githubIssueUri, pr.getRequestedReviewers());
+                                    writeReviewsAsTriplesToIssue(writer, githubIssueUri, pr.listReviews());
                                 }
 
                                 if (mergedByEnabled && pr.getMergedBy() != null) {
@@ -1204,6 +1206,40 @@ public class GithubRdfConversionTransactionService {
 
         for (GHUser reviewer : reviewers) {
             writer.triple(RdfGithubIssueUtils.createIssueReviewerProperty(issueUri, reviewer.getHtmlUrl().toString()));
+        }
+
+    }
+
+    private void writeReviewsAsTriplesToIssue(
+            StreamRDF writer,
+            String issueUri,
+            PagedIterable<GHPullRequestReview> reviews) throws IOException {
+
+        for (GHPullRequestReview review : reviews) {
+            String reviewUri = review.getHtmlUrl().toString();
+            writer.triple(RdfGithubIssueUtils.createIssueReviewProperty(issueUri, reviewUri));
+            writer.triple(RdfGithubIssueUtils.createReviewRdfTypeProperty(reviewUri));
+            writer.triple(RdfGithubIssueUtils.createReviewOfProperty(reviewUri, issueUri));
+            writer.triple(RdfGithubIssueUtils.createReviewIdProperty(reviewUri, review.getId()));
+
+            GHUser user = review.getUser();
+            if (user != null) {
+                writer.triple(RdfGithubIssueUtils.createReviewUserProperty(reviewUri, user.getHtmlUrl().toString()));
+            }
+
+            String body = review.getBody();
+            if (body != null) {
+                writer.triple(RdfGithubIssueUtils.createReviewBodyProperty(reviewUri, body));
+            }
+
+            if (review.getState() != null) {
+                writer.triple(RdfGithubIssueUtils.createReviewStateProperty(reviewUri, review.getState()));
+            }
+
+            if (review.getSubmittedAt() != null) {
+                LocalDateTime submitted = localDateTimeFrom(review.getSubmittedAt());
+                writer.triple(RdfGithubIssueUtils.createReviewSubmittedAtProperty(reviewUri, submitted));
+            }
         }
 
     }
