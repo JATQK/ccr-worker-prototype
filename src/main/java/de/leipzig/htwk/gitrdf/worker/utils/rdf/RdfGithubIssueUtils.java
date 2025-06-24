@@ -170,6 +170,31 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "issueCommentUpdatedAt");
     }
 
+    // Review comment related nodes
+    public static Node reviewCommentProperty() {
+        return RdfUtils.uri(GH_NS + "reviewComment");
+    }
+
+    public static Node reviewCommentOfProperty() {
+        return RdfUtils.uri(GH_NS + "reviewCommentOf");
+    }
+
+    public static Node reviewCommentBodyProperty() {
+        return RdfUtils.uri(GH_NS + "reviewCommentBody");
+    }
+
+    public static Node reviewCommentUserProperty() {
+        return RdfUtils.uri(GH_NS + "reviewCommentUser");
+    }
+
+    public static Node reviewCommentCreatedAtProperty() {
+        return RdfUtils.uri(GH_NS + "reviewCommentCreatedAt");
+    }
+
+    public static Node reviewCommentUpdatedAtProperty() {
+        return RdfUtils.uri(GH_NS + "reviewCommentUpdatedAt");
+    }
+
 
     public static Triple createRdfTypeProperty(String issueUri) {
         return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri("github:GithubIssue"));
@@ -310,6 +335,31 @@ public final class RdfGithubIssueUtils {
     public static Triple createIssueCommentUpdatedAtProperty(String commentUri, LocalDateTime updatedAt) {
         return Triple.create(RdfUtils.uri(commentUri), commentUpdatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
 
+    }
+
+    // Review comment related triple creators
+    public static Triple createReviewCommentProperty(String reviewUri, String commentUri) {
+        return Triple.create(RdfUtils.uri(reviewUri), reviewCommentProperty(), RdfUtils.uri(commentUri));
+    }
+
+    public static Triple createReviewCommentOfProperty(String commentUri, String reviewUri) {
+        return Triple.create(RdfUtils.uri(commentUri), reviewCommentOfProperty(), RdfUtils.uri(reviewUri));
+    }
+
+    public static Triple createReviewCommentBodyProperty(String commentUri, String body) {
+        return Triple.create(RdfUtils.uri(commentUri), reviewCommentBodyProperty(), RdfUtils.stringLiteral(body));
+    }
+
+    public static Triple createReviewCommentUserProperty(String commentUri, String userUri) {
+        return Triple.create(RdfUtils.uri(commentUri), reviewCommentUserProperty(), RdfUtils.uri(userUri));
+    }
+
+    public static Triple createReviewCommentCreatedAtProperty(String commentUri, LocalDateTime createdAt) {
+        return Triple.create(RdfUtils.uri(commentUri), reviewCommentCreatedAtProperty(), RdfUtils.dateTimeLiteral(createdAt));
+    }
+
+    public static Triple createReviewCommentUpdatedAtProperty(String commentUri, LocalDateTime updatedAt) {
+        return Triple.create(RdfUtils.uri(commentUri), reviewCommentUpdatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
     }
 
 }
