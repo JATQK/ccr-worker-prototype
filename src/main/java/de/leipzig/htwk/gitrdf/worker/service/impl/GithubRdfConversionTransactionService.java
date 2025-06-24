@@ -29,6 +29,8 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.StreamRDF;
 import org.apache.jena.riot.system.StreamRDFWriter;
+import org.apache.jena.graph.Triple;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -1255,8 +1257,15 @@ public class GithubRdfConversionTransactionService {
             String reviewUri,
             PagedIterable<GHPullRequestReviewComment> comments) throws IOException {
 
+        String containerUri = reviewUri + "#comments";
+        writer.triple(RdfGithubIssueUtils.createReviewDiscussionProperty(reviewUri, containerUri));
+        writer.triple(RdfGithubIssueUtils.createDiscussionOfProperty(containerUri, reviewUri));
+        writer.triple(RdfGithubIssueUtils.createDiscussionRdfTypeBag(containerUri));
+
+        int index = 1;
         for (GHPullRequestReviewComment comment : comments) {
             String commentUri = comment.getHtmlUrl().toString();
+            writer.triple(Triple.create(RdfUtils.uri(containerUri), RdfGithubIssueUtils.bagItemProperty(index++), RdfUtils.uri(commentUri)));
             writer.triple(RdfGithubIssueUtils.createReviewCommentProperty(reviewUri, commentUri));
             writer.triple(RdfGithubIssueUtils.createCommentRdfTypeProperty(commentUri));
             writer.triple(RdfGithubIssueUtils.createReviewCommentOfProperty(commentUri, reviewUri));
@@ -1289,8 +1298,16 @@ public class GithubRdfConversionTransactionService {
             String issueUri,
             PagedIterable<GHIssueComment> comments)
             throws IOException { // <-- propagate
+
+        String containerUri = issueUri + "#comments";
+        writer.triple(RdfGithubIssueUtils.createIssueDiscussionProperty(issueUri, containerUri));
+        writer.triple(RdfGithubIssueUtils.createDiscussionOfProperty(containerUri, issueUri));
+        writer.triple(RdfGithubIssueUtils.createDiscussionRdfTypeBag(containerUri));
+
+        int index = 1;
         for (GHIssueComment comment : comments) {
             String commentUri = comment.getHtmlUrl().toString();
+            writer.triple(Triple.create(RdfUtils.uri(containerUri), RdfGithubIssueUtils.bagItemProperty(index++), RdfUtils.uri(commentUri)));
             writer.triple(RdfGithubIssueUtils.createIssueCommentProperty(issueUri, commentUri));
             writer.triple(RdfGithubIssueUtils.createCommentRdfTypeProperty(commentUri));
             writer.triple(RdfGithubIssueUtils.createIssueCommentOfProperty(commentUri, issueUri));
