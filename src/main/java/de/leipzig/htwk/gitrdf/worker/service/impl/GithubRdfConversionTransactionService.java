@@ -1254,6 +1254,7 @@ public class GithubRdfConversionTransactionService {
             writer.triple(RdfGithubIssueUtils.createIssueCommentProperty(issueUri, commentUri));
             writer.triple(RdfGithubIssueUtils.createCommentRdfTypeProperty(commentUri));
             writer.triple(RdfGithubIssueUtils.createIssueCommentOfProperty(commentUri, issueUri));
+            writer.triple(RdfGithubIssueUtils.createIssueCommentIdProperty(commentUri, comment.getId()));
 
             GHUser user = comment.getUser();
             if (user != null) {

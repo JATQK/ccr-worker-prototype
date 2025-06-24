@@ -282,6 +282,11 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(issueUri), commentsProperty(), RdfUtils.uri(commentUri));
     }
 
+    public static Triple createIssueCommentIdProperty(String commentUri, long id) {
+        return Triple.create(RdfUtils.uri(commentUri), issueCommentIdProperty(),
+                RdfUtils.stringLiteral(Long.toString(id)));
+    }
+
     public static Triple createCommentRdfTypeProperty(String commentUri) {
         return Triple.create(RdfUtils.uri(commentUri), rdfTypeProperty(), RdfUtils.uri("github:GithubComment"));
     }
