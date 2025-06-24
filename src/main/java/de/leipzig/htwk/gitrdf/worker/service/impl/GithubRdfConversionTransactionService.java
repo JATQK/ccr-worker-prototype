@@ -24,13 +24,12 @@ import java.util.Set;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.jena.graph.Node;
+import org.apache.jena.graph.Triple;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.StreamRDF;
 import org.apache.jena.riot.system.StreamRDFWriter;
-import org.apache.jena.graph.Triple;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -88,6 +87,7 @@ import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils;
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 
