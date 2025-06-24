@@ -75,6 +75,7 @@ public final class RdfGithubIssueUtils {
     }
 
     // Review related nodes
+    public static Node reviewsProperty() { return RdfUtils.uri(GH_NS + "reviews"); }
     public static Node reviewProperty() {
         return RdfUtils.uri(GH_NS + "review");
     }
@@ -154,6 +155,15 @@ public final class RdfGithubIssueUtils {
     public static Node commentOfProperty() {
         return RdfUtils.uri(GH_NS + "commentOf");
     }
+
+    // Discussion container related nodes
+    public static Node discussionProperty() {
+        return RdfUtils.uri(GH_NS + "discussion");
+    }
+
+    public static Node discussionOfProperty() {
+        return RdfUtils.uri(GH_NS + "discussionOf");
+    }
     public static Node commentBodyProperty() {
         return bodyProperty();
     }
@@ -220,6 +230,11 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "reviewCommentUpdatedAt");
     }
 
+    public static Node bagItemProperty(int index) {
+        return RdfUtils.uri("rdf:_" + index);
+    }
+
+
 
     public static Triple createRdfTypeProperty(String issueUri) {
         return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri("github:GithubIssue"));
@@ -275,6 +290,19 @@ public final class RdfGithubIssueUtils {
     }
 
     // Review related triple creators
+    public static Triple createIssueReviewsProperty(String issueUri, String collectionUri) {
+        return Triple.create(RdfUtils.uri(issueUri), reviewsProperty(), RdfUtils.uri(collectionUri));
+    }
+
+    public static Triple createReviewsCollectionTypeBag(String collectionUri) {
+        return Triple.create(RdfUtils.uri(collectionUri), rdfTypeProperty(), RdfUtils.uri("rdf:Bag"));
+    }
+
+    public static Triple createReviewsCollectionMemberProperty(String collectionUri, int index, String reviewUri) {
+        return Triple.create(RdfUtils.uri(collectionUri), RdfUtils.uri("rdf:_" + index), RdfUtils.uri(reviewUri));
+    }
+
+    // kept for direct links if required
     public static Triple createIssueReviewProperty(String issueUri, String reviewUri) {
         return Triple.create(RdfUtils.uri(issueUri), reviewProperty(), RdfUtils.uri(reviewUri));
     }
@@ -398,6 +426,7 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(commentUri), reviewCommentUpdatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
     }
 
+
     // Review container triple creators
     public static Triple createIssueReviewsProperty(String issueUri, String containerUri) {
         return Triple.create(RdfUtils.uri(issueUri), reviewsProperty(), RdfUtils.uri(containerUri));
@@ -405,6 +434,7 @@ public final class RdfGithubIssueUtils {
 
     public static Triple createReviewContainerTypeProperty(String containerUri) {
         return Triple.create(RdfUtils.uri(containerUri), rdfTypeProperty(), reviewContainerType());
+
     }
 
 }
