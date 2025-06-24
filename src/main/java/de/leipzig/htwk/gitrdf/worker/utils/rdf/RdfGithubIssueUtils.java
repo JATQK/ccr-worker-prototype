@@ -150,6 +150,15 @@ public final class RdfGithubIssueUtils {
     public static Node commentOfProperty() {
         return RdfUtils.uri(GH_NS + "commentOf");
     }
+
+    // Discussion container related nodes
+    public static Node discussionProperty() {
+        return RdfUtils.uri(GH_NS + "discussion");
+    }
+
+    public static Node discussionOfProperty() {
+        return RdfUtils.uri(GH_NS + "discussionOf");
+    }
     public static Node commentBodyProperty() {
         return bodyProperty();
     }
@@ -215,6 +224,11 @@ public final class RdfGithubIssueUtils {
     public static Node reviewCommentUpdatedAtProperty() {
         return RdfUtils.uri(GH_NS + "reviewCommentUpdatedAt");
     }
+
+    public static Node bagItemProperty(int index) {
+        return RdfUtils.uri("rdf:_" + index);
+    }
+
 
 
     public static Triple createRdfTypeProperty(String issueUri) {
@@ -392,6 +406,23 @@ public final class RdfGithubIssueUtils {
 
     public static Triple createReviewCommentUpdatedAtProperty(String commentUri, LocalDateTime updatedAt) {
         return Triple.create(RdfUtils.uri(commentUri), reviewCommentUpdatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
+    }
+
+    // Discussion container triple creators
+    public static Triple createIssueDiscussionProperty(String issueUri, String containerUri) {
+        return Triple.create(RdfUtils.uri(issueUri), discussionProperty(), RdfUtils.uri(containerUri));
+    }
+
+    public static Triple createReviewDiscussionProperty(String reviewUri, String containerUri) {
+        return Triple.create(RdfUtils.uri(reviewUri), discussionProperty(), RdfUtils.uri(containerUri));
+    }
+
+    public static Triple createDiscussionOfProperty(String containerUri, String parentUri) {
+        return Triple.create(RdfUtils.uri(containerUri), discussionOfProperty(), RdfUtils.uri(parentUri));
+    }
+
+    public static Triple createDiscussionRdfTypeBag(String containerUri) {
+        return Triple.create(RdfUtils.uri(containerUri), rdfTypeProperty(), RdfUtils.uri("rdf:Bag"));
     }
 
 }
