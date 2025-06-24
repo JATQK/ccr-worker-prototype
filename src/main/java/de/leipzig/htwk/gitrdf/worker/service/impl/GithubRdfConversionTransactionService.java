@@ -395,7 +395,6 @@ public class GithubRdfConversionTransactionService {
         Map<String, RdfGitCommitUserUtils> uniqueGitCommiterWithHash = new HashMap<>();
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(rdfTempFile))) {
 
-            //GithubHandle githubHandle = githubHandlerService.getGithubHandle();
             GitHub gitHubHandle = githubHandlerService.getGithub();
 
             lockHandler.renewLockOnRenewTimeFulfillment();
@@ -502,7 +501,9 @@ public class GithubRdfConversionTransactionService {
             lockHandler.renewLockOnRenewTimeFulfillment();
 
             // git commits
-            for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
+            var computeCommitsDeleteForProduction = false;
+            if (computeCommitsDeleteForProduction) {
+                for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
                 log.info("Start iterations of git commits. Current iteration count: {}", iteration);
 
@@ -675,7 +676,7 @@ public class GithubRdfConversionTransactionService {
                             "While iterating through commit log and transforming log to rdf: Exceeded iteration max count (integer overflow)");
                 }
             }
-
+            }
             log.info("Git commit iterations finished");
 
             commitConversionWatch.stop();
