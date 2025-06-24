@@ -423,13 +423,21 @@ public final class RdfGithubIssueUtils {
     }
 
 
-    // Review container triple creators
-    public static Triple createIssueReviewsProperty(String issueUri, String containerUri) {
-        return Triple.create(RdfUtils.uri(issueUri), reviewsProperty(), RdfUtils.uri(containerUri));
+    // Discussion container triple creators
+    public static Triple createIssueDiscussionProperty(String issueUri, String containerUri) {
+        return Triple.create(RdfUtils.uri(issueUri), discussionProperty(), RdfUtils.uri(containerUri));
     }
 
-    public static Triple createReviewContainerTypeProperty(String containerUri) {
-        return Triple.create(RdfUtils.uri(containerUri), rdfTypeProperty(), reviewContainerType());
+    public static Triple createReviewDiscussionProperty(String reviewUri, String containerUri) {
+        return Triple.create(RdfUtils.uri(reviewUri), discussionProperty(), RdfUtils.uri(containerUri));
+    }
+
+    public static Triple createDiscussionOfProperty(String containerUri, String parentUri) {
+        return Triple.create(RdfUtils.uri(containerUri), discussionOfProperty(), RdfUtils.uri(parentUri));
+    }
+
+    public static Triple createDiscussionRdfTypeBag(String containerUri) {
+        return Triple.create(RdfUtils.uri(containerUri), rdfTypeProperty(), RdfUtils.uri("rdf:Bag"));
 
     }
 
