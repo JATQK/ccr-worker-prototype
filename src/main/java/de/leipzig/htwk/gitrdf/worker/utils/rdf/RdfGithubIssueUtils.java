@@ -290,12 +290,12 @@ public final class RdfGithubIssueUtils {
 
 
 
-    public static Triple createReviewsCollectionTypeBag(String collectionUri) {
-        return Triple.create(RdfUtils.uri(collectionUri), rdfTypeProperty(), RdfUtils.uri("rdf:Bag"));
+    public static Triple createIssueReviewsProperty(String issueUri, String reviewsUri) {
+        return Triple.create(RdfUtils.uri(issueUri), reviewsProperty(), RdfUtils.uri(reviewsUri));
     }
 
-    public static Triple createReviewsCollectionMemberProperty(String collectionUri, int index, String reviewUri) {
-        return Triple.create(RdfUtils.uri(collectionUri), RdfUtils.uri("rdf:_" + index), RdfUtils.uri(reviewUri));
+    public static Triple createReviewContainerTypeProperty(String reviewsUri) {
+        return Triple.create(RdfUtils.uri(reviewsUri), rdfTypeProperty(), reviewContainerType());
     }
 
     // kept for direct links if required
