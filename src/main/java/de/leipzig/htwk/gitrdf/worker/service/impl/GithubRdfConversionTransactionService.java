@@ -1202,7 +1202,7 @@ public class GithubRdfConversionTransactionService {
                 continue;
             }
 
-            String reviewUri = issueUri + "#pullrequestreview-" + reviewId;
+            String reviewUri = issueUri + "/reviews/" + reviewId;
 
             writer.triple(RdfGithubIssueUtils.createIssueReviewProperty(issueUri, reviewUri));
             writer.triple(RdfGithubIssueUtils.createReviewRdfTypeProperty(reviewUri));
