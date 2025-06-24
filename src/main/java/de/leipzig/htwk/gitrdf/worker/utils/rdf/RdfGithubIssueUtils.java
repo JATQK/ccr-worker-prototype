@@ -238,7 +238,7 @@ public final class RdfGithubIssueUtils {
     }
 
     public static Triple createReviewIdProperty(String reviewUri, long id) {
-        return Triple.create(RdfUtils.uri(reviewUri), reviewIdProperty(), RdfUtils.stringLiteral(Long.toString(id)));
+        return Triple.create(RdfUtils.uri(reviewUri), reviewIdProperty(), RdfUtils.longLiteral(id));
     }
 
 
