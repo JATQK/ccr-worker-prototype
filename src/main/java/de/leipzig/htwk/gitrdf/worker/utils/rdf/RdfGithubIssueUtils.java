@@ -143,6 +143,10 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "repository");
     }
 
+    // Review container related nodes
+    public static Node reviewsProperty() { return RdfUtils.uri(GH_NS + "reviews"); }
+    public static Node reviewContainerType() { return RdfUtils.uri(GH_NS + "ReviewContainer"); }
+
     // Comment related nodes
     public static Node commentsProperty() {
         return RdfUtils.uri(GH_NS + "comments");
@@ -422,21 +426,15 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(commentUri), reviewCommentUpdatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
     }
 
-    // Discussion container triple creators
-    public static Triple createIssueDiscussionProperty(String issueUri, String containerUri) {
-        return Triple.create(RdfUtils.uri(issueUri), discussionProperty(), RdfUtils.uri(containerUri));
+
+    // Review container triple creators
+    public static Triple createIssueReviewsProperty(String issueUri, String containerUri) {
+        return Triple.create(RdfUtils.uri(issueUri), reviewsProperty(), RdfUtils.uri(containerUri));
     }
 
-    public static Triple createReviewDiscussionProperty(String reviewUri, String containerUri) {
-        return Triple.create(RdfUtils.uri(reviewUri), discussionProperty(), RdfUtils.uri(containerUri));
-    }
+    public static Triple createReviewContainerTypeProperty(String containerUri) {
+        return Triple.create(RdfUtils.uri(containerUri), rdfTypeProperty(), reviewContainerType());
 
-    public static Triple createDiscussionOfProperty(String containerUri, String parentUri) {
-        return Triple.create(RdfUtils.uri(containerUri), discussionOfProperty(), RdfUtils.uri(parentUri));
-    }
-
-    public static Triple createDiscussionRdfTypeBag(String containerUri) {
-        return Triple.create(RdfUtils.uri(containerUri), rdfTypeProperty(), RdfUtils.uri("rdf:Bag"));
     }
 
 }

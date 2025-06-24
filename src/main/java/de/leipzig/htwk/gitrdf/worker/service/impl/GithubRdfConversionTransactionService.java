@@ -1201,6 +1201,12 @@ public class GithubRdfConversionTransactionService {
         writer.triple(RdfGithubIssueUtils.createIssueReviewsProperty(issueUri, collectionUri));
         writer.triple(RdfGithubIssueUtils.createReviewsCollectionTypeBag(collectionUri));
 
+
+        String reviewsUri = issueUri + "/reviews";
+        writer.triple(RdfGithubIssueUtils.createIssueReviewsProperty(issueUri, reviewsUri));
+        writer.triple(RdfGithubIssueUtils.createReviewContainerTypeProperty(reviewsUri));
+        writer.triple(Triple.create(RdfUtils.uri(reviewsUri), RdfGithubIssueUtils.rdfTypeProperty(), RdfUtils.uri("rdf:Bag")));
+
         int index = 1;
         for (GHPullRequestReview review : reviews) {
             long reviewId = review.getId();
@@ -1210,8 +1216,11 @@ public class GithubRdfConversionTransactionService {
                 continue;
             }
 
-            String reviewUri = issueUri + "/reviews/" + reviewId;
-            writer.triple(RdfGithubIssueUtils.createReviewsCollectionMemberProperty(collectionUri, index++, reviewUri));
+
+            String reviewUri = reviewsUri + "/" + reviewId;
+
+            writer.triple(Triple.create(RdfUtils.uri(reviewsUri), RdfUtils.uri("rdf:_" + index++), RdfUtils.uri(reviewUri)));
+
             writer.triple(RdfGithubIssueUtils.createReviewRdfTypeProperty(reviewUri));
             writer.triple(RdfGithubIssueUtils.createReviewOfProperty(reviewUri, issueUri));
             writer.triple(RdfGithubIssueUtils.createReviewIdProperty(reviewUri, reviewId));
