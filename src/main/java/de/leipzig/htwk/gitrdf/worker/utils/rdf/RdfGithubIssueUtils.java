@@ -105,6 +105,27 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "reviewState");
     }
 
+    // Review state resources
+    public static Node reviewStateApproved() {
+        return RdfUtils.uri(GH_NS + "reviewStateApproved");
+    }
+
+    public static Node reviewStateChangesRequested() {
+        return RdfUtils.uri(GH_NS + "reviewStateChangesRequested");
+    }
+
+    public static Node reviewStateCommented() {
+        return RdfUtils.uri(GH_NS + "reviewStateCommented");
+    }
+
+    public static Node reviewStateDismissed() {
+        return RdfUtils.uri(GH_NS + "reviewStateDismissed");
+    }
+
+    public static Node reviewStatePending() {
+        return RdfUtils.uri(GH_NS + "reviewStatePending");
+    }
+
     public static Node reviewUserProperty() {
         return RdfUtils.uri(GH_NS + "reviewUser");
     }
@@ -256,7 +277,18 @@ public final class RdfGithubIssueUtils {
     }
 
     public static Triple createReviewStateProperty(String reviewUri, String state) {
-        return Triple.create(RdfUtils.uri(reviewUri), reviewStateProperty(), RdfUtils.uri(GH_NS + state.toLowerCase()));
+        return Triple.create(RdfUtils.uri(reviewUri), reviewStateProperty(), reviewStateResource(state));
+    }
+
+    private static Node reviewStateResource(String state) {
+        return switch (state.toUpperCase()) {
+            case "APPROVED" -> reviewStateApproved();
+            case "CHANGES_REQUESTED" -> reviewStateChangesRequested();
+            case "COMMENTED" -> reviewStateCommented();
+            case "DISMISSED" -> reviewStateDismissed();
+            case "PENDING" -> reviewStatePending();
+            default -> RdfUtils.uri(GH_NS + state.toLowerCase());
+        };
     }
 
     public static Triple createReviewUserProperty(String reviewUri, String userUri) {
