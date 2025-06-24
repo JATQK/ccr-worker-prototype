@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.jena.graph.Node;
+import org.apache.jena.graph.Triple;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.RDFFormat;
@@ -88,6 +89,7 @@ import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils;
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 
@@ -1197,7 +1199,17 @@ public class GithubRdfConversionTransactionService {
             String issueUri,
             PagedIterable<GHPullRequestReview> reviews) throws IOException {
 
+        String collectionUri = issueUri + "#reviews";
+        writer.triple(RdfGithubIssueUtils.createIssueReviewsProperty(issueUri, collectionUri));
+        writer.triple(RdfGithubIssueUtils.createReviewsCollectionTypeBag(collectionUri));
 
+
+        String reviewsUri = issueUri + "/reviews";
+        writer.triple(RdfGithubIssueUtils.createIssueReviewsProperty(issueUri, reviewsUri));
+        writer.triple(RdfGithubIssueUtils.createReviewContainerTypeProperty(reviewsUri));
+        writer.triple(Triple.create(RdfUtils.uri(reviewsUri), RdfGithubIssueUtils.rdfTypeProperty(), RdfUtils.uri("rdf:Bag")));
+
+        int index = 1;
         for (GHPullRequestReview review : reviews) {
             long reviewId = review.getId();
             if (!seenReviewIds.add(reviewId)) {
@@ -1206,9 +1218,11 @@ public class GithubRdfConversionTransactionService {
                 continue;
             }
 
-            String reviewUri = issueUri + "/reviews/" + reviewId;
 
-            writer.triple(RdfGithubIssueUtils.createIssueReviewProperty(issueUri, reviewUri));
+            String reviewUri = reviewsUri + "/" + reviewId;
+
+            writer.triple(Triple.create(RdfUtils.uri(reviewsUri), RdfUtils.uri("rdf:_" + index++), RdfUtils.uri(reviewUri)));
+
             writer.triple(RdfGithubIssueUtils.createReviewRdfTypeProperty(reviewUri));
             writer.triple(RdfGithubIssueUtils.createReviewOfProperty(reviewUri, issueUri));
             writer.triple(RdfGithubIssueUtils.createReviewIdProperty(reviewUri, reviewId));
