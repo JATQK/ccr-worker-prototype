@@ -62,6 +62,7 @@ import org.kohsuke.github.GHLabel;
 import org.kohsuke.github.GHMilestone;
 import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHPullRequestReview;
+import org.kohsuke.github.GHPullRequestReviewComment;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GitHub;
@@ -1240,6 +1241,44 @@ public class GithubRdfConversionTransactionService {
             if (review.getSubmittedAt() != null) {
                 LocalDateTime submitted = localDateTimeFrom(review.getSubmittedAt());
                 writer.triple(RdfGithubIssueUtils.createReviewSubmittedAtProperty(reviewUri, submitted));
+            }
+
+            // review comments
+            writeReviewCommentsAsTriples(writer, reviewUri, review.listReviewComments());
+        }
+
+    }
+
+    private void writeReviewCommentsAsTriples(
+            StreamRDF writer,
+            String reviewUri,
+            PagedIterable<GHPullRequestReviewComment> comments) throws IOException {
+
+        for (GHPullRequestReviewComment comment : comments) {
+            String commentUri = comment.getHtmlUrl().toString();
+            writer.triple(RdfGithubIssueUtils.createReviewCommentProperty(reviewUri, commentUri));
+            writer.triple(RdfGithubIssueUtils.createCommentRdfTypeProperty(commentUri));
+            writer.triple(RdfGithubIssueUtils.createReviewCommentOfProperty(commentUri, reviewUri));
+
+            GHUser user = comment.getUser();
+            if (user != null) {
+                writer.triple(RdfGithubIssueUtils.createReviewCommentUserProperty(
+                        commentUri, user.getHtmlUrl().toString()));
+            }
+
+            String body = comment.getBody();
+            if (body != null) {
+                writer.triple(RdfGithubIssueUtils.createReviewCommentBodyProperty(commentUri, body));
+            }
+
+            if (comment.getCreatedAt() != null) {
+                LocalDateTime created = localDateTimeFrom(comment.getCreatedAt());
+                writer.triple(RdfGithubIssueUtils.createReviewCommentCreatedAtProperty(commentUri, created));
+            }
+
+            if (comment.getUpdatedAt() != null) {
+                LocalDateTime updated = localDateTimeFrom(comment.getUpdatedAt());
+                writer.triple(RdfGithubIssueUtils.createReviewCommentUpdatedAtProperty(commentUri, updated));
             }
         }
 
