@@ -422,7 +422,6 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(commentUri), reviewCommentUpdatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
     }
 
-
     // Discussion container triple creators
     public static Triple createIssueDiscussionProperty(String issueUri, String containerUri) {
         return Triple.create(RdfUtils.uri(issueUri), discussionProperty(), RdfUtils.uri(containerUri));
