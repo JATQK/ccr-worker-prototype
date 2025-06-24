@@ -1199,11 +1199,6 @@ public class GithubRdfConversionTransactionService {
             String issueUri,
             PagedIterable<GHPullRequestReview> reviews) throws IOException {
 
-        String collectionUri = issueUri + "#reviews";
-        writer.triple(RdfGithubIssueUtils.createIssueReviewsProperty(issueUri, collectionUri));
-        writer.triple(RdfGithubIssueUtils.createReviewsCollectionTypeBag(collectionUri));
-
-
         String reviewsUri = issueUri + "/reviews";
         writer.triple(RdfGithubIssueUtils.createIssueReviewsProperty(issueUri, reviewsUri));
         writer.triple(RdfGithubIssueUtils.createReviewContainerTypeProperty(reviewsUri));
