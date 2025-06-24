@@ -390,8 +390,6 @@ public class GithubRdfConversionTransactionService {
         GithubIssueRepositoryFilter githubIssueRepositoryFilter
                 = entity.getGithubRepositoryFilter().getGithubIssueRepositoryFilter();
 
-        String githubCommitPrefixValue = getGithubCommitBaseUri(owner, repositoryName);
-        String githubIssuePrefixValue = getGithubIssueBaseUri(owner, repositoryName);
 
         Map<String, RdfGitCommitUserUtils> uniqueGitCommiterWithHash = new HashMap<>();
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(rdfTempFile))) {
@@ -437,22 +435,6 @@ public class GithubRdfConversionTransactionService {
 
             commitConversionWatch.start();
 
-            //// Tags (annotated only)
-            //List<Ref> tags = gitHandler.tagList().call();
-            //Map<ObjectId,String> tagNames = new HashMap<>();
-            //
-            //for (Ref tag : tags) {
-            //    ObjectId tagObjectId = tag.getObjectId();
-            //
-            //    if (tagObjectId == null) continue;
-            //
-            //    String tagName = tag.getName();
-            //    String tagCommitHash = tagObjectId.getName();
-            //
-            //    tagNames.put(tagObjectId, tagName);
-            //
-            //    log.info("Added Tag '{}' #{}", tagName, tagCommitHash);
-            //}
 
             Map<ObjectId, List<String>> commitToTags = getTagsForCommits(gitRepository);
 
@@ -461,7 +443,6 @@ public class GithubRdfConversionTransactionService {
             // Metadata
 
             writer.start();
-
             writer.triple(RdfCommitUtils.createRepositoryRdfTypeProperty(repositoryUri));
             writer.triple(RdfCommitUtils.createRepositoryOwnerProperty(repositoryUri, owner));
             writer.triple(RdfCommitUtils.createRepositoryNameProperty(repositoryUri, repositoryName));
@@ -698,7 +679,6 @@ public class GithubRdfConversionTransactionService {
 
             commitConversionWatch.stop();
 
-            //log.info("TIME MEASUREMENT DONE: Git-Commit conversion time in milliseconds is: '{}'", commitConversionWatch.getTime());
             timeLog.setGitCommitConversionTime(commitConversionWatch.getTime());
 
             lockHandler.renewLockOnRenewTimeFulfillment();
@@ -740,20 +720,12 @@ public class GithubRdfConversionTransactionService {
             lockHandler.renewLockOnRenewTimeFulfillment();
 
             // issues
-
             StopWatch issueWatch = new StopWatch();
-
             issueWatch.start();
 
             if (githubIssueRepositoryFilter.doesContainAtLeastOneEnabledFilterOption()) {
 
-                // request new github handle, so that we prevent installation token expiration during the process
-                //GithubHandle githubIssueHandle = githubHandlerService.getGithubHandle();
-                //GHRepository githubRepositoryIssueHandle = githubIssueHandle.getGitHubHandle().getRepository(githubRepositoryName);
-
                 if (githubRepositoryHandle.hasIssues()) {
-
-                    //githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()
 
                     log.info("Start issue processing");
 
@@ -761,21 +733,19 @@ public class GithubRdfConversionTransactionService {
 
                     boolean doesWriterContainNonWrittenRdfStreamElements = false;
 
-                    for (GHIssue ghIssue : githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100).list()) {
+                    for (GHIssue ghIssue : githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100)
+                            .list()) {
                         if (issueCounter >= 100) {
-                            continue;}
+                            continue;
+                        }
                         if (issueCounter < 1) {
                             log.info("Start issue rdf conversion batch");
                             writer.start();
                             doesWriterContainNonWrittenRdfStreamElements = true;
                         }
 
-                        long issueId = ghIssue.getId(); // ID seems to be an internal ID, not the actual issue number
-                        int issueNumber = ghIssue.getNumber(); // number is used in shortcuts like #123 or the URL
-
-                        //String githubIssueUri = getGithubIssueUri(owner, repositoryName, issueId);
+                        int issueNumber = ghIssue.getNumber(); 
                         String githubIssueUri = ghIssue.getHtmlUrl().toString();
-                        //String githubIssueUri = PLATFORM_GITHUB_NAMESPACE + ":GithubIssue";
 
                         if (ghIssue.isPullRequest()) {
                             boolean reviewersEnabled = false;
@@ -808,31 +778,31 @@ public class GithubRdfConversionTransactionService {
                                 githubIssueUri,
                                 getGithubRepositoryUri(owner, repositoryName)));
 
-                        if (githubIssueRepositoryFilter.isEnableIssueId()) {
-                            writer.triple(RdfGithubIssueUtils.createIssueIdProperty(githubIssueUri, issueId));
-                        }
-
                         if (githubIssueRepositoryFilter.isEnableIssueNumber()) {
                             writer.triple(RdfGithubIssueUtils.createIssueNumberProperty(githubIssueUri, issueNumber));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueTitle() && ghIssue.getTitle() != null) {
-                            writer.triple(RdfGithubIssueUtils.createIssueTitleProperty(githubIssueUri, ghIssue.getTitle()));
+                            writer.triple(
+                                    RdfGithubIssueUtils.createIssueTitleProperty(githubIssueUri, ghIssue.getTitle()));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueBody() && ghIssue.getBody() != null) {
-                            writer.triple(RdfGithubIssueUtils.createIssueBodyProperty(githubIssueUri, ghIssue.getBody()));
+                            writer.triple(
+                                    RdfGithubIssueUtils.createIssueBodyProperty(githubIssueUri, ghIssue.getBody()));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() != null) {
-                            writer.triple(RdfGithubIssueUtils.createIssueStateProperty(githubIssueUri, ghIssue.getState().toString()));
+                            writer.triple(RdfGithubIssueUtils.createIssueStateProperty(githubIssueUri,
+                                    ghIssue.getState().toString()));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueUser() && ghIssue.getUser() != null) {
 
                             //String githubIssueUserUri = getGithubUserUri(ghIssue.getUser().getLogin());
                             String githubIssueUserUri = ghIssue.getUser().getHtmlUrl().toString();
-                            writer.triple(RdfGithubIssueUtils.createIssueUserProperty(githubIssueUri, githubIssueUserUri));
+                            writer.triple(
+                                    RdfGithubIssueUtils.createIssueUserProperty(githubIssueUri, githubIssueUserUri));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueLabels()) {
@@ -847,7 +817,8 @@ public class GithubRdfConversionTransactionService {
 
                             GHMilestone issueMilestone = ghIssue.getMilestone();
                             if (issueMilestone != null) {
-                                writer.triple(RdfGithubIssueUtils.createIssueMilestoneProperty(githubIssueUri, ghIssue.getMilestone().getHtmlUrl().toString()));
+                                writer.triple(RdfGithubIssueUtils.createIssueMilestoneProperty(githubIssueUri,
+                                        ghIssue.getMilestone().getHtmlUrl().toString()));
                             }
                         }
 
@@ -862,7 +833,8 @@ public class GithubRdfConversionTransactionService {
                             Date updatedAtUtilDate = ghIssue.getUpdatedAt();
                             if (updatedAtUtilDate != null) {
                                 LocalDateTime updatedAt = localDateTimeFrom(updatedAtUtilDate);
-                                writer.triple(RdfGithubIssueUtils.createIssueUpdatedAtProperty(githubIssueUri, updatedAt));
+                                writer.triple(
+                                        RdfGithubIssueUtils.createIssueUpdatedAtProperty(githubIssueUri, updatedAt));
                             }
                         }
 
@@ -871,7 +843,8 @@ public class GithubRdfConversionTransactionService {
                             Date closedAtUtilDate = ghIssue.getClosedAt();
                             if (closedAtUtilDate != null) {
                                 LocalDateTime closedAt = localDateTimeFrom(closedAtUtilDate);
-                                writer.triple(RdfGithubIssueUtils.createIssueClosedAtProperty(githubIssueUri, closedAt));
+                                writer.triple(
+                                        RdfGithubIssueUtils.createIssueClosedAtProperty(githubIssueUri, closedAt));
                             }
                         }
 
@@ -889,7 +862,7 @@ public class GithubRdfConversionTransactionService {
                             //issueCounter = 0;
                             lockHandler.renewLockOnRenewTimeFulfillment();
                         } else {
-                            log.info("Processed issue #{} with id {} and uri '{}'", issueCounter, issueId, githubIssueUri);
+                            log.info("Processed issue #{} with id {} and uri '{}'", issueCounter, githubIssueUri);
                         }
                     }
 
@@ -899,12 +872,9 @@ public class GithubRdfConversionTransactionService {
                     }
                 }
             }
-
+            
             issueWatch.stop();
-
             lockHandler.renewLockOnRenewTimeFulfillment();
-
-            //log.info("TIME MEASUREMENT DONE: Github-Issue conversion time in milliseconds is: '{}'", issueWatch.getTime());
             timeLog.setGithubIssueConversionTime(issueWatch.getTime());
 
         }
@@ -1218,7 +1188,6 @@ public class GithubRdfConversionTransactionService {
 
     }
 
-
     private void writeReviewsAsTriplesToIssue(
             StreamRDF writer,
             String issueUri,
@@ -1285,8 +1254,6 @@ public class GithubRdfConversionTransactionService {
             writer.triple(RdfGithubIssueUtils.createIssueCommentProperty(issueUri, commentUri));
             writer.triple(RdfGithubIssueUtils.createCommentRdfTypeProperty(commentUri));
             writer.triple(RdfGithubIssueUtils.createIssueCommentOfProperty(commentUri, issueUri));
-
-            writer.triple(RdfGithubIssueUtils.createIssueCommentIdProperty(commentUri, comment.getId()));
 
             GHUser user = comment.getUser();
             if (user != null) {

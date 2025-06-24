@@ -33,9 +33,7 @@ public final class RdfGithubIssueUtils {
 
     // Platform - GitHub
 
-    public static Node idProperty() {
-        return RdfUtils.uri(GH_NS + "id");
-    }
+
 
     public static Node numberProperty() {
         return RdfUtils.uri(GH_NS + "number");
@@ -131,11 +129,6 @@ public final class RdfGithubIssueUtils {
     public static Node commentOfProperty() {
         return RdfUtils.uri(GH_NS + "commentOf");
     }
-
-    public static Node commentIdProperty() {
-        return idProperty();
-    }
-
     public static Node commentBodyProperty() {
         return bodyProperty();
     }
@@ -182,16 +175,12 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri("github:GithubIssue"));
     }
 
-    public static Triple createIssueIdProperty(String issueUri, long id) {
-        return Triple.create(RdfUtils.uri(issueUri), idProperty(), RdfUtils.stringLiteral(Long.toString(id)));
-    }
-
     public static Triple createIssueNumberProperty(String issueUri, int number) {
         return Triple.create(RdfUtils.uri(issueUri), numberProperty(), RdfUtils.stringLiteral(Integer.toString(number)));
     }
 
     public static Triple createIssueStateProperty(String issueUri, String state) {
-        return Triple.create(RdfUtils.uri(issueUri), stateProperty(), uri(GH_NS + state.toLowerCase()));
+        return Triple.create(RdfUtils.uri(issueUri), stateProperty(), uri(state.toLowerCase()));
     }
 
     public static Triple createIssueTitleProperty(String issueUri, String title) {
@@ -299,10 +288,6 @@ public final class RdfGithubIssueUtils {
 
     public static Triple createIssueCommentOfProperty(String commentUri, String issueUri) {
         return Triple.create(RdfUtils.uri(commentUri), commentOfProperty(), RdfUtils.uri(issueUri));
-    }
-
-    public static Triple createIssueCommentIdProperty(String commentUri, long id) {
-        return Triple.create(RdfUtils.uri(commentUri), commentIdProperty(), RdfUtils.stringLiteral(Long.toString(id)));
     }
 
     public static Triple createIssueCommentBodyProperty(String commentUri, String body) {
