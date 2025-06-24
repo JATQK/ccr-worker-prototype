@@ -142,6 +142,10 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "repository");
     }
 
+    // Review container related nodes
+    public static Node reviewsProperty() { return RdfUtils.uri(GH_NS + "reviews"); }
+    public static Node reviewContainerType() { return RdfUtils.uri(GH_NS + "ReviewContainer"); }
+
     // Comment related nodes
     public static Node commentsProperty() {
         return RdfUtils.uri(GH_NS + "comments");
@@ -392,6 +396,15 @@ public final class RdfGithubIssueUtils {
 
     public static Triple createReviewCommentUpdatedAtProperty(String commentUri, LocalDateTime updatedAt) {
         return Triple.create(RdfUtils.uri(commentUri), reviewCommentUpdatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
+    }
+
+    // Review container triple creators
+    public static Triple createIssueReviewsProperty(String issueUri, String containerUri) {
+        return Triple.create(RdfUtils.uri(issueUri), reviewsProperty(), RdfUtils.uri(containerUri));
+    }
+
+    public static Triple createReviewContainerTypeProperty(String containerUri) {
+        return Triple.create(RdfUtils.uri(containerUri), rdfTypeProperty(), reviewContainerType());
     }
 
 }
