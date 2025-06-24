@@ -75,6 +75,7 @@ public final class RdfGithubIssueUtils {
     }
 
     // Review related nodes
+    public static Node reviewsProperty() { return RdfUtils.uri(GH_NS + "reviews"); }
     public static Node reviewProperty() {
         return RdfUtils.uri(GH_NS + "review");
     }
@@ -271,6 +272,19 @@ public final class RdfGithubIssueUtils {
     }
 
     // Review related triple creators
+    public static Triple createIssueReviewsProperty(String issueUri, String collectionUri) {
+        return Triple.create(RdfUtils.uri(issueUri), reviewsProperty(), RdfUtils.uri(collectionUri));
+    }
+
+    public static Triple createReviewsCollectionTypeBag(String collectionUri) {
+        return Triple.create(RdfUtils.uri(collectionUri), rdfTypeProperty(), RdfUtils.uri("rdf:Bag"));
+    }
+
+    public static Triple createReviewsCollectionMemberProperty(String collectionUri, int index, String reviewUri) {
+        return Triple.create(RdfUtils.uri(collectionUri), RdfUtils.uri("rdf:_" + index), RdfUtils.uri(reviewUri));
+    }
+
+    // kept for direct links if required
     public static Triple createIssueReviewProperty(String issueUri, String reviewUri) {
         return Triple.create(RdfUtils.uri(issueUri), reviewProperty(), RdfUtils.uri(reviewUri));
     }

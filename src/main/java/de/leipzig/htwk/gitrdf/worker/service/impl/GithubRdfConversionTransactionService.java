@@ -1195,7 +1195,11 @@ public class GithubRdfConversionTransactionService {
             String issueUri,
             PagedIterable<GHPullRequestReview> reviews) throws IOException {
 
+        String collectionUri = issueUri + "#reviews";
+        writer.triple(RdfGithubIssueUtils.createIssueReviewsProperty(issueUri, collectionUri));
+        writer.triple(RdfGithubIssueUtils.createReviewsCollectionTypeBag(collectionUri));
 
+        int index = 1;
         for (GHPullRequestReview review : reviews) {
             long reviewId = review.getId();
             if (!seenReviewIds.add(reviewId)) {
@@ -1205,8 +1209,7 @@ public class GithubRdfConversionTransactionService {
             }
 
             String reviewUri = issueUri + "/reviews/" + reviewId;
-
-            writer.triple(RdfGithubIssueUtils.createIssueReviewProperty(issueUri, reviewUri));
+            writer.triple(RdfGithubIssueUtils.createReviewsCollectionMemberProperty(collectionUri, index++, reviewUri));
             writer.triple(RdfGithubIssueUtils.createReviewRdfTypeProperty(reviewUri));
             writer.triple(RdfGithubIssueUtils.createReviewOfProperty(reviewUri, issueUri));
             writer.triple(RdfGithubIssueUtils.createReviewIdProperty(reviewUri, reviewId));
