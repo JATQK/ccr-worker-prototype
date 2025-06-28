@@ -20,7 +20,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.jena.graph.Node;
@@ -55,6 +56,7 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.hibernate.engine.jdbc.BlobProxy;
+import org.kohsuke.github.GHCheckRun;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueState;
 import org.kohsuke.github.GHMilestone;
@@ -66,8 +68,7 @@ import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GHWorkflowJob;
 import org.kohsuke.github.GHWorkflowRun;
 import org.kohsuke.github.GitHub;
-import org.kohsuke.github.GHWorkflowJob;
-import org.kohsuke.github.GHWorkflowRun;
+import org.kohsuke.github.PagedIterable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -105,21 +106,17 @@ public class GithubRdfConversionTransactionService {
     public static final String GIT_NAMESPACE = "git";
     public static final String GIT_URI = "https://purl.archive.org/git2rdflab/v1/git2RDFLab-git#";
 
-
     public static final String PLATFORM_NAMESPACE = "platform";
     public static final String PLATFORM_URI = "https://purl.archive.org/git2rdflab/v1/git2RDFLab-platform#";
 
-
     public static final String PLATFORM_GITHUB_URI = "https://purl.archive.org/git2rdflab/v1/git2RDFLab-platform-github#";
     public static final String PLATFORM_GITHUB_NAMESPACE = "github";
-
 
     public static final String XSD_SCHEMA_URI = "http://www.w3.org/2001/XMLSchema#";
     public static final String XSD_SCHEMA_NAMESPACE = "xsd";
 
     public static final String RDF_SCHEMA_URI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
     public static final String RDF_SCHEMA_NAMESPACE = "rdf";
-
 
     private final GithubHandlerService githubHandlerService;
 
@@ -148,20 +145,22 @@ public class GithubRdfConversionTransactionService {
     }
 
     // TODO (ccr): Refactor -> code is currently not in use -> maybe delete or refactor to a cleaner state
-    @Transactional(rollbackFor = {IOException.class, GitAPIException.class, URISyntaxException.class, InterruptedException.class}) // Runtime-Exceptions are rollbacked by default; Checked-Exceptions not
+    @Transactional(rollbackFor = { IOException.class, GitAPIException.class, URISyntaxException.class,
+            InterruptedException.class }) // Runtime-Exceptions are rollbacked by default; Checked-Exceptions not
     public InputStream performGithubRepoToRdfConversionAndReturnCloseableInputStream(
-            long id, File rdfTempFile, LockHandler lockHandler) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
+            long id, File rdfTempFile, LockHandler lockHandler)
+            throws IOException, GitAPIException, URISyntaxException, InterruptedException {
 
         GitHub githubHandle = githubHandlerService.getGithub();
 
         // du kriegst die .git nicht als Teil der Zip ->
         //gitHubHandle.getRepository("").listCommits()
 
-        GithubRepositoryOrderEntityLobs githubRepositoryOrderEntityLobs
-                = entityManager.find(GithubRepositoryOrderEntityLobs.class, id);
+        GithubRepositoryOrderEntityLobs githubRepositoryOrderEntityLobs = entityManager
+                .find(GithubRepositoryOrderEntityLobs.class, id);
 
-        GithubRepositoryOrderEntity githubRepositoryOrderEntity
-                = entityManager.find(GithubRepositoryOrderEntity.class, id);
+        GithubRepositoryOrderEntity githubRepositoryOrderEntity = entityManager.find(GithubRepositoryOrderEntity.class,
+                id);
 
         String owner = githubRepositoryOrderEntity.getOwnerName();
         String repo = githubRepositoryOrderEntity.getRepositoryName();
@@ -170,15 +169,16 @@ public class GithubRdfConversionTransactionService {
 
         File gitFile = getDotGitFileFromGithubRepositoryHandle(targetRepo, id, owner, repo);
 
-        InputStream needsToBeClosedOutsideOfTransaction
-                = writeRdf(gitFile, githubRepositoryOrderEntity, githubRepositoryOrderEntityLobs, rdfTempFile, new TimeLog(false), lockHandler);
+        InputStream needsToBeClosedOutsideOfTransaction = writeRdf(gitFile, githubRepositoryOrderEntity,
+                githubRepositoryOrderEntityLobs, rdfTempFile, new TimeLog(false), lockHandler);
 
         githubRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.DONE);
 
         return needsToBeClosedOutsideOfTransaction;
     }
 
-    @Transactional(rollbackFor = {IOException.class, GitAPIException.class, URISyntaxException.class, InterruptedException.class}) // Runtime-Exceptions are rollbacked by default; Checked-Exceptions not
+    @Transactional(rollbackFor = { IOException.class, GitAPIException.class, URISyntaxException.class,
+            InterruptedException.class }) // Runtime-Exceptions are rollbacked by default; Checked-Exceptions not
     public InputStream performGithubRepoToRdfConversionWithGitCloningLogicAndReturnCloseableInputStream(
             long id,
             File gitWorkingDirectory,
@@ -190,11 +190,11 @@ public class GithubRdfConversionTransactionService {
 
         try {
 
-            GithubRepositoryOrderEntityLobs githubRepositoryOrderEntityLobs
-                    = entityManager.find(GithubRepositoryOrderEntityLobs.class, id);
+            GithubRepositoryOrderEntityLobs githubRepositoryOrderEntityLobs = entityManager
+                    .find(GithubRepositoryOrderEntityLobs.class, id);
 
-            GithubRepositoryOrderEntity githubRepositoryOrderEntity
-                    = entityManager.find(GithubRepositoryOrderEntity.class, id);
+            GithubRepositoryOrderEntity githubRepositoryOrderEntity = entityManager
+                    .find(GithubRepositoryOrderEntity.class, id);
 
             String owner = githubRepositoryOrderEntity.getOwnerName();
             String repo = githubRepositoryOrderEntity.getRepositoryName();
@@ -218,8 +218,8 @@ public class GithubRdfConversionTransactionService {
 
             conversionWatch.start();
 
-            InputStream needsToBeClosedOutsideOfTransaction
-                    = writeRdf(gitHandler, githubRepositoryOrderEntity, githubRepositoryOrderEntityLobs, rdfTempFile, timeLog, lockHandler);
+            InputStream needsToBeClosedOutsideOfTransaction = writeRdf(gitHandler, githubRepositoryOrderEntity,
+                    githubRepositoryOrderEntityLobs, rdfTempFile, timeLog, lockHandler);
 
             conversionWatch.stop();
 
@@ -232,7 +232,8 @@ public class GithubRdfConversionTransactionService {
 
         } finally {
 
-            if (gitHandler != null) gitHandler.close();
+            if (gitHandler != null)
+                gitHandler.close();
 
         }
 
@@ -264,91 +265,238 @@ public class GithubRdfConversionTransactionService {
         // TODO: Add addional merge information if available
     }
 
-    private void writeWorkflowRunInfo(GHPullRequest pr, StreamRDF writer, String issueUri) {
+    // private void writeWorkflowRunInfo(GHPullRequest pr, StreamRDF writer, String issueUri) {
 
-        if (pr == null || !pr.isMerged()) {
+    //     if (pr == null) {
+    //         return;
+    //     }
 
-            return;
-        }
+    //     try {
+    //         if (!pr.isMerged()) {
+    //             log.debug("Pull request {} is not merged, skipping workflow run info.", pr.getHtmlUrl());
+    //             return;
+    //         }
+    //         GHRepository repo = pr.getRepository();
+    //         String mergeSha = pr.getMergeCommitSha();
+    //         if (repo == null || mergeSha == null) {
+    //             return;
+    //         }
 
-        try {
+    //         List<GHWorkflowRun> runs = repo.queryWorkflowRuns()
+    //                 .branch(pr.getBase().getRef())
+    //                 .list()
+    //                 .toList()
+    //                 .stream()
+    //                 .filter(run -> mergeSha.equalsIgnoreCase(run.getHeadSha()))
+    //                 .collect(Collectors.toList());
 
-            GHRepository repo = pr.getRepository();
-            String mergeSha = pr.getMergeCommitSha();
-            if (repo == null || mergeSha == null) {
-                return;
-            }
+    //         for (GHWorkflowRun run : runs) {
+    //             String runUri = run.getHtmlUrl().toString();
+    //             writer.triple(RdfGithubWorkflowUtils.createWorkflowRunProperty(issueUri, runUri));
+    //             writer.triple(RdfGithubWorkflowUtils.createWorkflowRunRdfTypeProperty(runUri));
+    //             writer.triple(RdfGithubWorkflowUtils.createWorkflowRunIdProperty(runUri, run.getId()));
 
+    //             if (run.getName() != null) {
+    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowNameProperty(runUri, run.getName()));
+    //             }
+    //             if (run.getStatus() != null) {
+    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowStatusProperty(runUri, run.getStatus()));
+    //             }
+    //             if (run.getConclusion() != null) {
+    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowConclusionProperty(runUri, run.getConclusion()));
+    //             }
+    //             if (run.getEvent() != null) {
+    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowEventProperty(runUri, run.getEvent()));
+    //             }
 
-            List<GHWorkflowRun> runs = repo.queryWorkflowRuns()
-                    .branch(pr.getBase().getRef())
-                    .list()
-                    .toList()
-                    .stream()
-                    .filter(run -> mergeSha.equalsIgnoreCase(run.getHeadSha()))
-                    .collect(Collectors.toList());
+    //             writer.triple(RdfGithubWorkflowUtils.createWorkflowRunNumberProperty(runUri, run.getRunNumber()));
+    //             writer.triple(RdfGithubWorkflowUtils.createWorkflowCommitShaProperty(runUri, mergeSha));
+    //             if (run.getHtmlUrl() != null) {
+    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowHtmlUrlProperty(runUri, run.getHtmlUrl().toString()));
+    //             }
+    //             if (run.getCreatedAt() != null) {
+    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowCreatedAtProperty(runUri, localDateTimeFrom(run.getCreatedAt())));
+    //             }
+    //             if (run.getUpdatedAt() != null) {
+    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowUpdatedAtProperty(runUri, localDateTimeFrom(run.getUpdatedAt())));
+    //             }
 
+    //             for (GHWorkflowJob job : run.listJobs().toList()) {
+    //                 String jobUri = runUri + "/jobs/" + job.getId();
+    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowJobProperty(runUri, jobUri));
+    //                 writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobRdfTypeProperty(jobUri));
+    //                 writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobIdProperty(jobUri, job.getId()));
+    //                 if (job.getName() != null) {
+    //                     writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobNameProperty(jobUri, job.getName()));
+    //                 }
+    //                 if (job.getStatus() != null) {
+    //                     writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStatusProperty(jobUri, job.getStatus()));
+    //                 }
+    //                 if (job.getConclusion() != null) {
+    //                     writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobConclusionProperty(jobUri, job.getConclusion()));
+    //                 }
+    //                 if (job.getStartedAt() != null) {
+    //                     writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStartedAtProperty(jobUri, localDateTimeFrom(job.getStartedAt())));
+    //                 }
+    //                 if (job.getCompletedAt() != null) {
+    //                     writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobCompletedAtProperty(jobUri, localDateTimeFrom(job.getCompletedAt())));
+    //                 }
+    //             }
+    //         }
 
-            for (GHWorkflowRun run : runs) {
-                String runUri = run.getHtmlUrl().toString();
-                writer.triple(RdfGithubWorkflowUtils.createWorkflowRunProperty(issueUri, runUri));
-                writer.triple(RdfGithubWorkflowUtils.createWorkflowRunRdfTypeProperty(runUri));
-                writer.triple(RdfGithubWorkflowUtils.createWorkflowRunIdProperty(runUri, run.getId()));
+    //     } catch (IOException e) {
+    //         log.warn("Error while writing workflow run info for issue {}: {}", issueUri, e.getMessage());
+    //     }
+    // }
 
-                if (run.getName() != null) {
-                    writer.triple(RdfGithubWorkflowUtils.createWorkflowNameProperty(runUri, run.getName()));
-                }
-                if (run.getStatus() != null) {
-                    writer.triple(RdfGithubWorkflowUtils.createWorkflowStatusProperty(runUri, run.getStatus()));
-                }
-                if (run.getConclusion() != null) {
-                    writer.triple(RdfGithubWorkflowUtils.createWorkflowConclusionProperty(runUri, run.getConclusion()));
-                }
-                if (run.getEvent() != null) {
-                    writer.triple(RdfGithubWorkflowUtils.createWorkflowEventProperty(runUri, run.getEvent()));
-                }
-
-                writer.triple(RdfGithubWorkflowUtils.createWorkflowRunNumberProperty(runUri, run.getRunNumber()));
-                writer.triple(RdfGithubWorkflowUtils.createWorkflowCommitShaProperty(runUri, mergeSha));
-                if (run.getHtmlUrl() != null) {
-                    writer.triple(RdfGithubWorkflowUtils.createWorkflowHtmlUrlProperty(runUri, run.getHtmlUrl().toString()));
-                }
-                if (run.getCreatedAt() != null) {
-                    writer.triple(RdfGithubWorkflowUtils.createWorkflowCreatedAtProperty(runUri, localDateTimeFrom(run.getCreatedAt())));
-                }
-                if (run.getUpdatedAt() != null) {
-                    writer.triple(RdfGithubWorkflowUtils.createWorkflowUpdatedAtProperty(runUri, localDateTimeFrom(run.getUpdatedAt())));
-                }
-
-                for (GHWorkflowJob job : run.listJobs().toList()) {
-                    String jobUri = runUri + "/jobs/" + job.getId();
-                    writer.triple(RdfGithubWorkflowUtils.createWorkflowJobProperty(runUri, jobUri));
-                    writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobRdfTypeProperty(jobUri));
-                    writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobIdProperty(jobUri, job.getId()));
-                    if (job.getName() != null) {
-                        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobNameProperty(jobUri, job.getName()));
-                    }
-                    if (job.getStatus() != null) {
-                        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStatusProperty(jobUri, job.getStatus()));
-                    }
-                    if (job.getConclusion() != null) {
-                        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobConclusionProperty(jobUri, job.getConclusion()));
-                    }
-                    if (job.getStartedAt() != null) {
-                        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStartedAtProperty(jobUri, localDateTimeFrom(job.getStartedAt())));
-                    }
-                    if (job.getCompletedAt() != null) {
-                        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobCompletedAtProperty(jobUri, localDateTimeFrom(job.getCompletedAt())));
-                    }
-                }
-            }
-
-        } catch (IOException e) {
-            log.warn("Error while writing workflow run info for issue {}: {}", issueUri, e.getMessage());
-        }
+private void writeWorkflowRunInfo(GHPullRequest pr, StreamRDF writer, String issueUri) {
+    if (pr == null ) {
+        return;
     }
 
-    private Git performGitClone(String ownerName, String repositoryName, File gitWorkingDirectory) throws GitAPIException {
+    try {
+        if (!pr.isMerged()) {
+            log.debug("Pull request {} is not merged, skipping workflow run info.", pr.getHtmlUrl());
+            return;
+        }
+        // Approach 1: Get check runs directly from the PR's head commit
+        String headSha = pr.getHead().getSha();
+        GHRepository repo = pr.getRepository();
+        
+        // Get check runs for the specific commit
+        List<GHCheckRun> checkRuns = repo.getCommit(headSha).getCheckRuns().toList();
+        
+        for (GHCheckRun checkRun : checkRuns) {
+            // Check runs have details_url that often points to workflow runs
+            if (checkRun.getDetailsUrl() != null && 
+                checkRun.getDetailsUrl().toString().contains("/actions/runs/")) {
+                
+                // Extract workflow run ID from URL
+                String runId = extractRunIdFromUrl(checkRun.getDetailsUrl().toString());
+                if (runId != null) {
+                    GHWorkflowRun run = repo.getWorkflowRun(Long.parseLong(runId));
+                    writeWorkflowRunData(run, writer, issueUri, headSha);
+                }
+            }
+        }
+        
+    } catch (IOException e) {
+        log.warn("Error fetching workflow runs via check runs: {}", e.getMessage());
+        // Fallback to original approach if needed
+    }
+}
+
+private String extractRunIdFromUrl(String detailsUrl) {
+    // Extract run ID from URL like: https://github.com/owner/repo/actions/runs/12345
+    Pattern pattern = Pattern.compile(".*/actions/runs/(\\d+)");
+    Matcher matcher = pattern.matcher(detailsUrl);
+    return matcher.find() ? matcher.group(1) : null;
+}
+
+private void writeWorkflowRunData(GHWorkflowRun run, StreamRDF writer, String issueUri, String mergeSha) 
+        throws IOException {
+    
+    String runUri = run.getHtmlUrl().toString();
+    
+    // Write workflow run properties
+    writer.triple(RdfGithubWorkflowUtils.createWorkflowRunProperty(issueUri, runUri));
+    writer.triple(RdfGithubWorkflowUtils.createWorkflowRunRdfTypeProperty(runUri));
+    writer.triple(RdfGithubWorkflowUtils.createWorkflowRunIdProperty(runUri, run.getId()));
+
+    // Batch property writes to reduce overhead
+    writeWorkflowRunProperties(run, writer, runUri, mergeSha);
+    
+    // Optimization 2: Only fetch jobs if needed, with pagination control
+    if (shouldIncludeJobDetails(run)) {
+        writeWorkflowJobData(run, writer, runUri);
+    }
+}
+
+private void writeWorkflowRunProperties(GHWorkflowRun run, StreamRDF writer, String runUri, String mergeSha) {
+    // Group property writes together for better performance
+    if (run.getName() != null) {
+        writer.triple(RdfGithubWorkflowUtils.createWorkflowNameProperty(runUri, run.getName()));
+    }
+    if (run.getStatus() != null) {
+        writer.triple(RdfGithubWorkflowUtils.createWorkflowStatusProperty(runUri, run.getStatus()));
+    }
+    if (run.getConclusion() != null) {
+        writer.triple(RdfGithubWorkflowUtils.createWorkflowConclusionProperty(runUri, run.getConclusion()));
+    }
+    if (run.getEvent() != null) {
+        writer.triple(RdfGithubWorkflowUtils.createWorkflowEventProperty(runUri, run.getEvent()));
+    }
+
+    writer.triple(RdfGithubWorkflowUtils.createWorkflowRunNumberProperty(runUri, run.getRunNumber()));
+    writer.triple(RdfGithubWorkflowUtils.createWorkflowCommitShaProperty(runUri, mergeSha));
+    try {
+        if (run.getHtmlUrl() != null) {
+            writer.triple(RdfGithubWorkflowUtils.createWorkflowHtmlUrlProperty(runUri, run.getHtmlUrl().toString()));
+        }
+        if (run.getCreatedAt() != null) {
+            writer.triple(RdfGithubWorkflowUtils.createWorkflowCreatedAtProperty(runUri, localDateTimeFrom(run.getCreatedAt())));
+        }
+        if (run.getUpdatedAt() != null) {
+            writer.triple(RdfGithubWorkflowUtils.createWorkflowUpdatedAtProperty(runUri, localDateTimeFrom(run.getUpdatedAt())));
+        }
+    } catch(IOException e) {
+            log.warn("Error while writing workflow run properties for run {}: {}", run.getId(), e.getMessage());
+        }
+}
+
+private void writeWorkflowJobData(GHWorkflowRun run, StreamRDF writer, String runUri) throws IOException {
+    // Optimization 3: Limit job fetching with early termination
+    PagedIterable<GHWorkflowJob> jobIterable = run.listJobs().withPageSize(25);
+    
+    int maxJobsToProcess = 30; // Reasonable limit on jobs per run
+    int jobsProcessed = 0;
+    
+    for (GHWorkflowJob job : jobIterable) {
+        if (jobsProcessed >= maxJobsToProcess) {
+            log.debug("Reached max jobs limit ({}) for workflow run {}", maxJobsToProcess, run.getId());
+            break;
+        }
+        
+        writeJobProperties(job, writer, runUri);
+        jobsProcessed++;
+    }
+    
+    log.debug("Processed {} jobs for workflow run {}", jobsProcessed, run.getId());
+}
+
+private void writeJobProperties(GHWorkflowJob job, StreamRDF writer, String runUri) {
+    String jobUri = runUri + "/jobs/" + job.getId();
+    
+    writer.triple(RdfGithubWorkflowUtils.createWorkflowJobProperty(runUri, jobUri));
+    writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobRdfTypeProperty(jobUri));
+    writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobIdProperty(jobUri, job.getId()));
+    
+    if (job.getName() != null) {
+        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobNameProperty(jobUri, job.getName()));
+    }
+    if (job.getStatus() != null) {
+        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStatusProperty(jobUri, job.getStatus()));
+    }
+    if (job.getConclusion() != null) {
+        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobConclusionProperty(jobUri, job.getConclusion()));
+    }
+    if (job.getStartedAt() != null) {
+        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStartedAtProperty(jobUri, localDateTimeFrom(job.getStartedAt())));
+    }
+    if (job.getCompletedAt() != null) {
+        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobCompletedAtProperty(jobUri, localDateTimeFrom(job.getCompletedAt())));
+    }
+}
+
+private boolean shouldIncludeJobDetails(GHWorkflowRun run) {
+    // Optimization 4: Only fetch job details for certain conditions
+    // You can customize this logic based on your needs
+    return run.getConclusion() != null && 
+           (run.getConclusion().equals("failure") || 
+            run.getConclusion().equals("success"));
+}
+    private Git performGitClone(String ownerName, String repositoryName, File gitWorkingDirectory)
+            throws GitAPIException {
 
         String gitRepoTargetUrl = String.format("https://github.com/%s/%s.git", ownerName, repositoryName);
 
@@ -404,8 +552,8 @@ public class GithubRdfConversionTransactionService {
 
         if (fileAmountInExtractedZipDirectory > 1) {
             String exceptionMessage = String.format("Error extracting files from zip for github repository with id " +
-                            "'%d', owner '%s' and repository name '%s'. Expected only one single file in the " +
-                            "extracted github repository zip. But found %d files. Names of the files are: '%s'",
+                    "'%d', owner '%s' and repository name '%s'. Expected only one single file in the " +
+                    "extracted github repository zip. But found %d files. Names of the files are: '%s'",
                     entityId,
                     ownerName,
                     repoName,
@@ -437,7 +585,8 @@ public class GithubRdfConversionTransactionService {
         return fileNameBuilder.toString();
     }
 
-    private GHRepository getGithubRepositoryHandle(String ownerName, String repositoryName, GitHub gitHubHandle) throws IOException {
+    private GHRepository getGithubRepositoryHandle(String ownerName, String repositoryName, GitHub gitHubHandle)
+            throws IOException {
         String targetRepoName = String.format("%s/%s", ownerName, repositoryName);
         return gitHubHandle.getRepository(targetRepoName);
     }
@@ -456,7 +605,8 @@ public class GithubRdfConversionTransactionService {
 
         if (filesOfExtractedZipDirectory == null) {
 
-            String exceptionMessage = String.format("Error while trying to list files of extracted zip file directory. " +
+            String exceptionMessage = String.format(
+                    "Error while trying to list files of extracted zip file directory. " +
                             "Returned value is null. Id is: '%d', owner is: '%s' and repository name is: '%s'",
                     entityId, ownerName, repositoryName);
 
@@ -500,12 +650,11 @@ public class GithubRdfConversionTransactionService {
 
         Repository gitRepository = gitHandler.getRepository();
 
-        GitCommitRepositoryFilter gitCommitRepositoryFilter
-                = entity.getGithubRepositoryFilter().getGitCommitRepositoryFilter();
+        GitCommitRepositoryFilter gitCommitRepositoryFilter = entity.getGithubRepositoryFilter()
+                .getGitCommitRepositoryFilter();
 
-        GithubIssueRepositoryFilter githubIssueRepositoryFilter
-                = entity.getGithubRepositoryFilter().getGithubIssueRepositoryFilter();
-
+        GithubIssueRepositoryFilter githubIssueRepositoryFilter = entity.getGithubRepositoryFilter()
+                .getGithubIssueRepositoryFilter();
 
         Map<String, RdfGitCommitUserUtils> uniqueGitCommiterWithHash = new HashMap<>();
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(rdfTempFile))) {
@@ -530,7 +679,7 @@ public class GithubRdfConversionTransactionService {
             //writer.prefix(GITHUB_ISSUE_NAMESPACE, githubIssuePrefixValue);
 
             DiffFormatter diffFormatter = new DiffFormatter(DisabledOutputStream.INSTANCE);
-            diffFormatter.setRepository( gitRepository );
+            diffFormatter.setRepository(gitRepository);
             ObjectReader reader = gitRepository.newObjectReader();
 
             Iterable<Ref> branches = gitHandler.branchList().setListMode(ListBranchCommand.ListMode.ALL).call();
@@ -549,7 +698,6 @@ public class GithubRdfConversionTransactionService {
             StopWatch commitConversionWatch = new StopWatch();
 
             commitConversionWatch.start();
-
 
             Map<ObjectId, List<String>> commitToTags = getTagsForCommits(gitRepository);
 
@@ -598,15 +746,15 @@ public class GithubRdfConversionTransactionService {
 
                     writer.triple(RdfCommitUtils.createSubmodulePathProperty(submoduleNode, submodulePath));
                     writer.triple(RdfCommitUtils.createSubmoduleRepositoryEntryProperty(submoduleNode, submoduleUrl));
-                    writer.triple(RdfCommitUtils.createSubmoduleCommitEntryProperty(submoduleNode, submoduleCommitHashUri));
+                    writer.triple(
+                            RdfCommitUtils.createSubmoduleCommitEntryProperty(submoduleNode, submoduleCommitHashUri));
                     writer.triple(RdfCommitUtils.createSubmoduleCommitProperty(submoduleNode, submoduleCommitHash));
 
-                    log.info("Submodule: path: {} url: {} commit-hash: {}", submodulePath, submoduleUrl, submoduleCommitHash);
-                }
-                catch (ConfigInvalidException e) {
+                    log.info("Submodule: path: {} url: {} commit-hash: {}", submodulePath, submoduleUrl,
+                            submoduleCommitHash);
+                } catch (ConfigInvalidException e) {
                     log.error("Submodule Invalid Config Error: {}", e.getMessage());
-                }
-                catch (Exception e) {
+                } catch (Exception e) {
                     log.error("Submodule Error: {}", e.getMessage());
                 }
             }
@@ -620,165 +768,181 @@ public class GithubRdfConversionTransactionService {
             if (computeCommitsDeleteForProduction) {
                 for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
-                log.info("Start iterations of git commits. Current iteration count: {}", iteration);
+                    log.info("Start iterations of git commits. Current iteration count: {}", iteration);
 
-                if (log.isDebugEnabled()) log.debug("Check whether github installation token needs refresh");
+                    if (log.isDebugEnabled())
+                        log.debug("Check whether github installation token needs refresh");
 
-                int skipCount = calculateSkipCountAndThrowExceptionIfIntegerOverflowIsImminent(iteration, commitsPerIteration);
+                    int skipCount = calculateSkipCountAndThrowExceptionIfIntegerOverflowIsImminent(iteration,
+                            commitsPerIteration);
 
-                log.info("Calculated skip count for this iteration is: {}", skipCount);
+                    log.info("Calculated skip count for this iteration is: {}", skipCount);
 
-                Iterable<RevCommit> commits = gitHandler.log().setSkip(skipCount).setMaxCount(commitsPerIteration).call();
+                    Iterable<RevCommit> commits = gitHandler.log().setSkip(skipCount).setMaxCount(commitsPerIteration)
+                            .call();
 
-                boolean finished = true;
+                    boolean finished = true;
 
-                if (log.isDebugEnabled()) log.debug("Starting commit writer rdf");
+                    if (log.isDebugEnabled())
+                        log.debug("Starting commit writer rdf");
 
-                writer.start();
+                    writer.start();
 
-                if (log.isDebugEnabled()) log.debug("Starting commit loop");
+                    if (log.isDebugEnabled())
+                        log.debug("Starting commit loop");
 
-                for (RevCommit commit : commits) {
+                    for (RevCommit commit : commits) {
 
-                    finished = false;
+                        finished = false;
 
-                    ObjectId commitId = commit.getId();
-                    String gitHash = commitId.name();
+                        ObjectId commitId = commit.getId();
+                        String gitHash = commitId.name();
 
-                    PersonIdent authorIdent = null;
-                    PersonIdent committerIdent = null;
+                        PersonIdent authorIdent = null;
+                        PersonIdent committerIdent = null;
 
-                    try {
+                        try {
 
-                        authorIdent = commit.getAuthorIdent();
+                            authorIdent = commit.getAuthorIdent();
 
-                    } catch (RuntimeException ex) {
+                        } catch (RuntimeException ex) {
 
-                        log.warn("Error while trying to identify the author for the git commit '{}'. " +
-                                "Skipping author email and name entry. Error is '{}'", gitHash, ex.getMessage(), ex);
+                            log.warn("Error while trying to identify the author for the git commit '{}'. " +
+                                    "Skipping author email and name entry. Error is '{}'", gitHash, ex.getMessage(),
+                                    ex);
 
-                    }
-
-                    try {
-
-                        committerIdent = commit.getCommitterIdent();
-
-                    } catch (RuntimeException ex) {
-
-                        log.warn("Error while trying to identify the committer for the git commit '{}'. " +
-                                "Skipping committer email and name entry. Error is '{}'", gitHash, ex.getMessage(), ex);
-
-                    }
-
-                    String commitUri = getGithubCommitUri(owner, repositoryName, gitHash);
-                    //String commitUri = GIT_NAMESPACE + ":GitCommit";
-
-                    if (log.isDebugEnabled()) log.debug("Set rdf type property commitUri");
-
-                    writer.triple(RdfCommitUtils.createRdfTypeProperty(commitUri));
-
-                    if (log.isDebugEnabled()) log.debug("Set rdf commit hash");
-
-                    if (gitCommitRepositoryFilter.isEnableCommitHash()) {
-                        writer.triple(RdfCommitUtils.createCommitHashProperty(commitUri, gitHash));
-                    }
-
-                    if (log.isDebugEnabled()) log.debug("Set rdf author email");
-
-                    if (gitCommitRepositoryFilter.isEnableAuthorEmail()) {
-                        calculateAuthorEmail( // Also brings github identifier into rdf
-                                authorIdent, uniqueGitCommiterWithHash, writer, commitUri, gitHash, githubRepositoryHandle);
-                    }
-
-                    if (log.isDebugEnabled()) log.debug("Set RDF author name");
-
-                    if (gitCommitRepositoryFilter.isEnableAuthorName()) {
-                        calculateAuthorName(writer, commitUri, authorIdent);
-                    }
-
-
-                    boolean isAuthorDateEnabled = gitCommitRepositoryFilter.isEnableAuthorDate();
-                    boolean isCommitDateEnabled = gitCommitRepositoryFilter.isEnableCommitDate();
-
-                    if (isAuthorDateEnabled || isCommitDateEnabled) {
-
-                        LocalDateTime commitDateTime = localDateTimeFrom(commit.getCommitTime());
-
-                        if (log.isDebugEnabled()) log.debug("Set RDF author date");
-
-                        if (isAuthorDateEnabled) {
-                            writer.triple(RdfCommitUtils.createAuthorDateProperty(commitUri, commitDateTime));
                         }
 
-                        if (log.isDebugEnabled()) log.debug("Set RDF commit date");
+                        try {
 
-                        if (isCommitDateEnabled) {
-                            writer.triple(RdfCommitUtils.createCommitDateProperty(commitUri, commitDateTime));
+                            committerIdent = commit.getCommitterIdent();
+
+                        } catch (RuntimeException ex) {
+
+                            log.warn("Error while trying to identify the committer for the git commit '{}'. " +
+                                    "Skipping committer email and name entry. Error is '{}'", gitHash, ex.getMessage(),
+                                    ex);
+
+                        }
+
+                        String commitUri = getGithubCommitUri(owner, repositoryName, gitHash);
+                        //String commitUri = GIT_NAMESPACE + ":GitCommit";
+
+                        if (log.isDebugEnabled())
+                            log.debug("Set rdf type property commitUri");
+
+                        writer.triple(RdfCommitUtils.createRdfTypeProperty(commitUri));
+
+                        if (log.isDebugEnabled())
+                            log.debug("Set rdf commit hash");
+
+                        if (gitCommitRepositoryFilter.isEnableCommitHash()) {
+                            writer.triple(RdfCommitUtils.createCommitHashProperty(commitUri, gitHash));
+                        }
+
+                        if (log.isDebugEnabled())
+                            log.debug("Set rdf author email");
+
+                        if (gitCommitRepositoryFilter.isEnableAuthorEmail()) {
+                            calculateAuthorEmail( // Also brings github identifier into rdf
+                                    authorIdent, uniqueGitCommiterWithHash, writer, commitUri, gitHash,
+                                    githubRepositoryHandle);
+                        }
+
+                        if (log.isDebugEnabled())
+                            log.debug("Set RDF author name");
+
+                        if (gitCommitRepositoryFilter.isEnableAuthorName()) {
+                            calculateAuthorName(writer, commitUri, authorIdent);
+                        }
+
+                        boolean isAuthorDateEnabled = gitCommitRepositoryFilter.isEnableAuthorDate();
+                        boolean isCommitDateEnabled = gitCommitRepositoryFilter.isEnableCommitDate();
+
+                        if (isAuthorDateEnabled || isCommitDateEnabled) {
+
+                            LocalDateTime commitDateTime = localDateTimeFrom(commit.getCommitTime());
+
+                            if (log.isDebugEnabled())
+                                log.debug("Set RDF author date");
+
+                            if (isAuthorDateEnabled) {
+                                writer.triple(RdfCommitUtils.createAuthorDateProperty(commitUri, commitDateTime));
+                            }
+
+                            if (log.isDebugEnabled())
+                                log.debug("Set RDF commit date");
+
+                            if (isCommitDateEnabled) {
+                                writer.triple(RdfCommitUtils.createCommitDateProperty(commitUri, commitDateTime));
+                            }
+                        }
+
+                        if (log.isDebugEnabled())
+                            log.debug("Set RDF committer name");
+
+                        if (gitCommitRepositoryFilter.isEnableCommitterName()) {
+                            calculateCommitterName(writer, commitUri, committerIdent);
+                        }
+
+                        if (log.isDebugEnabled())
+                            log.debug("Set RDF committer email");
+
+                        if (gitCommitRepositoryFilter.isEnableCommitterEmail()) {
+                            calculateCommitterEmail(writer, commitUri, committerIdent);
+                        }
+
+                        if (log.isDebugEnabled())
+                            log.debug("Set RDF commit message for commit with hash '{}'", gitHash);
+
+                        if (gitCommitRepositoryFilter.isEnableCommitMessage()) {
+                            calculateCommitMessage(writer, commitUri, commit);
+                        }
+
+                        // Branch
+                        // TODO: better way to handle merges? (so commit could have multiple branches)
+                        if (gitCommitRepositoryFilter.isEnableCommitBranch()) {
+                            calculateCommitBranch(commitBranchCalculator, writer, commit, commitUri);
+                        }
+
+                        List<String> tagNames = commitToTags.get(commitId);
+
+                        if (tagNames != null && !tagNames.isEmpty()) {
+
+                            for (String tagName : tagNames) {
+                                writer.triple(RdfCommitUtils.createCommitTagProperty(commitUri, tagName));
+                                log.debug("Added Tag '{}' to commit #{}", tagName, commitId.getName());
+                            }
+                        }
+
+                        // Commit Diffs
+                        // See: https://www.codeaffine.com/2016/06/16/jgit-diff/
+                        // TODO: check if merges with more than 1 parent exist?
+
+                        if (log.isDebugEnabled())
+                            log.debug("Check commit diff");
+
+                        if (gitCommitRepositoryFilter.isEnableCommitDiff()) {
+                            calculateCommitDiff(commit, reader, diffFormatter, writer, commitUri);
                         }
                     }
 
-                    if (log.isDebugEnabled()) log.debug("Set RDF committer name");
+                    if (log.isDebugEnabled())
+                        log.debug("Ending commit writer rdf - loop finished");
 
-                    if (gitCommitRepositoryFilter.isEnableCommitterName()) {
-                        calculateCommitterName(writer, commitUri, committerIdent);
+                    writer.finish();
+
+                    lockHandler.renewLockOnRenewTimeFulfillment();
+
+                    if (finished) {
+                        break;
                     }
 
-                    if (log.isDebugEnabled()) log.debug("Set RDF committer email");
-
-                    if (gitCommitRepositoryFilter.isEnableCommitterEmail()) {
-                        calculateCommitterEmail(writer, commitUri, committerIdent);
-                    }
-
-                    if (log.isDebugEnabled()) log.debug("Set RDF commit message for commit with hash '{}'", gitHash);
-
-                    if (gitCommitRepositoryFilter.isEnableCommitMessage()) {
-                        calculateCommitMessage(writer, commitUri, commit);
-                    }
-
-                    // Branch
-                    // TODO: better way to handle merges? (so commit could have multiple branches)
-                    if(gitCommitRepositoryFilter.isEnableCommitBranch()) {
-                        calculateCommitBranch(commitBranchCalculator, writer, commit, commitUri);
-                    }
-
-
-                    List<String> tagNames = commitToTags.get(commitId);
-
-                    if (tagNames != null && !tagNames.isEmpty()) {
-
-                        for (String tagName : tagNames) {
-                            writer.triple(RdfCommitUtils.createCommitTagProperty(commitUri, tagName));
-                            log.debug("Added Tag '{}' to commit #{}", tagName, commitId.getName());
-                        }
-                    }
-
-
-                    // Commit Diffs
-                    // See: https://www.codeaffine.com/2016/06/16/jgit-diff/
-                    // TODO: check if merges with more than 1 parent exist?
-
-                    if (log.isDebugEnabled()) log.debug("Check commit diff");
-
-                    if(gitCommitRepositoryFilter.isEnableCommitDiff()) {
-                        calculateCommitDiff(commit, reader, diffFormatter, writer, commitUri);
+                    if (iteration + 1 == Integer.MAX_VALUE) {
+                        throw new RuntimeException(
+                                "While iterating through commit log and transforming log to rdf: Exceeded iteration max count (integer overflow)");
                     }
                 }
-
-                if (log.isDebugEnabled()) log.debug("Ending commit writer rdf - loop finished");
-
-                writer.finish();
-
-                lockHandler.renewLockOnRenewTimeFulfillment();
-
-                if (finished) {
-                    break;
-                }
-
-                if (iteration + 1 == Integer.MAX_VALUE) {
-                    throw new RuntimeException(
-                            "While iterating through commit log and transforming log to rdf: Exceeded iteration max count (integer overflow)");
-                }
-            }
             }
             log.info("Git commit iterations finished");
 
@@ -790,12 +954,10 @@ public class GithubRdfConversionTransactionService {
 
             // Submodules
 
-
             // branch-snapshot
             // TODO: rename to 'blame'?
 
-
-            if (gitCommitRepositoryFilter.isEnableBranchSnapshot() ) {
+            if (gitCommitRepositoryFilter.isEnableBranchSnapshot()) {
 
                 StopWatch branchSnapshottingWatch = new StopWatch();
 
@@ -823,8 +985,6 @@ public class GithubRdfConversionTransactionService {
             }
 
             lockHandler.renewLockOnRenewTimeFulfillment();
-
-
 
             // issues
             StopWatch issueWatch = new StopWatch();
@@ -880,10 +1040,10 @@ public class GithubRdfConversionTransactionService {
                         // }
 
                         // REMOVE ON DEPLOYMENT
-                        if (issueCounter >= 400) {
-                            continue;
+                        if (issueCounter >= 100) {
+                            break;
                         }
-                        
+
                         writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(issueUri));
                         writer.triple(RdfGithubIssueUtils.createIssueRepositoryProperty(
                                 issueUri,
@@ -955,7 +1115,6 @@ public class GithubRdfConversionTransactionService {
                                 GHPullRequest pullRequest = githubRepositoryHandle.getPullRequest(issueNumber);
                                 writeMergeInfo(ghIssue, pullRequest, writer, issueUri);
                                 writeWorkflowRunInfo(pullRequest, writer, issueUri);
-
                             }
                         }
 
@@ -1057,7 +1216,6 @@ public class GithubRdfConversionTransactionService {
                                 writer.triple(RdfGithubIssueReviewUtils.createThreadCountProperty(reviewUri,
                                         threadIds.size()));
 
-                                
                                 if (firstCommentAt != null) {
                                     writer.triple(RdfGithubIssueReviewUtils.createFirstCommentAtProperty(reviewUri,
                                             firstCommentAt));
@@ -1160,7 +1318,7 @@ public class GithubRdfConversionTransactionService {
                     }
                 }
             }
-            
+
             issueWatch.stop();
             lockHandler.renewLockOnRenewTimeFulfillment();
             timeLog.setGithubIssueConversionTime(issueWatch.getTime());
@@ -1225,34 +1383,41 @@ public class GithubRdfConversionTransactionService {
 
         String email = authorIdent.getEmailAddress();
 
-        if (log.isDebugEnabled()) log.debug("Set rdf github user in commit");
+        if (log.isDebugEnabled())
+            log.debug("Set rdf github user in commit");
 
         if (uniqueGitCommiterWithHash.containsKey(email)) {
 
-            if (log.isDebugEnabled()) log.debug("Found github committer email in hash");
+            if (log.isDebugEnabled())
+                log.debug("Found github committer email in hash");
 
             RdfGitCommitUserUtils commitInfo = uniqueGitCommiterWithHash.get(email);
             if (commitInfo.gitHubUser != null && !commitInfo.gitHubUser.isEmpty()) {
 
-                if (log.isDebugEnabled()) log.debug("Set RDF committer github user property after finding github committer email in hash");
+                if (log.isDebugEnabled())
+                    log.debug("Set RDF committer github user property after finding github committer email in hash");
 
                 writer.triple(RdfCommitUtils.createCommiterGitHubUserProperty(commitUri, commitInfo.gitHubUser));
             }
         } else {
 
-            if (log.isDebugEnabled()) log.debug("Did not find github committer email in hash");
+            if (log.isDebugEnabled())
+                log.debug("Did not find github committer email in hash");
 
             String gitHubUser = RdfGitCommitUserUtils.getGitHubUserFromCommit(githubRepositoryHandle, gitHash);
             uniqueGitCommiterWithHash.put(email, new RdfGitCommitUserUtils(gitHash, gitHubUser));
             if (gitHubUser != null && !gitHubUser.isEmpty()) {
 
-                if (log.isDebugEnabled()) log.debug("Set RDF committer github user property after not finding it in github committer email in hash");
+                if (log.isDebugEnabled())
+                    log.debug(
+                            "Set RDF committer github user property after not finding it in github committer email in hash");
 
                 writer.triple(RdfCommitUtils.createCommiterGitHubUserProperty(commitUri, gitHubUser));
             }
         }
 
-        if (log.isDebugEnabled()) log.debug("Set RDF author email property");
+        if (log.isDebugEnabled())
+            log.debug("Set RDF author email property");
 
         writer.triple(RdfCommitUtils.createAuthorEmailProperty(commitUri, email));
     }
@@ -1328,69 +1493,85 @@ public class GithubRdfConversionTransactionService {
 
         int parentCommitCount = commit.getParentCount();
 
-        if (log.isDebugEnabled()) log.debug("Commit diff is enabled - parent count is '{}'", parentCommitCount);
+        if (log.isDebugEnabled())
+            log.debug("Commit diff is enabled - parent count is '{}'", parentCommitCount);
 
         if (parentCommitCount > 0) {
 
             RevCommit parentCommit = commit.getParent(0);
 
-            if (log.isDebugEnabled()) log.debug("Check if parent commit is null");
+            if (log.isDebugEnabled())
+                log.debug("Check if parent commit is null");
 
             if (parentCommit != null) {
                 CanonicalTreeParser parentTreeParser = new CanonicalTreeParser();
                 CanonicalTreeParser currentTreeParser = new CanonicalTreeParser();
 
-                if (log.isDebugEnabled()) log.debug("Reset tree parsers - starting with parent tree parser");
+                if (log.isDebugEnabled())
+                    log.debug("Reset tree parsers - starting with parent tree parser");
                 parentTreeParser.reset(currentRepositoryObjectReader, parentCommit.getTree());
 
-                if (log.isDebugEnabled()) log.debug("Reset tree parsers - continuing with current tree parser");
+                if (log.isDebugEnabled())
+                    log.debug("Reset tree parsers - continuing with current tree parser");
                 currentTreeParser.reset(currentRepositoryObjectReader, commit.getTree());
 
                 //Resource commitResource = ResourceFactory.createResource(gitHash); // TODO: use proper uri?
                 //Node commitNode = commitResource.asNode();
                 //writer.triple(RdfCommitUtils.createCommitResource(commitUri, commitNode));
 
-                if (log.isDebugEnabled()) log.debug("Scan diff entries");
+                if (log.isDebugEnabled())
+                    log.debug("Scan diff entries");
 
                 List<DiffEntry> diffEntries = currentRepositoryDiffFormatter.scan(parentTreeParser, currentTreeParser);
 
-                if (log.isDebugEnabled()) log.debug("Loop through diff entries. Diff entry list size is '{}'", diffEntries.size());
+                if (log.isDebugEnabled())
+                    log.debug("Loop through diff entries. Diff entry list size is '{}'", diffEntries.size());
 
                 for (DiffEntry diffEntry : diffEntries) {
                     Resource diffEntryResource = ResourceFactory.createResource(/*GIT_NAMESPACE + ":entry"*/);
                     Node diffEntryNode = diffEntryResource.asNode();
                     //writer.triple(RdfCommitUtils.createCommitDiffEntryResource(commitNode, diffEntryNode));
 
-                    if (log.isDebugEnabled()) log.debug("Set RDF commit diff entry property");
+                    if (log.isDebugEnabled())
+                        log.debug("Set RDF commit diff entry property");
 
                     writer.triple(RdfCommitUtils.createCommitDiffEntryProperty(commitUri, diffEntryNode));
 
                     DiffEntry.ChangeType changeType = diffEntry.getChangeType(); // ADD,DELETE,MODIFY,RENAME,COPY
 
-                    if (log.isDebugEnabled()) log.debug("Set RDF commit diff entry edit type property");
+                    if (log.isDebugEnabled())
+                        log.debug("Set RDF commit diff entry edit type property");
 
                     writer.triple(RdfCommitUtils.createCommitDiffEntryEditTypeProperty(diffEntryNode, changeType));
 
                     FileHeader fileHeader = currentRepositoryDiffFormatter.toFileHeader(diffEntry);
 
-                    if (log.isDebugEnabled()) log.debug("Switch through diff entry change type");
+                    if (log.isDebugEnabled())
+                        log.debug("Switch through diff entry change type");
 
                     // See: org.eclipse.jgit.diff.DiffEntry.ChangeType.toString()
                     switch (changeType) {
                         case ADD:
-                            if (log.isDebugEnabled()) log.debug("Set RDF ADD commit diff entry new file name property");
-                            writer.triple(RdfCommitUtils.createCommitDiffEntryNewFileNameProperty(diffEntryNode, fileHeader));
+                            if (log.isDebugEnabled())
+                                log.debug("Set RDF ADD commit diff entry new file name property");
+                            writer.triple(
+                                    RdfCommitUtils.createCommitDiffEntryNewFileNameProperty(diffEntryNode, fileHeader));
                             break;
                         case COPY:
                         case RENAME:
-                            if (log.isDebugEnabled()) log.debug("Set RDF COPY/RENAME commit diff entry new file name property");
-                            writer.triple(RdfCommitUtils.createCommitDiffEntryOldFileNameProperty(diffEntryNode, fileHeader));
-                            writer.triple(RdfCommitUtils.createCommitDiffEntryNewFileNameProperty(diffEntryNode, fileHeader));
+                            if (log.isDebugEnabled())
+                                log.debug("Set RDF COPY/RENAME commit diff entry new file name property");
+                            writer.triple(
+                                    RdfCommitUtils.createCommitDiffEntryOldFileNameProperty(diffEntryNode, fileHeader));
+                            writer.triple(
+                                    RdfCommitUtils.createCommitDiffEntryNewFileNameProperty(diffEntryNode, fileHeader));
                             break;
                         case DELETE:
                         case MODIFY:
-                            if (log.isDebugEnabled()) log.debug("Set RDF DELETE/MODIFY commit diff entry new file name property");
-                            writer.triple(RdfCommitUtils.createCommitDiffEntryOldFileNameProperty(diffEntryNode, fileHeader));
+                            if (log.isDebugEnabled())
+                                log.debug("Set RDF DELETE/MODIFY commit diff entry new file name property");
+                            writer.triple(
+                                    RdfCommitUtils.createCommitDiffEntryOldFileNameProperty(diffEntryNode, fileHeader));
                             break;
                         default:
                             throw new IllegalStateException("Unexpected changeType: " + changeType);
@@ -1398,43 +1579,54 @@ public class GithubRdfConversionTransactionService {
 
                     // Diff Lines (added/changed/removed)
 
-                    if (log.isDebugEnabled()) log.debug("Retrieve file header edit list");
+                    if (log.isDebugEnabled())
+                        log.debug("Retrieve file header edit list");
 
                     EditList editList = fileHeader.toEditList();
 
-                    if (log.isDebugEnabled()) log.debug("Loop trough edit list. There are '{}' edit list entries", editList.size());
+                    if (log.isDebugEnabled())
+                        log.debug("Loop trough edit list. There are '{}' edit list entries", editList.size());
 
                     for (Edit edit : editList) {
                         Resource editResource = ResourceFactory.createResource(/*GIT_NAMESPACE + ":edit"*/);
                         Node editNode = editResource.asNode();
 
-                        if (log.isDebugEnabled()) log.debug("Set RDF commit diff edit resource");
+                        if (log.isDebugEnabled())
+                            log.debug("Set RDF commit diff edit resource");
 
                         writer.triple(RdfCommitUtils.createCommitDiffEditResource(diffEntryNode, editNode));
 
                         Edit.Type editType = edit.getType(); // INSERT,DELETE,REPLACE
 
-                        if (log.isDebugEnabled()) log.debug("Set RDF commit diff edit type property");
+                        if (log.isDebugEnabled())
+                            log.debug("Set RDF commit diff edit type property");
 
                         writer.triple(RdfCommitUtils.createCommitDiffEditTypeProperty(editNode, editType));
 
-                        if (log.isDebugEnabled()) log.debug("Retrieve for file diffs the old and new line number beginnings and endings");
+                        if (log.isDebugEnabled())
+                            log.debug("Retrieve for file diffs the old and new line number beginnings and endings");
 
                         final int oldLinenumberBegin = edit.getBeginA();
                         final int newLinenumberBegin = edit.getBeginB();
                         final int oldLinenumberEnd = edit.getEndA();
                         final int newLinenumberEnd = edit.getEndB();
 
-                        if (log.isDebugEnabled()) log.debug("Set RDF edit old line number begin property");
-                        writer.triple(RdfCommitUtils.createEditOldLinenumberBeginProperty(editNode, oldLinenumberBegin));
+                        if (log.isDebugEnabled())
+                            log.debug("Set RDF edit old line number begin property");
+                        writer.triple(
+                                RdfCommitUtils.createEditOldLinenumberBeginProperty(editNode, oldLinenumberBegin));
 
-                        if (log.isDebugEnabled()) log.debug("Set RDF edit new line number begin property");
-                        writer.triple(RdfCommitUtils.createEditNewLinenumberBeginProperty(editNode, newLinenumberBegin));
+                        if (log.isDebugEnabled())
+                            log.debug("Set RDF edit new line number begin property");
+                        writer.triple(
+                                RdfCommitUtils.createEditNewLinenumberBeginProperty(editNode, newLinenumberBegin));
 
-                        if (log.isDebugEnabled()) log.debug("Set RDF edit old line number end property");
+                        if (log.isDebugEnabled())
+                            log.debug("Set RDF edit old line number end property");
                         writer.triple(RdfCommitUtils.createEditOldLinenumberEndProperty(editNode, oldLinenumberEnd));
 
-                        if (log.isDebugEnabled()) log.debug("Set RDF edit new line number end property");
+                        if (log.isDebugEnabled())
+                            log.debug("Set RDF edit new line number end property");
                         writer.triple(RdfCommitUtils.createEditNewLinenumberEndProperty(editNode, newLinenumberEnd));
                     }
                 }
@@ -1452,7 +1644,8 @@ public class GithubRdfConversionTransactionService {
         long skips = longCurrentIteration * longCommitsPerIteration;
 
         if (skips > Integer.MAX_VALUE) {
-            throw new RuntimeException("While iterating through commit log and transforming log to rdf: Exceeded skip max count (integer overflow)");
+            throw new RuntimeException(
+                    "While iterating through commit log and transforming log to rdf: Exceeded skip max count (integer overflow)");
         }
 
         return (int) skips;
