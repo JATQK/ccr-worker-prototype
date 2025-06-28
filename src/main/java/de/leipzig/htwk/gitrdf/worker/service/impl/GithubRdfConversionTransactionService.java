@@ -907,12 +907,8 @@ public class GithubRdfConversionTransactionService {
                                 if (review.getCommitId() != null) {
                                     writer.triple(RdfGithubIssueReviewUtils.createReviewCommitIdProperty(reviewUri, review.getCommitId()));
                                 }
-         
 
                                 List<GHPullRequestReviewComment> reviewComments = review.listReviewComments().toList();
-
-
-                                List<GHPullRequestReviewComment> reviewComments = review.listComments().toList();
                                 String commentListUri = reviewUri + "#comments";
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewCommentsProperty(reviewUri, commentListUri));
                                 writer.triple(RdfGithubIssueReviewUtils.createCommentListRdfTypeProperty(commentListUri));
