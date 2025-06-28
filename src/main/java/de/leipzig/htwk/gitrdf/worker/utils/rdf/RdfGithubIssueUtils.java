@@ -43,7 +43,13 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "state");
     }
 
-    public static Node authorProperty() { return RdfUtils.uri(GH_NS + "author"); }
+    public static Node authorProperty() {
+        return RdfUtils.uri(GH_NS + "author");
+    }
+    
+    public static Node creatorProperty() {
+        return RdfUtils.uri(GH_NS + "creator");
+    }
 
     public static Node assigneeProperty() {
         return RdfUtils.uri(GH_NS + "assignee");
@@ -146,11 +152,11 @@ public final class RdfGithubIssueUtils {
     }
 
     public static Triple createIssueNumberProperty(String issueUri, int number) {
-        return Triple.create(RdfUtils.uri(issueUri), numberProperty(), RdfUtils.stringLiteral(Integer.toString(number)));
+        return Triple.create(RdfUtils.uri(issueUri), numberProperty(), RdfUtils.integerLiteral(number));
     }
 
     public static Triple createIssueStateProperty(String issueUri, String state) {
-        return Triple.create(RdfUtils.uri(issueUri), stateProperty(), uri(state.toLowerCase()));
+        return Triple.create(RdfUtils.uri(issueUri), stateProperty(), RdfUtils.uri(GH_NS + state.toLowerCase()));
     }
 
     public static Triple createIssueTitleProperty(String issueUri, String title) {
@@ -195,7 +201,7 @@ public final class RdfGithubIssueUtils {
 
     // Merge information triples
     public static Triple createIssueMergedProperty(String issueUri, boolean merged) {
-        return Triple.create(RdfUtils.uri(issueUri), mergedProperty(), RdfUtils.stringLiteral(Boolean.toString(merged)));
+        return Triple.create(RdfUtils.uri(issueUri), mergedProperty(), RdfUtils.booleanLiteral(merged));
     }
   
     public static Triple createIssueMergedByProperty(String issueUri, String userUri) {

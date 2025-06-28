@@ -59,7 +59,7 @@ public final class RdfGithubIssueReviewUtils {
     }
 
     public static Triple createReviewStateProperty(String reviewUri, String state) {
-        return Triple.create(uri(reviewUri), RdfGithubIssueUtils.stateProperty(), uri(state.toLowerCase()));
+        return Triple.create(uri(reviewUri), RdfGithubIssueUtils.stateProperty(), RdfUtils.uri(GH_NS + state.toLowerCase()));
     }
 
     public static Triple createReviewCreatedAtProperty(String reviewUri, LocalDateTime createdAt) {
@@ -70,8 +70,8 @@ public final class RdfGithubIssueReviewUtils {
         return Triple.create(uri(reviewUri), RdfGithubIssueUtils.updatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
     }
 
-    public static Triple createReviewAuthorProperty(String reviewUri, String authorUri) {
-        return Triple.create(uri(reviewUri), RdfGithubIssueUtils.authorProperty(), uri(authorUri));
+    public static Triple createReviewCreatorProperty(String reviewUri, String creatorUri) {
+        return Triple.create(uri(reviewUri), RdfGithubIssueUtils.creatorProperty(), uri(creatorUri));
     }
 
     public static Triple createReviewCommitIdProperty(String reviewUri, String commitId) {

@@ -66,6 +66,10 @@ public final class RdfUtils {
         return NodeFactory.createLiteralByValue(value, XSDDatatype.XSDboolean);
     }
 
+    public static Node integerLiteral(int value) {
+        return NodeFactory.createLiteralByValue(value, XSDDatatype.XSDint);
+    }
+
     public static Node uri(String value) {
         var expandedValue = prefixMap.expand(value);
 
