@@ -27,6 +27,7 @@ public final class RdfGithubIssueReviewUtils {
     public static Node reviewCommentCountProperty() { return uri(GH_NS + "reviewCommentCount"); }
     public static Node hasReviewCommentProperty() { return uri(GH_NS + "hasReviewComment"); }
     public static Node discussionProperty() { return uri(GH_NS + "discussion"); }
+    public static Node commentsProperty() { return uri(GH_NS + "comments"); }
 
     public static Node reviewContainerClass() { return uri(GH_NS + "ReviewContainer"); }
     public static Node reviewCommentContainerClass() { return uri(GH_NS + "ReviewCommentContainer"); }
@@ -88,6 +89,14 @@ public final class RdfGithubIssueReviewUtils {
 
     public static Triple createReviewHasCommentProperty(String reviewUri, String commentUri) {
         return Triple.create(uri(reviewUri), hasReviewCommentProperty(), uri(commentUri));
+    }
+
+    public static Triple createReviewCommentsProperty(String reviewUri, String listUri) {
+        return Triple.create(uri(reviewUri), commentsProperty(), uri(listUri));
+    }
+
+    public static Triple createCommentListRdfTypeProperty(String listUri) {
+        return Triple.create(uri(listUri), RdfGithubIssueUtils.rdfTypeProperty(), RdfUtils.uri("rdf:Bag"));
     }
 
     public static Triple createDiscussionProperty(String parentUri, String discussionUri) {
