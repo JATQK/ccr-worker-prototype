@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
+import org.kohsuke.github.GHEvent;
+import org.kohsuke.github.GHWorkflowRun;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -49,20 +51,20 @@ public final class RdfGithubWorkflowUtils {
         return Triple.create(RdfUtils.uri(runUri), nameProperty(), RdfUtils.stringLiteral(name));
     }
 
-    public static Triple createWorkflowStatusProperty(String runUri, String status) {
-        return Triple.create(RdfUtils.uri(runUri), statusProperty(), RdfUtils.uri(GH_NS + status.toLowerCase()));
+    public static Triple createWorkflowStatusProperty(String runUri, GHWorkflowRun.Status status) {
+        return Triple.create(RdfUtils.uri(runUri), statusProperty(), RdfUtils.uri(GH_NS + status));
     }
 
-    public static Triple createWorkflowConclusionProperty(String runUri, String conclusion) {
-        return Triple.create(RdfUtils.uri(runUri), conclusionProperty(), RdfUtils.uri(GH_NS + conclusion.toLowerCase()));
+    public static Triple createWorkflowConclusionProperty(String runUri, GHWorkflowRun.Conclusion conclusion) {
+        return Triple.create(RdfUtils.uri(runUri), conclusionProperty(), RdfUtils.uri(GH_NS + conclusion));
     }
 
-    public static Triple createWorkflowEventProperty(String runUri, String event) {
-        return Triple.create(RdfUtils.uri(runUri), eventProperty(), RdfUtils.uri(GH_NS + event.toLowerCase()));
+    public static Triple createWorkflowEventProperty(String runUri, GHEvent event) {
+        return Triple.create(RdfUtils.uri(runUri), eventProperty(), RdfUtils.uri(GH_NS + event));
     }
 
-    public static Triple createWorkflowRunNumberProperty(String runUri, int runNumber) {
-        return Triple.create(RdfUtils.uri(runUri), runNumberProperty(), RdfUtils.integerLiteral(runNumber));
+    public static Triple createWorkflowRunNumberProperty(String runUri, long runNumber) {
+        return Triple.create(RdfUtils.uri(runUri), runNumberProperty(), RdfUtils.longLiteral(runNumber));
     }
 
     public static Triple createWorkflowCommitShaProperty(String runUri, String sha) {

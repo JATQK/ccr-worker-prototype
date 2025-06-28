@@ -32,7 +32,12 @@ public final class RdfGithubIssueReviewUtils {
     public static Node threadCountProperty() { return uri(GH_NS + "threadCount"); }
     public static Node firstCommentAtProperty() { return uri(GH_NS + "firstCommentAt"); }
     public static Node lastCommentAtProperty() { return uri(GH_NS + "lastCommentAt"); }
-    public static Node lastActivityProperty() { return uri(GH_NS + "lastActivity"); }
+
+    public static Node lastActivityProperty() {
+        return uri(GH_NS + "lastActivity");
+    }
+    
+
 
     public static Triple createReviewDiscussionProperty(String reviewUri, String discussionUri) {
         return Triple.create(uri(reviewUri), discussionProperty(), uri(discussionUri));
@@ -110,6 +115,8 @@ public final class RdfGithubIssueReviewUtils {
     public static Triple createLastActivityProperty(String reviewUri, LocalDateTime dateTime) {
         return Triple.create(uri(reviewUri), lastActivityProperty(), RdfUtils.dateTimeLiteral(dateTime));
     }
+
+
     
 
 }
