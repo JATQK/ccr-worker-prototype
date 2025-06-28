@@ -28,15 +28,11 @@ public final class RdfGithubIssueReviewUtils {
     public static Node hasReviewCommentProperty() { return uri(GH_NS + "hasReviewComment"); }
     public static Node discussionProperty() { return uri(GH_NS + "discussion"); }
 
-    public static Node reviewContainerClass() { return uri(GH_NS + "ReviewContainer"); }
     public static Node reviewCommentContainerClass() { return uri(GH_NS + "ReviewCommentContainer"); }
     public static Node reviewClass() { return uri(GH_NS + "Review"); }
     public static Node reviewCommentClass() { return uri(GH_NS + "ReviewComment"); }
 
 
-    public static Triple createIssueReviewsProperty(String issueUri, String containerUri) {
-        return Triple.create(uri(issueUri), reviewsProperty(), uri(containerUri));
-    }
 
     public static Triple createIssueHasReviewProperty(String issueUri, String reviewUri) {
         return Triple.create(uri(issueUri), hasReviewProperty(), uri(reviewUri));
@@ -94,10 +90,6 @@ public final class RdfGithubIssueReviewUtils {
         return Triple.create(uri(parentUri), discussionProperty(), uri(discussionUri));
     }
 
-
-    public static Triple createReviewContainerRdfTypeProperty(String containerUri) {
-        return Triple.create(uri(containerUri), RdfGithubIssueUtils.rdfTypeProperty(), reviewContainerClass());
-    }
 
     public static Triple createReviewCommentContainerRdfTypeProperty(String containerUri) {
         return Triple.create(uri(containerUri), RdfGithubIssueUtils.rdfTypeProperty(), reviewCommentContainerClass());
