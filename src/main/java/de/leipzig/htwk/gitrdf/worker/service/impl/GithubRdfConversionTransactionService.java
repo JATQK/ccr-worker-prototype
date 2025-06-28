@@ -902,16 +902,14 @@ public class GithubRdfConversionTransactionService {
                                     writer.triple(RdfGithubIssueReviewUtils.createReviewCreatedAtProperty(reviewUri, localDateTimeFrom(review.getSubmittedAt())));
                                 }
                                 if (review.getUser() != null) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewAuthorProperty(reviewUri, review.getUser().getHtmlUrl().toString()));
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewCreatorProperty(reviewUri, review.getUser().getHtmlUrl().toString()));
                                 }
                                 if (review.getCommitId() != null) {
                                     writer.triple(RdfGithubIssueReviewUtils.createReviewCommitIdProperty(reviewUri, review.getCommitId()));
                                 }
-                                if (review.getAuthorAssociation() != null) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewAuthorAssociationProperty(reviewUri, review.getAuthorAssociation().toString()));
-                                }
+         
 
-                                List<GHPullRequestReviewComment> reviewComments = review.listComments().toList();
+                                List<GHPullRequestReviewComment> reviewComments = review.listReviewComments().toList();
 
                                 String commentContainerUri = reviewUri + "/comments";
                                 writer.triple(RdfGithubIssueReviewUtils.createDiscussionProperty(reviewUri, commentContainerUri));
@@ -944,7 +942,7 @@ public class GithubRdfConversionTransactionService {
                                         writer.triple(RdfGithubIssueCommentUtils.createReviewCommentOfProperty(commentUri, reviewUri));
 
                                         Long replyTo = c.getInReplyToId();
-                                        if (replyTo == null) {
+                                        if (replyTo == null || replyTo == 0) {
                                             writer.triple(RdfGithubIssueCommentUtils.createCommentIsRootProperty(commentUri, true));
                                             replyCount.put(cid, 0);
                                         } else {
