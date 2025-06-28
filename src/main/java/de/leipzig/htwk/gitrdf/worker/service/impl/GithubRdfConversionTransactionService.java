@@ -59,10 +59,9 @@ import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueState;
 import org.kohsuke.github.GHMilestone;
 import org.kohsuke.github.GHPullRequest;
-import org.kohsuke.github.GHRepository;
-import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHPullRequestReview;
 import org.kohsuke.github.GHPullRequestReviewComment;
+import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -82,9 +81,9 @@ import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueReviewUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueCommentUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueReviewUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils;
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
@@ -881,7 +880,7 @@ public class GithubRdfConversionTransactionService {
                                     continue;
                                 }
 
-                                reviewCount++;
+
                                 String reviewUri = reviewListUri + "/" + reviewId;
 
 
@@ -923,16 +922,15 @@ public class GithubRdfConversionTransactionService {
                                 writer.triple(RdfGithubIssueCommentUtils.createReviewCommentContainerRdfTypeProperty(commentContainerUri));
 
 
-                                int commentOrdinal = 1;
+                         
                                 Map<Long, Integer> replyCount = new HashMap<>();
 
 
                                 if (!reviewComments.isEmpty()) {
-                                    String commentContainerUri = reviewUri + "/comments";
                                     writer.triple(RdfGithubIssueReviewUtils.createDiscussionProperty(reviewUri, commentContainerUri));
                                     writer.triple(RdfGithubIssueCommentUtils.createReviewCommentContainerRdfTypeProperty(commentContainerUri));
 
-                                    int commentOrdinal = 1;
+                          
                                     Map<Long, Integer> replyCount = new HashMap<>();
 
                                     for (GHPullRequestReviewComment c : reviewComments) {
@@ -966,7 +964,7 @@ public class GithubRdfConversionTransactionService {
                                             replyCount.compute(replyTo, (k,v) -> v == null ? 1 : v + 1);
                                         }
 
-                                        commentCount++;
+
                                     }
 
 
