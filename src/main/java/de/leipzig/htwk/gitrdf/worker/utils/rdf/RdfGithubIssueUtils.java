@@ -69,6 +69,28 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "repository");
     }
 
+    public static Node mergedProperty() { return RdfUtils.uri(GH_NS + "merged"); }
+
+    public static Node mergedAtProperty() {
+        return RdfUtils.uri(GH_NS + "mergedAt");
+    }
+
+    public static Node mergedByProperty() {
+        return RdfUtils.uri(GH_NS + "mergedBy");
+    }
+
+    public static Node mergeCommitShaProperty() {
+        return RdfUtils.uri(GH_NS + "mergeCommitSha");
+    }
+
+    public static Node mergedViaSquashProperty() {
+        return RdfUtils.uri(GH_NS + "mergedViaSquash");
+    }
+
+    public static Node mergedViaRebaseProperty() {
+        return RdfUtils.uri(GH_NS + "mergedViaRebase");
+    }
+
 
 
 
@@ -126,6 +148,30 @@ public final class RdfGithubIssueUtils {
 
     public static Triple createIssueRepositoryProperty(String issueUri, String repoUri) {
         return Triple.create(RdfUtils.uri(issueUri), repositoryProperty(), RdfUtils.uri(repoUri));
+    }
+
+    public static Triple createIssueMergedProperty(String issueUri, boolean merged) {
+        return Triple.create(RdfUtils.uri(issueUri), mergedProperty(), RdfUtils.stringLiteral(Boolean.toString(merged)));
+    }
+
+    public static Triple createIssueMergedAtProperty(String issueUri, LocalDateTime mergedAt) {
+        return Triple.create(RdfUtils.uri(issueUri), mergedAtProperty(), RdfUtils.dateTimeLiteral(mergedAt));
+    }
+
+    public static Triple createIssueMergedByProperty(String issueUri, String userUri) {
+        return Triple.create(RdfUtils.uri(issueUri), mergedByProperty(), RdfUtils.uri(userUri));
+    }
+
+    public static Triple createIssueMergeCommitShaProperty(String issueUri, String sha) {
+        return Triple.create(RdfUtils.uri(issueUri), mergeCommitShaProperty(), RdfUtils.stringLiteral(sha));
+    }
+
+    public static Triple createIssueMergedViaSquashProperty(String issueUri, boolean squash) {
+        return Triple.create(RdfUtils.uri(issueUri), mergedViaSquashProperty(), RdfUtils.stringLiteral(Boolean.toString(squash)));
+    }
+
+    public static Triple createIssueMergedViaRebaseProperty(String issueUri, boolean rebase) {
+        return Triple.create(RdfUtils.uri(issueUri), mergedViaRebaseProperty(), RdfUtils.stringLiteral(Boolean.toString(rebase)));
     }
 
 }
