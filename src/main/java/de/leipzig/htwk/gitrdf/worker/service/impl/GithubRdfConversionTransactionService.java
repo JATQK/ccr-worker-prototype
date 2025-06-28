@@ -802,6 +802,17 @@ public class GithubRdfConversionTransactionService {
                             }
                         }
 
+                        if (githubIssueRepositoryFilter.isEnableIssueMergedInfo()) {
+                            // Basic merge status
+                            // merged -> true/false boolean
+                            // mergedAt -> timestamp of merge (ISO 8601 format)
+                            // mergedBy -> URI of user who performed the merge
+
+                            // Merge commit information
+                            // mergeCommitSha -> SHA of the actual merge commit
+                            // squashed -> boolean if PR was squash-merged
+                            // rebased -> boolean if PR was rebase-merged
+                        }
 
                         // WORK HERE
                         if (githubIssueRepositoryFilter.isEnableIssueReviewers()) {
