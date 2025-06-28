@@ -871,14 +871,12 @@ public class GithubRdfConversionTransactionService {
 
 
                             int reviewOrdinal = 1;
-                            int reviewCount = 0;
 
                             for (GHPullRequestReview review : reviews) {
                                 long reviewId = review.getId();
                                 if (!seenReviewIds.add(reviewId)) {
                                     continue;
                                 }
-                                reviewCount++;
                                 String reviewUri = reviewContainerUri + "/" + reviewId;
 
                                 writer.triple(RdfGithubIssueReviewUtils.createIssueHasReviewProperty(githubIssueUri, reviewUri));
@@ -919,7 +917,6 @@ public class GithubRdfConversionTransactionService {
 
 
                                 int commentOrdinal = 1;
-                                int commentCount = 0;
                                 Map<Long, Integer> replyCount = new HashMap<>();
 
                                 for (GHPullRequestReviewComment c : reviewComments) {
@@ -953,7 +950,6 @@ public class GithubRdfConversionTransactionService {
                                         replyCount.compute(replyTo, (k,v) -> v == null ? 1 : v + 1);
                                     }
 
-                                    commentCount++;
                                 }
 
                                 for (Map.Entry<Long, Integer> e : replyCount.entrySet()) {
@@ -961,11 +957,9 @@ public class GithubRdfConversionTransactionService {
                                     writer.triple(RdfGithubIssueCommentUtils.createCommentReplyCountProperty(cUri, e.getValue()));
                                 }
 
-                                writer.triple(RdfGithubIssueReviewUtils.createReviewCommentCountProperty(reviewUri, commentCount));
                             }
 
 
-                            writer.triple(RdfGithubIssueReviewUtils.createIssueReviewCountProperty(githubIssueUri, reviewCount));
 
                         }
 
