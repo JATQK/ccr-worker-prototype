@@ -56,8 +56,8 @@ import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.hibernate.engine.jdbc.BlobProxy;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueState;
-import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHMilestone;
+import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
 import org.springframework.beans.factory.annotation.Value;
@@ -230,25 +230,26 @@ public class GithubRdfConversionTransactionService {
         if (issue == null || !issue.isPullRequest() || pr == null) {
             return;
         }
+        try {
+            writer.triple(RdfGithubIssueUtils.createIssueMergedProperty(issueUri, pr.isMerged()));
 
-        writer.triple(RdfGithubIssueUtils.createIssueMergedProperty(issueUri, pr.isMerged()));
+            Date mergedAt = pr.getMergedAt();
+            if (mergedAt != null) {
+                writer.triple(RdfGithubIssueUtils.createIssueMergedAtProperty(issueUri, localDateTimeFrom(mergedAt)));
+            }
 
-        Date mergedAt = pr.getMergedAt();
-        if (mergedAt != null) {
-            writer.triple(RdfGithubIssueUtils.createIssueMergedAtProperty(issueUri, localDateTimeFrom(mergedAt)));
+            if (pr.getMergedBy() != null) {
+                writer.triple(RdfGithubIssueUtils.createIssueMergedByProperty(issueUri,
+                        pr.getMergedBy().getHtmlUrl().toString()));
+            }
+
+            if (pr.getMergeCommitSha() != null) {
+                writer.triple(RdfGithubIssueUtils.createIssueMergeCommitShaProperty(issueUri, pr.getMergeCommitSha()));
+            }
+        } catch (IOException e) {
+            log.warn("Error while writing merge info for issue {}: {}", issueUri, e.getMessage());
         }
-
-        if (pr.getMergedBy() != null) {
-            writer.triple(RdfGithubIssueUtils.createIssueMergedByProperty(issueUri,
-                    pr.getMergedBy().getHtmlUrl().toString()));
-        }
-
-        if (pr.getMergeCommitSha() != null) {
-            writer.triple(RdfGithubIssueUtils.createIssueMergeCommitShaProperty(issueUri, pr.getMergeCommitSha()));
-        }
-
-        writer.triple(RdfGithubIssueUtils.createIssueMergedViaSquashProperty(issueUri, pr.isMergedViaSquash()));
-        writer.triple(RdfGithubIssueUtils.createIssueMergedViaRebaseProperty(issueUri, pr.isMergedViaRebase()));
+        // TODO: Add addional merge information if available
     }
 
     private Git performGitClone(String ownerName, String repositoryName, File gitWorkingDirectory) throws GitAPIException {
@@ -754,12 +755,31 @@ public class GithubRdfConversionTransactionService {
                             doesWriterContainNonWrittenRdfStreamElements = true;
                         }
 
-                        int issueNumber = ghIssue.getNumber(); 
+                        int issueNumber = ghIssue.getNumber();
                         String githubIssueUri = ghIssue.getHtmlUrl().toString();
 
-                        if (issueNumber != 9956) {
+                        if (githubIssueUri == null || githubIssueUri.isEmpty()) {
+                            log.warn(
+                                    "Issue with number {} fallback to githubRepositoryURI because its githubIssueURI is null or empty",
+                                    issueNumber);
+                            githubIssueUri = getGithubRepositoryUri(owner, repositoryName);
+                        }
+
+                        // REMOVE ON DEPLOYMENT
+                        // if (issueNumber != 9956) {
+                        //     continue;
+                        // }
+
+                        // REMOVE ON DEPLOYMENT
+                        if (!githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() == null) {
                             continue;
                         }
+                        if (githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() != GHIssueState.CLOSED) {
+                            log.warn("Issue with number {} is not closed, skipping", issueNumber);
+                            continue;
+                        }
+                        
+
 
                         writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(githubIssueUri));
                         writer.triple(RdfGithubIssueUtils.createIssueRepositoryProperty(
@@ -787,7 +807,6 @@ public class GithubRdfConversionTransactionService {
 
                         if (githubIssueRepositoryFilter.isEnableIssueUser() && ghIssue.getUser() != null) {
 
-                            //String githubIssueUserUri = getGithubUserUri(ghIssue.getUser().getLogin());
                             String githubIssueUserUri = ghIssue.getUser().getHtmlUrl().toString();
                             writer.triple(
                                     RdfGithubIssueUtils.createIssueUserProperty(githubIssueUri, githubIssueUserUri));
@@ -849,69 +868,67 @@ public class GithubRdfConversionTransactionService {
                             // github:commentCount 2 ;
                         }
 
-
                         if (githubIssueRepositoryFilter.isEnableIssueReviewers()) {
-                        // Add the Reviews and their comments to the main rdf as seperate uris under /issues/PR_ID/reviews/REVIEW_ID
-                        // issue/12345/reviews/5001
-                        //      rdf:type github:Review ;
-                        //      github:identifier "5001"^^xsd:string ;
-                        //      github:reviewOf ex:issue/12345 ;
-                        //      github:description "Looks good" ;
-                        //      github:state github:APPROVED ;
-                        //      github:createdAt "2025-06-26T20:00:00Z"^^xsd:dateTime ;
-                        //      github:updatedAt "2025-06-26T20:30:00Z"^^xsd:dateTime ;
-                        //      github:author ex:user/anna ;
-                        //      github:commitId "abc123def" ;
-                        //      github:authorAssociation github:COLLABORATOR ;
-                        //      github:reviewCommentCount 1 ;
-                        //      github:hasReviewComment ex:issue/12345/reviews/5001/comments/6001 .
+                            // Add the Reviews and their comments to the main rdf as seperate uris under /issues/PR_ID/reviews/REVIEW_ID
+                            // issue/12345/reviews/5001
+                            //      rdf:type github:Review ;
+                            //      github:identifier "5001"^^xsd:string ;
+                            //      github:reviewOf ex:issue/12345 ;
+                            //      github:description "Looks good" ;
+                            //      github:state github:APPROVED ;
+                            //      github:createdAt "2025-06-26T20:00:00Z"^^xsd:dateTime ;
+                            //      github:updatedAt "2025-06-26T20:30:00Z"^^xsd:dateTime ;
+                            //      github:author ex:user/anna ;
+                            //      github:commitId "abc123def" ;
+                            //      github:authorAssociation github:COLLABORATOR ;
+                            //      github:reviewCommentCount 1 ;
+                            //      github:hasReviewComment ex:issue/12345/reviews/5001/comments/6001 .
 
                             // ReviewComment is build in a separate method which should reflect a generalized way of creating comments for issues
-                        //  issue/12345/reviews/5001/comments/6001
-                        //     rdf:type github:ReviewComment ;
-                        //     github:identifier "6001"^^xsd:string ;
-                        //     github:description "Consider adding a test." ;
-                        //     github:createdAt "2025-06-26T20:05:00Z"^^xsd:dateTime ;
-                        //     github:author ex:user/ben ;
-                        //     github:isRootComment true ;
-                        //     github:commentReplyCount 1 ;
-                        //     github:hasCommentReply ex:issue/12345/reviews/5001/comments/6002 ;
-                        //     github:reviewCommentOf ex:issue/12345/reviews/5001 .
+                            //  issue/12345/reviews/5001/comments/6001
+                            //     rdf:type github:ReviewComment ;
+                            //     github:identifier "6001"^^xsd:string ;
+                            //     github:description "Consider adding a test." ;
+                            //     github:createdAt "2025-06-26T20:05:00Z"^^xsd:dateTime ;
+                            //     github:author ex:user/ben ;
+                            //     github:isRootComment true ;
+                            //     github:commentReplyCount 1 ;
+                            //     github:hasCommentReply ex:issue/12345/reviews/5001/comments/6002 ;
+                            //     github:reviewCommentOf ex:issue/12345/reviews/5001 .
 
-                        // issue/12345/reviews/5001/comments/6002
-                        //     rdf:type github:ReviewComment ;
-                        //     github:identifier "6002"^^xsd:string ;
-                        //     github:description "Agreed, added one." ;
-                        //     github:createdAt "2025-06-26T20:10:00Z"^^xsd:dateTime ;
-                        //     github:author ex:user/anna ;
-                        //     github:isRootComment false ;
-                        //     github:reviewCommentReplyTo ex:issue/12345/reviews/5001/comments/6001 ;
-                        //     github:reviewCommentOf ex:issue/12345/reviews/5001 .
+                            // issue/12345/reviews/5001/comments/6002
+                            //     rdf:type github:ReviewComment ;
+                            //     github:identifier "6002"^^xsd:string ;
+                            //     github:description "Agreed, added one." ;
+                            //     github:createdAt "2025-06-26T20:10:00Z"^^xsd:dateTime ;
+                            //     github:author ex:user/anna ;
+                            //     github:isRootComment false ;
+                            //     github:reviewCommentReplyTo ex:issue/12345/reviews/5001/comments/6001 ;
+                            //     github:reviewCommentOf ex:issue/12345/reviews/5001 .
                         }
-
 
                         if (githubIssueRepositoryFilter.isEnableIssueComments()) {
                             // Add the Comments to the main rdf as seperate uris under /issues/ISSUE_ID/comments/COMMENT_ID
-                        // issue/12345/comments/001
-                        //     rdf:type github:IssueComment ;
-                        //     github:identifier "001" ;
-                        //     github:description "Any update on this?" ;
-                        //     github:createdAt "2025-06-25T12:00:00Z"^^xsd:dateTime ;
-                        //     github:author ex:user/david ;
-                        //     github:isRootComment true ;
-                        //     github:commentReplyCount 1 ;
-                        //     github:hasCommentReply ex:issue/12345/comments/002 ;
-                        //     github:commentOf ex:issue/12345 .
+                            // issue/12345/comments/001
+                            //     rdf:type github:IssueComment ;
+                            //     github:identifier "001" ;
+                            //     github:description "Any update on this?" ;
+                            //     github:createdAt "2025-06-25T12:00:00Z"^^xsd:dateTime ;
+                            //     github:author ex:user/david ;
+                            //     github:isRootComment true ;
+                            //     github:commentReplyCount 1 ;
+                            //     github:hasCommentReply ex:issue/12345/comments/002 ;
+                            //     github:commentOf ex:issue/12345 .
 
-                        // issue/12345/comments/002
-                        //     rdf:type github:IssueComment ;
-                        //     github:identifier "002" ;
-                        //     github:description "Working on it." ;
-                        //     github:createdAt "2025-06-25T13:00:00Z"^^xsd:dateTime ;
-                        //     github:author ex:user/maintainer ;
-                        //     github:isRootComment false ;
-                        //     github:commentReplyTo ex:issue/12345/comments/001 ;
-                        //     github:commentOf ex:issue/12345 .
+                            // issue/12345/comments/002
+                            //     rdf:type github:IssueComment ;
+                            //     github:identifier "002" ;
+                            //     github:description "Working on it." ;
+                            //     github:createdAt "2025-06-25T13:00:00Z"^^xsd:dateTime ;
+                            //     github:author ex:user/maintainer ;
+                            //     github:isRootComment false ;
+                            //     github:commentReplyTo ex:issue/12345/comments/001 ;
+                            //     github:commentOf ex:issue/12345 .
                         }
 
                         issueCounter++;

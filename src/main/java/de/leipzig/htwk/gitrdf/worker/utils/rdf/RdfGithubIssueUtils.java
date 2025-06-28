@@ -79,10 +79,6 @@ public final class RdfGithubIssueUtils {
 
     public static Node mergeCommitShaProperty() { return RdfUtils.uri(GH_NS + "mergeCommitSha"); }
 
-    public static Node squashedProperty() { return RdfUtils.uri(GH_NS + "squashed"); }
-
-    public static Node rebasedProperty() { return RdfUtils.uri(GH_NS + "rebased"); }
-
     // Review linkage
     public static Node hasReviewProperty() { return RdfUtils.uri(GH_NS + "hasReview"); }
 
@@ -204,16 +200,12 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(issueUri), mergedByProperty(), RdfUtils.uri(userUri));
     }
 
+    public static Triple createIssueMergedAtProperty(String issueUri, LocalDateTime mergedAt) {
+        return Triple.create(RdfUtils.uri(issueUri), mergedAtProperty(), RdfUtils.dateTimeLiteral(mergedAt));
+    }
+
     public static Triple createIssueMergeCommitShaProperty(String issueUri, String sha) {
         return Triple.create(RdfUtils.uri(issueUri), mergeCommitShaProperty(), RdfUtils.stringLiteral(sha));
-    }
-
-    public static Triple createIssueSquashedProperty(String issueUri, boolean squashed) {
-        return Triple.create(RdfUtils.uri(issueUri), squashedProperty(), RdfUtils.stringLiteral(Boolean.toString(squashed)));
-    }
-
-    public static Triple createIssueRebasedProperty(String issueUri, boolean rebased) {
-        return Triple.create(RdfUtils.uri(issueUri), rebasedProperty(), RdfUtils.stringLiteral(Boolean.toString(rebased)));
     }
 
     // Review linkage triples
