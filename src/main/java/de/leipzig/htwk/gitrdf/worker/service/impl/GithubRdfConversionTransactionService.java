@@ -913,9 +913,11 @@ public class GithubRdfConversionTransactionService {
                                         lastCommentAt = updated;
                                     }
 
+
                                     Long parentId = c.getInReplyToId();
                                     long threadId = parentId != null ? parentId : c.getId();
                                     threadIds.add(threadId);
+
 
                                     if (parentId == null) {
                                         rootCommentCount++;
