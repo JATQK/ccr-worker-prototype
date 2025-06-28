@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
+import org.kohsuke.github.GHWorkflowRun;
+
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -39,12 +41,12 @@ public final class RdfGithubWorkflowJobUtils {
         return Triple.create(RdfUtils.uri(jobUri), nameProperty(), RdfUtils.stringLiteral(name));
     }
 
-    public static Triple createWorkflowJobStatusProperty(String jobUri, String status) {
-        return Triple.create(RdfUtils.uri(jobUri), statusProperty(), RdfUtils.uri(GH_NS + status.toLowerCase()));
+    public static Triple createWorkflowJobStatusProperty(String jobUri, GHWorkflowRun.Status status) {
+        return Triple.create(RdfUtils.uri(jobUri), statusProperty(), RdfUtils.uri(GH_NS + status));
     }
 
-    public static Triple createWorkflowJobConclusionProperty(String jobUri, String conclusion) {
-        return Triple.create(RdfUtils.uri(jobUri), conclusionProperty(), RdfUtils.uri(GH_NS + conclusion.toLowerCase()));
+    public static Triple createWorkflowJobConclusionProperty(String jobUri, GHWorkflowRun.Conclusion conclusion) {
+        return Triple.create(RdfUtils.uri(jobUri), conclusionProperty(), RdfUtils.uri(GH_NS + conclusion));
     }
 
     public static Triple createWorkflowJobStartedAtProperty(String jobUri, LocalDateTime started) {
