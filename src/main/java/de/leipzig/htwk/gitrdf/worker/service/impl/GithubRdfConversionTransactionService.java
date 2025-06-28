@@ -56,6 +56,7 @@ import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.hibernate.engine.jdbc.BlobProxy;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueState;
+import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHMilestone;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
@@ -223,6 +224,31 @@ public class GithubRdfConversionTransactionService {
 
         }
 
+    }
+
+    private void writeMergeInfo(GHIssue issue, GHPullRequest pr, StreamRDF writer, String issueUri) {
+        if (issue == null || !issue.isPullRequest() || pr == null) {
+            return;
+        }
+
+        writer.triple(RdfGithubIssueUtils.createIssueMergedProperty(issueUri, pr.isMerged()));
+
+        Date mergedAt = pr.getMergedAt();
+        if (mergedAt != null) {
+            writer.triple(RdfGithubIssueUtils.createIssueMergedAtProperty(issueUri, localDateTimeFrom(mergedAt)));
+        }
+
+        if (pr.getMergedBy() != null) {
+            writer.triple(RdfGithubIssueUtils.createIssueMergedByProperty(issueUri,
+                    pr.getMergedBy().getHtmlUrl().toString()));
+        }
+
+        if (pr.getMergeCommitSha() != null) {
+            writer.triple(RdfGithubIssueUtils.createIssueMergeCommitShaProperty(issueUri, pr.getMergeCommitSha()));
+        }
+
+        writer.triple(RdfGithubIssueUtils.createIssueMergedViaSquashProperty(issueUri, pr.isMergedViaSquash()));
+        writer.triple(RdfGithubIssueUtils.createIssueMergedViaRebaseProperty(issueUri, pr.isMergedViaRebase()));
     }
 
     private Git performGitClone(String ownerName, String repositoryName, File gitWorkingDirectory) throws GitAPIException {
@@ -802,17 +828,11 @@ public class GithubRdfConversionTransactionService {
                             }
                         }
 
-                        // WORK HERE
                         if (githubIssueRepositoryFilter.isEnableIssueMergedInfo()) {
-                            // Basic merge status
-                            // merged -> true/false boolean
-                            // mergedAt -> timestamp of merge (ISO 8601 format)
-                            // mergedBy -> URI of user who performed the merge
-
-                            // Merge commit information
-                            // mergeCommitSha -> SHA of the actual merge commit
-                            // squashed -> boolean if PR was squash-merged
-                            // rebased -> boolean if PR was rebase-merged
+                            if (ghIssue.isPullRequest()) {
+                                GHPullRequest pullRequest = githubRepositoryHandle.getPullRequest(issueNumber);
+                                writeMergeInfo(ghIssue, pullRequest, writer, githubIssueUri);
+                            }
                         }
 
                         // WORK HERE

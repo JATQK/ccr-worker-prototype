@@ -69,6 +69,7 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "repository");
     }
 
+
     // Merge information
     public static Node mergedProperty() { return RdfUtils.uri(GH_NS + "merged"); }
 
@@ -138,8 +139,6 @@ public final class RdfGithubIssueUtils {
 
 
 
-
-
     public static Node bagItemProperty(int index) {
         return RdfUtils.uri("rdf:_" + index);
     }
@@ -195,15 +194,12 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(issueUri), repositoryProperty(), RdfUtils.uri(repoUri));
     }
 
+
     // Merge information triples
     public static Triple createIssueMergedProperty(String issueUri, boolean merged) {
         return Triple.create(RdfUtils.uri(issueUri), mergedProperty(), RdfUtils.stringLiteral(Boolean.toString(merged)));
     }
-
-    public static Triple createIssueMergedAtProperty(String issueUri, LocalDateTime mergedAtDateTime) {
-        return Triple.create(RdfUtils.uri(issueUri), mergedAtProperty(), RdfUtils.dateTimeLiteral(mergedAtDateTime));
-    }
-
+  
     public static Triple createIssueMergedByProperty(String issueUri, String userUri) {
         return Triple.create(RdfUtils.uri(issueUri), mergedByProperty(), RdfUtils.uri(userUri));
     }
