@@ -772,9 +772,9 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         // REMOVE ON DEPLOYMENT
-                        // if (issueNumber != 9956) {
-                        //     continue;
-                        // }
+                        if (!"9956".equals(String.valueOf(issueNumber)) && !"9954".equals(String.valueOf(issueNumber))) {
+                            continue;
+                        }
 
                         // REMOVE ON DEPLOYMENT
                         if (!githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() == null) {
