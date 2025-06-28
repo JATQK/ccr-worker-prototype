@@ -40,7 +40,7 @@ See the folder `target` for the executable JAR file.
 
 ## Discussion containers
 
-Issues and reviews expose their comments via a dedicated container located at `#comments` relative to the parent resource. The parent links to this container via `github:discussion`. The container is typed as `rdf:Bag` and enumerates comment URIs using ordinal properties like `rdf:_1`, `rdf:_2`.
+Reviews expose their comments via a dedicated container located at `#comments` relative to the parent resource. The parent links to this container via `github:discussion`. The container is typed as `rdf:Bag` and enumerates comment URIs using ordinal properties like `rdf:_1`, `rdf:_2`.
 
 [Spring Initializr Template](https://start.spring.io/#!type=maven-project&language=java&platformVersion=3.2.2&packaging=jar&jvmVersion=21&groupId=de.leipzig.htwk.gitrdf&artifactId=worker&name=worker&description=Archetype%20project%20for%20HTWK%20Leipzig%20-%20Project%20to%20transform%20git%20to%20RDF&packageName=de.leipzig.htwk.gitrdf.worker&dependencies=lombok,devtools,data-jpa,postgresql,testcontainers,integration)
 

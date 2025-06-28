@@ -855,7 +855,8 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueComments()) {
-                            writeCommentsAsTriplesToIssue(writer, githubIssueUri, ghIssue.listComments());
+                            // Issue comments are intentionally ignored. Conversation
+                            // metadata for issues is no longer written.
                         }
 
                         issueCounter++;
@@ -1314,57 +1315,8 @@ public class GithubRdfConversionTransactionService {
     private void writeCommentsAsTriplesToIssue(StreamRDF writer,
             String issueUri,
             PagedIterable<GHIssueComment> comments)
-            throws IOException { // <-- propagate
-
-        String conversationUri = issueUri + "#conversation";
-        writer.triple(RdfGithubIssueUtils.createHasConversationProperty(issueUri, conversationUri));
-        writer.triple(RdfGithubIssueUtils.createConversationOfProperty(conversationUri, issueUri));
-        writer.triple(RdfGithubIssueUtils.createConversationRdfType(conversationUri));
-
-        int index = 0;
-        String first = null;
-        String previous = null;
-        for (GHIssueComment comment : comments) {
-            String commentUri = comment.getHtmlUrl().toString();
-            index++;
-            if (first == null) first = commentUri;
-            if (previous != null) {
-                writer.triple(RdfGithubIssueUtils.createNextCommentProperty(previous, commentUri));
-                writer.triple(RdfGithubIssueUtils.createPreviousCommentProperty(commentUri, previous));
-            }
-            writer.triple(RdfGithubIssueUtils.createPartOfConversationProperty(commentUri, conversationUri));
-            writer.triple(RdfGithubIssueUtils.createIssueCommentProperty(issueUri, commentUri));
-            writer.triple(RdfGithubIssueUtils.createCommentRdfTypeProperty(commentUri));
-            writer.triple(RdfGithubIssueUtils.createIssueCommentOfProperty(commentUri, issueUri));
-            writer.triple(RdfGithubIssueUtils.createIssueCommentIdProperty(commentUri, comment.getId()));
-
-            GHUser user = comment.getUser();
-            if (user != null) {
-                writer.triple(RdfGithubIssueUtils.createIssueCommentUserProperty(
-                        commentUri, user.getHtmlUrl().toString()));
-            }
-
-            String body = comment.getBody();
-            if (body != null) {
-                writer.triple(RdfGithubIssueUtils.createIssueCommentBodyProperty(commentUri, body));
-            }
-
-            if (comment.getCreatedAt() != null) {
-                LocalDateTime created = localDateTimeFrom(comment.getCreatedAt());
-                writer.triple(RdfGithubIssueUtils.createIssueCommentCreatedAtProperty(commentUri, created));
-            }
-
-            if (comment.getUpdatedAt() != null) {
-                LocalDateTime updated = localDateTimeFrom(comment.getUpdatedAt());
-                writer.triple(RdfGithubIssueUtils.createIssueCommentUpdatedAtProperty(commentUri, updated));
-            }
-            previous = commentUri;
-        }
-        writer.triple(RdfGithubIssueUtils.createCommentCountProperty(conversationUri, index));
-        if (first != null) {
-            writer.triple(RdfGithubIssueUtils.createFirstCommentProperty(conversationUri, first));
-            writer.triple(RdfGithubIssueUtils.createLastCommentProperty(conversationUri, previous));
-        }
+            throws IOException {
+        // Issue comments are no longer exported to RDF.
     }
 
     private int calculateSkipCountAndThrowExceptionIfIntegerOverflowIsImminent(
