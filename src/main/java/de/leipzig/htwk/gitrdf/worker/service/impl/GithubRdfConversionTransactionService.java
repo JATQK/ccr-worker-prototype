@@ -80,9 +80,9 @@ import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueDiscussionUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueReviewUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueCommentUtils;
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 
@@ -750,9 +750,7 @@ public class GithubRdfConversionTransactionService {
 
                     for (GHIssue ghIssue : githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100)
                             .list()) {
-                        if (issueCounter >= 100) {
-                            continue;
-                        }
+
                         if (issueCounter < 1) {
                             log.info("Start issue rdf conversion batch");
                             writer.start();
@@ -760,52 +758,61 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         int issueNumber = ghIssue.getNumber();
-                        String githubIssueUri = ghIssue.getHtmlUrl().toString();
+                        String issueUri = ghIssue.getHtmlUrl().toString();
 
-                        if (githubIssueUri == null || githubIssueUri.isEmpty()) {
+                        if (issueUri == null || issueUri.isEmpty()) {
                             log.warn(
-                                    "Issue with number {} fallback to githubRepositoryURI because its githubIssueURI is null or empty",
+                                    "Issue with number {} fallback to githubRepositoryURI because its issueUri is null or empty",
                                     issueNumber);
-                            githubIssueUri = getGithubRepositoryUri(owner, repositoryName);
+                            issueUri = getGithubRepositoryUri(owner, repositoryName);
                         }
 
                         // REMOVE ON DEPLOYMENT
-                        if (!"9956".equals(String.valueOf(issueNumber)) && !"9954".equals(String.valueOf(issueNumber))) {
-                            continue;
-                        }
+                        // if (!"9956".equals(String.valueOf(issueNumber)) && !"9954".equals(String.valueOf(issueNumber))) {
+                        //     continue;
+                        // }
 
                         // REMOVE ON DEPLOYMENT
                         if (!githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() == null) {
                             continue;
                         }
-                        if (githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() != GHIssueState.CLOSED) {
+                        // REMOVE ON DEPLOYMENT
+                        if (githubIssueRepositoryFilter.isEnableIssueState()
+                                && ghIssue.getState() != GHIssueState.CLOSED) {
                             log.warn("Issue with number {} is not closed, skipping", issueNumber);
                             continue;
                         }
+                        // REMOVE ON DEPLOYMENT
+                        // if (issueCounter >= 50) {
+                        // continue;
+                        // }
+
+                        // REMOVE ON DEPLOYMENT
+                        if (issueCounter >= 400) {
+                            continue;
+                        }
                         
-
-
-                        writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(githubIssueUri));
+                        writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(issueUri));
                         writer.triple(RdfGithubIssueUtils.createIssueRepositoryProperty(
-                                githubIssueUri,
+                                issueUri,
                                 getGithubRepositoryUri(owner, repositoryName)));
 
                         if (githubIssueRepositoryFilter.isEnableIssueNumber()) {
-                            writer.triple(RdfGithubIssueUtils.createIssueNumberProperty(githubIssueUri, issueNumber));
+                            writer.triple(RdfGithubIssueUtils.createIssueNumberProperty(issueUri, issueNumber));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueTitle() && ghIssue.getTitle() != null) {
                             writer.triple(
-                                    RdfGithubIssueUtils.createIssueTitleProperty(githubIssueUri, ghIssue.getTitle()));
+                                    RdfGithubIssueUtils.createIssueTitleProperty(issueUri, ghIssue.getTitle()));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueBody() && ghIssue.getBody() != null) {
                             writer.triple(
-                                    RdfGithubIssueUtils.createIssueBodyProperty(githubIssueUri, ghIssue.getBody()));
+                                    RdfGithubIssueUtils.createIssueBodyProperty(issueUri, ghIssue.getBody()));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() != null) {
-                            writer.triple(RdfGithubIssueUtils.createIssueStateProperty(githubIssueUri,
+                            writer.triple(RdfGithubIssueUtils.createIssueStateProperty(issueUri,
                                     ghIssue.getState().toString()));
                         }
 
@@ -813,14 +820,14 @@ public class GithubRdfConversionTransactionService {
 
                             String githubIssueUserUri = ghIssue.getUser().getHtmlUrl().toString();
                             writer.triple(
-                                    RdfGithubIssueUtils.createIssueUserProperty(githubIssueUri, githubIssueUserUri));
+                                    RdfGithubIssueUtils.createIssueUserProperty(issueUri, githubIssueUserUri));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueMilestone()) {
 
                             GHMilestone issueMilestone = ghIssue.getMilestone();
                             if (issueMilestone != null) {
-                                writer.triple(RdfGithubIssueUtils.createIssueMilestoneProperty(githubIssueUri,
+                                writer.triple(RdfGithubIssueUtils.createIssueMilestoneProperty(issueUri,
                                         ghIssue.getMilestone().getHtmlUrl().toString()));
                             }
                         }
@@ -828,7 +835,7 @@ public class GithubRdfConversionTransactionService {
                         if (githubIssueRepositoryFilter.isEnableIssueCreatedAt() && ghIssue.getCreatedAt() != null) {
 
                             LocalDateTime createdAt = localDateTimeFrom(ghIssue.getCreatedAt());
-                            writer.triple(RdfGithubIssueUtils.createIssueCreatedAtProperty(githubIssueUri, createdAt));
+                            writer.triple(RdfGithubIssueUtils.createIssueSubmittedAtProperty(issueUri, createdAt));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueUpdatedAt()) {
@@ -837,7 +844,7 @@ public class GithubRdfConversionTransactionService {
                             if (updatedAtUtilDate != null) {
                                 LocalDateTime updatedAt = localDateTimeFrom(updatedAtUtilDate);
                                 writer.triple(
-                                        RdfGithubIssueUtils.createIssueUpdatedAtProperty(githubIssueUri, updatedAt));
+                                        RdfGithubIssueUtils.createIssueUpdatedAtProperty(issueUri, updatedAt));
                             }
                         }
 
@@ -847,18 +854,18 @@ public class GithubRdfConversionTransactionService {
                             if (closedAtUtilDate != null) {
                                 LocalDateTime closedAt = localDateTimeFrom(closedAtUtilDate);
                                 writer.triple(
-                                        RdfGithubIssueUtils.createIssueClosedAtProperty(githubIssueUri, closedAt));
+                                        RdfGithubIssueUtils.createIssueClosedAtProperty(issueUri, closedAt));
                             }
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueMergedInfo()) {
                             if (ghIssue.isPullRequest()) {
                                 GHPullRequest pullRequest = githubRepositoryHandle.getPullRequest(issueNumber);
-                                writeMergeInfo(ghIssue, pullRequest, writer, githubIssueUri);
+                                writeMergeInfo(ghIssue, pullRequest, writer, issueUri);
                             }
                         }
 
-
+                        // Reviews
                         if (githubIssueRepositoryFilter.isEnableIssueReviewers() && ghIssue.isPullRequest()) {
                             GHPullRequest pr = ghIssue.getRepository().getPullRequest(issueNumber);
                             List<GHPullRequestReview> reviews = pr.listReviews().toList();
@@ -868,35 +875,46 @@ public class GithubRdfConversionTransactionService {
                                 if (!seenReviewIds.add(reviewId)) {
                                     continue;
                                 }
-                                String reviewUri = githubIssueUri + "/reviews/" + reviewId;
+                                String reviewUri = issueUri + "/reviews/" + reviewId;
 
-                                writer.triple(RdfGithubIssueUtils.createIssueReviewProperty(githubIssueUri, reviewUri));
-                                writer.triple(RdfGithubIssueReviewUtils.createReviewIdentifierProperty(reviewUri, reviewId));
-                                writer.triple(RdfGithubIssueReviewUtils.createReviewOfProperty(reviewUri, githubIssueUri));
+                                writer.triple(RdfGithubIssueReviewUtils.createIssueReviewProperty(issueUri, reviewUri));
+                                writer.triple(RdfGithubIssueReviewUtils.createIssueReviewRdfTypeProperty(reviewUri));
+                                writer.triple(
+                                        RdfGithubIssueReviewUtils.createReviewIdentifierProperty(reviewUri, reviewId));
+                                writer.triple(RdfGithubIssueReviewUtils.createReviewOfProperty(reviewUri, issueUri));
 
                                 if (review.getBody() != null && !review.getBody().isEmpty()) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewDescriptionProperty(reviewUri, review.getBody()));
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewDescriptionProperty(reviewUri,
+                                            review.getBody()));
                                 }
                                 if (review.getState() != null) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewStateProperty(reviewUri, review.getState().toString()));
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewStateProperty(reviewUri,
+                                            review.getState().toString()));
                                 }
                                 if (review.getSubmittedAt() != null) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewCreatedAtProperty(reviewUri, localDateTimeFrom(review.getSubmittedAt())));
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewSubmittedAtProperty(reviewUri,
+                                            localDateTimeFrom(review.getSubmittedAt())));
                                 }
                                 if (review.getUser() != null) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewCreatorProperty(reviewUri, review.getUser().getHtmlUrl().toString()));
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewUserProperty(reviewUri,
+                                            review.getUser().getHtmlUrl().toString()));
                                 }
                                 if (review.getCommitId() != null) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewCommitIdProperty(reviewUri, review.getCommitId()));
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewCommitIdProperty(reviewUri,
+                                            review.getCommitId()));
                                 }
 
+                                // Review Comments (alias Discussions) Statistics
                                 List<GHPullRequestReviewComment> reviewComments = review.listReviewComments().toList();
-                                String commentListUri = reviewUri + "#comments";
-
-                                writer.triple(RdfGithubIssueReviewUtils.createDiscussionProperty(reviewUri, commentListUri));
-                                writer.triple(RdfGithubIssueCommentUtils.createReviewCommentContainerRdfTypeProperty(commentListUri));
-
                                 int reviewCommentCount = reviewComments.size();
+
+                                // If there are no review comments, skip further processing about comments for this review
+                                if (reviewCommentCount == 0) {
+                                    continue;
+                                }
+
+                                String _discussionUri = issueUri + "#discussion_r";
+
                                 int rootCommentCount = 0;
                                 Set<Long> threadIds = new HashSet<>();
                                 Map<Long, List<Long>> repliesByParent = new HashMap<>();
@@ -905,7 +923,9 @@ public class GithubRdfConversionTransactionService {
 
                                 for (GHPullRequestReviewComment c : reviewComments) {
                                     LocalDateTime created = localDateTimeFrom(c.getCreatedAt());
-                                    LocalDateTime updated = c.getUpdatedAt() != null ? localDateTimeFrom(c.getUpdatedAt()) : created;
+                                    LocalDateTime updated = c.getUpdatedAt() != null
+                                            ? localDateTimeFrom(c.getUpdatedAt())
+                                            : created;
                                     if (firstCommentAt == null || created.isBefore(firstCommentAt)) {
                                         firstCommentAt = created;
                                     }
@@ -913,64 +933,79 @@ public class GithubRdfConversionTransactionService {
                                         lastCommentAt = updated;
                                     }
 
-
                                     Long parentId = c.getInReplyToId();
                                     long threadId = parentId != null ? parentId : c.getId();
                                     threadIds.add(threadId);
 
-
-                                    if (parentId == null) {
+                                    if (parentId == null || parentId == c.getId()) {
                                         rootCommentCount++;
                                     } else {
-                                        repliesByParent.computeIfAbsent(parentId, k -> new ArrayList<>()).add(c.getId());
+                                        repliesByParent.computeIfAbsent(parentId, k -> new ArrayList<>())
+                                                .add(c.getId());
                                     }
                                 }
 
-                                writer.triple(RdfGithubIssueReviewUtils.createReviewCommentCountProperty(reviewUri, reviewCommentCount));
-                                writer.triple(RdfGithubIssueReviewUtils.createRootCommentCountProperty(reviewUri, rootCommentCount));
-                                writer.triple(RdfGithubIssueReviewUtils.createThreadCountProperty(reviewUri, threadIds.size()));
+                                writer.triple(RdfGithubIssueReviewUtils.createReviewCommentCountProperty(reviewUri,
+                                        reviewCommentCount));
+                                writer.triple(RdfGithubIssueReviewUtils.createRootCommentCountProperty(reviewUri,
+                                        rootCommentCount));
+                                writer.triple(RdfGithubIssueReviewUtils.createThreadCountProperty(reviewUri,
+                                        threadIds.size()));
+
                                 if (firstCommentAt != null) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createFirstCommentAtProperty(reviewUri, firstCommentAt));
+                                    writer.triple(RdfGithubIssueReviewUtils.createFirstCommentAtProperty(reviewUri,
+                                            firstCommentAt));
                                 }
                                 if (lastCommentAt != null) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createLastCommentAtProperty(reviewUri, lastCommentAt));
-                                    writer.triple(RdfGithubIssueReviewUtils.createLastActivityProperty(reviewUri, lastCommentAt));
+                                    writer.triple(RdfGithubIssueReviewUtils.createLastCommentAtProperty(reviewUri,
+                                            lastCommentAt));
+                                    writer.triple(RdfGithubIssueReviewUtils.createLastActivityProperty(reviewUri,
+                                            lastCommentAt));
                                 }
 
+                                // Review Discussions
                                 for (GHPullRequestReviewComment c : reviewComments) {
                                     long cid = c.getId();
-                                    String commentUri = commentListUri + "/" + cid;
+                                    String discussionUri = _discussionUri + cid;
 
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewCommentsProperty(reviewUri, commentUri));
-                                    writer.triple(RdfGithubIssueCommentUtils.createReviewCommentRdfTypeProperty(commentUri));
-                                    writer.triple(RdfGithubIssueCommentUtils.createCommentIdentifierProperty(commentUri, cid));
-                                    writer.triple(RdfGithubIssueCommentUtils.createReviewCommentOfProperty(commentUri, reviewUri));
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewDiscussionProperty(reviewUri,
+                                            discussionUri));
+
+                                    writer.triple(RdfGithubIssueDiscussionUtils.createReviewDiscussionRdfTypeProperty(
+                                            discussionUri));
+                                    writer.triple(RdfGithubIssueDiscussionUtils
+                                            .createDiscussionIdentifierProperty(discussionUri, cid));
+                                    writer.triple(RdfGithubIssueDiscussionUtils
+                                            .createReviewDiscussionOfProperty(discussionUri, reviewUri));
                                     if (c.getBody() != null && !c.getBody().isEmpty()) {
-                                        writer.triple(RdfGithubIssueCommentUtils.createCommentDescriptionProperty(commentUri, c.getBody()));
+                                        writer.triple(RdfGithubIssueDiscussionUtils
+                                                .createDiscussionDescriptionProperty(discussionUri, c.getBody()));
                                     }
                                     if (c.getUser() != null) {
-                                        writer.triple(RdfGithubIssueCommentUtils.createCommentAuthorProperty(commentUri, c.getUser().getHtmlUrl().toString()));
+                                        writer.triple(RdfGithubIssueDiscussionUtils.createDiscussionUserProperty(
+                                                discussionUri, c.getUser().getHtmlUrl().toString()));
                                     }
                                     if (c.getCreatedAt() != null) {
-                                        writer.triple(RdfGithubIssueCommentUtils.createCommentCreatedAtProperty(commentUri, localDateTimeFrom(c.getCreatedAt())));
+                                        writer.triple(RdfGithubIssueDiscussionUtils.createDiscussionCreatedAtProperty(
+                                                discussionUri, localDateTimeFrom(c.getCreatedAt())));
                                     }
 
-                                    Long parentId = c.getInReplyToId();
-                                    if (parentId == null) {
-                                        writer.triple(RdfGithubIssueCommentUtils.createCommentIsRootProperty(commentUri, true));
-                                        writer.triple(RdfGithubIssueReviewUtils.createRootCommentsProperty(reviewUri, commentUri));
-                                    } else {
-                                        writer.triple(RdfGithubIssueCommentUtils.createCommentIsRootProperty(commentUri, false));
-                                        String parentUri = commentListUri + "/" + parentId;
-                                        writer.triple(RdfGithubIssueCommentUtils.createReviewCommentReplyToProperty(commentUri, parentUri));
-                                    }
+                                    // Long parentId = c.getInReplyToId();
+                                    // if (parentId == null || parentId == c.getId()) {
+                                    //     writer.triple(RdfGithubIssueDiscussionUtils.createCommentIsRootProperty(discussionUri, true));
+                                    //     writer.triple(RdfGithubIssueReviewUtils.createRootCommentsProperty(reviewUri, discussionUri));
+                                    // } else {
+                                    //     writer.triple(RdfGithubIssueDiscussionUtils.createCommentIsRootProperty(discussionUri, false));
+                                    //     String parentUri = commentListUri + "/" + parentId;
+                                    //     writer.triple(RdfGithubIssueDiscussionUtils.createReviewCommentReplyToProperty(discussionUri, parentUri));
+                                    // }
 
-                                    List<Long> replies = repliesByParent.getOrDefault(cid, List.of());
-                                    writer.triple(RdfGithubIssueCommentUtils.createCommentReplyCountProperty(commentUri, replies.size()));
-                                    for (Long rid : replies) {
-                                        String replyUri = commentListUri + "/" + rid;
-                                        writer.triple(RdfGithubIssueCommentUtils.createHasCommentReplyProperty(commentUri, replyUri));
-                                    }
+                                    // List<Long> replies = repliesByParent.getOrDefault(cid, List.of());
+                                    // writer.triple(RdfGithubIssueDiscussionUtils.createCommentReplyCountProperty(discussionUri, replies.size()));
+                                    // for (Long rid : replies) {
+                                    //     String replyUri = commentListUri + "/" + rid;
+                                    //     writer.triple(RdfGithubIssueDiscussionUtils.createHasCommentReplyProperty(discussionUri, replyUri));
+                                    // }
                                 }
                             }
                         }
@@ -1009,7 +1044,7 @@ public class GithubRdfConversionTransactionService {
                             //issueCounter = 0;
                             lockHandler.renewLockOnRenewTimeFulfillment();
                         } else {
-                            log.info("Processed issue #{} with id {} and uri '{}'", issueCounter, githubIssueUri);
+                            log.info("Processed issue #{} with id {} and uri '{}'", issueCounter, issueUri);
                         }
                     }
 

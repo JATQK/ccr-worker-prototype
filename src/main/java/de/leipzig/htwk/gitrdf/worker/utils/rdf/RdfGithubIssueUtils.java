@@ -40,12 +40,8 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "state");
     }
 
-    public static Node authorProperty() {
-        return RdfUtils.uri(GH_NS + "author");
-    }
-
-    public static Node creatorProperty() {
-        return RdfUtils.uri(GH_NS + "creator");
+    public static Node userProperty() {
+        return RdfUtils.uri(GH_NS + "user");
     }
 
     public static Node assigneeProperty() {
@@ -56,8 +52,8 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "milestone");
     }
 
-    public static Node createdAtProperty() {
-        return RdfUtils.uri(GH_NS + "createdAt");
+    public static Node submittedAtProperty() {
+        return RdfUtils.uri(GH_NS + "submittedAt");
     }
 
     public static Node updatedAtProperty() {
@@ -89,9 +85,6 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "mergeCommitSha");
     }
 
-    public static Node bagItemProperty(int index) {
-        return RdfUtils.uri("rdf:_" + index);
-    }
 
     public static Triple createRdfTypeProperty(String issueUri) {
         return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri("github:GithubIssue"));
@@ -114,7 +107,7 @@ public final class RdfGithubIssueUtils {
     }
 
     public static Triple createIssueUserProperty(String issueUri, String userUri) {
-        return Triple.create(RdfUtils.uri(issueUri), authorProperty(), RdfUtils.uri(userUri));
+        return Triple.create(RdfUtils.uri(issueUri), userProperty(), RdfUtils.uri(userUri));
     }
 
     public static Triple createIssueAssigneeProperty(String issueUri, String userUri) {
@@ -125,8 +118,8 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(issueUri), milestoneProperty(), RdfUtils.uri(milestoneUri));
     }
 
-    public static Triple createIssueCreatedAtProperty(String issueUri, LocalDateTime createdAtDateTime) {
-        return Triple.create(RdfUtils.uri(issueUri), createdAtProperty(), RdfUtils.dateTimeLiteral(createdAtDateTime));
+    public static Triple createIssueSubmittedAtProperty(String issueUri, LocalDateTime submittedAtDateTime) {
+        return Triple.create(RdfUtils.uri(issueUri), submittedAtProperty(), RdfUtils.dateTimeLiteral(submittedAtDateTime));
     }
 
     public static Triple createIssueUpdatedAtProperty(String issueUri, LocalDateTime updatedAtDateTime) {
@@ -158,11 +151,6 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(issueUri), mergeCommitShaProperty(), RdfUtils.stringLiteral(sha));
     }
 
-    public static Triple createIssueReviewProperty(String issueUri, String reviewId) {
-        return Triple.create(RdfUtils.uri(issueUri), RdfGithubIssueReviewUtils.reviewProperty(), RdfUtils.uri(
-                reviewId));
-    
-    }
 }
 
 
