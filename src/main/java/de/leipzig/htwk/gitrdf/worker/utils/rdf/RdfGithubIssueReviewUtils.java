@@ -23,6 +23,14 @@ public final class RdfGithubIssueReviewUtils {
     public static Node commitIdProperty() { return uri(GH_NS + "commitId"); }
     public static Node discussionProperty() { return uri(GH_NS + "discussion"); }
     public static Node commentProperty() { return uri(GH_NS + "comment"); }
+    public static Node reviewCommentsProperty() { return uri(GH_NS + "reviewComments"); }
+    public static Node rootCommentsProperty() { return uri(GH_NS + "rootComments"); }
+    public static Node reviewCommentCountProperty() { return uri(GH_NS + "reviewCommentCount"); }
+    public static Node rootCommentCountProperty() { return uri(GH_NS + "rootCommentCount"); }
+    public static Node threadCountProperty() { return uri(GH_NS + "threadCount"); }
+    public static Node firstCommentAtProperty() { return uri(GH_NS + "firstCommentAt"); }
+    public static Node lastCommentAtProperty() { return uri(GH_NS + "lastCommentAt"); }
+    public static Node lastActivityProperty() { return uri(GH_NS + "lastActivity"); }
 
     public static Triple createReviewIdentifierProperty(String reviewUri, long id) {
         return Triple.create(uri(reviewUri), identifierProperty(), RdfUtils.longLiteral(id));
@@ -59,6 +67,39 @@ public final class RdfGithubIssueReviewUtils {
 
     public static Triple createReviewCommentProperty(String reviewUri, String commentUri) {
         return Triple.create(uri(reviewUri), commentProperty(), uri(commentUri));
+    }
+
+
+    public static Triple createReviewCommentsProperty(String reviewUri, String commentUri) {
+        return Triple.create(uri(reviewUri), reviewCommentsProperty(), uri(commentUri));
+    }
+
+    public static Triple createRootCommentsProperty(String reviewUri, String commentUri) {
+        return Triple.create(uri(reviewUri), rootCommentsProperty(), uri(commentUri));
+    }
+
+    public static Triple createReviewCommentCountProperty(String reviewUri, long count) {
+        return Triple.create(uri(reviewUri), reviewCommentCountProperty(), RdfUtils.nonNegativeIntegerLiteral(count));
+    }
+
+    public static Triple createRootCommentCountProperty(String reviewUri, long count) {
+        return Triple.create(uri(reviewUri), rootCommentCountProperty(), RdfUtils.nonNegativeIntegerLiteral(count));
+    }
+
+    public static Triple createThreadCountProperty(String reviewUri, long count) {
+        return Triple.create(uri(reviewUri), threadCountProperty(), RdfUtils.nonNegativeIntegerLiteral(count));
+    }
+
+    public static Triple createFirstCommentAtProperty(String reviewUri, LocalDateTime dateTime) {
+        return Triple.create(uri(reviewUri), firstCommentAtProperty(), RdfUtils.dateTimeLiteral(dateTime));
+    }
+
+    public static Triple createLastCommentAtProperty(String reviewUri, LocalDateTime dateTime) {
+        return Triple.create(uri(reviewUri), lastCommentAtProperty(), RdfUtils.dateTimeLiteral(dateTime));
+    }
+
+    public static Triple createLastActivityProperty(String reviewUri, LocalDateTime dateTime) {
+        return Triple.create(uri(reviewUri), lastActivityProperty(), RdfUtils.dateTimeLiteral(dateTime));
     }
 
 
