@@ -913,12 +913,12 @@ public class GithubRdfConversionTransactionService {
                                         lastCommentAt = updated;
                                     }
 
-                                    Long threadId = c.getPullRequestReviewThreadId();
-                                    if (threadId != null) {
-                                        threadIds.add(threadId);
-                                    }
 
                                     Long parentId = c.getInReplyToId();
+                                    long threadId = parentId != null ? parentId : c.getId();
+                                    threadIds.add(threadId);
+
+
                                     if (parentId == null) {
                                         rootCommentCount++;
                                     } else {
