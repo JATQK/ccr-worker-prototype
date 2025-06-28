@@ -40,7 +40,7 @@ See the folder `target` for the executable JAR file.
 
 ## Discussion containers
 
-Reviews expose their comments via a dedicated container located at `#comments` relative to the parent resource. The parent links to this container via `github:discussion`. The container is typed as `rdf:Bag` and enumerates comment URIs using ordinal properties like `rdf:_1`, `rdf:_2`.
+Reviews expose their comments via the `github:comments` property on the review itself. The property points to an `rdf:Bag` list that enumerates comment URIs with ordinal predicates such as `rdf:_1`, `rdf:_2`. The `github:discussion` property is only used for nested reply threads.
 
 [Spring Initializr Template](https://start.spring.io/#!type=maven-project&language=java&platformVersion=3.2.2&packaging=jar&jvmVersion=21&groupId=de.leipzig.htwk.gitrdf&artifactId=worker&name=worker&description=Archetype%20project%20for%20HTWK%20Leipzig%20-%20Project%20to%20transform%20git%20to%20RDF&packageName=de.leipzig.htwk.gitrdf.worker&dependencies=lombok,devtools,data-jpa,postgresql,testcontainers,integration)
 
@@ -57,6 +57,16 @@ Pull request reviews are now collected in a simple list resource.
 <#pr123/reviews>
     rdf:_1 <#pr123/reviews/1> ;
     rdf:_2 <#pr123/reviews/2> .
+```
+
+## Comment List Example
+
+```turtle
+<#pr123/reviews/1> github:comments <#pr123/reviews/1#comments> .
+
+<#pr123/reviews/1#comments> a rdf:Bag ;
+    rdf:_1 <#pr123/reviews/1/comments/1> ;
+    rdf:_2 <#pr123/reviews/1/comments/2> .
 ```
 
 
