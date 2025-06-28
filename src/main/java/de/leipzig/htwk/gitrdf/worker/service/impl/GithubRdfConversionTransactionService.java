@@ -874,15 +874,16 @@ public class GithubRdfConversionTransactionService {
 
 
                             int reviewOrdinal = 1;
-                            int reviewCount = 0;
 
                             for (GHPullRequestReview review : reviews) {
                                 long reviewId = review.getId();
                                 if (!seenReviewIds.add(reviewId)) {
                                     continue;
                                 }
+
                                 reviewCount++;
                                 String reviewUri = reviewListUri + "/" + reviewId;
+
 
                                 writer.triple(RdfGithubIssueReviewUtils.createIssueHasReviewProperty(githubIssueUri, reviewUri));
 
@@ -915,6 +916,7 @@ public class GithubRdfConversionTransactionService {
                                 }
 
                                 List<GHPullRequestReviewComment> reviewComments = review.listComments().toList();
+
                                 String commentContainerUri = reviewUri + "/comments";
                                 writer.triple(RdfGithubIssueReviewUtils.createDiscussionProperty(reviewUri, commentContainerUri));
 
@@ -922,53 +924,63 @@ public class GithubRdfConversionTransactionService {
 
 
                                 int commentOrdinal = 1;
-                                int commentCount = 0;
                                 Map<Long, Integer> replyCount = new HashMap<>();
 
-                                for (GHPullRequestReviewComment c : reviewComments) {
-                                    long cid = c.getId();
-                                    String commentUri = commentContainerUri + "/" + cid;
 
-                                    writer.triple(RdfGithubIssueReviewUtils.createContainerMembershipProperty(commentContainerUri, commentOrdinal++, commentUri));
-                                    writer.triple(RdfGithubIssueCommentUtils.createReviewCommentRdfTypeProperty(commentUri));
+                                if (!reviewComments.isEmpty()) {
+                                    String commentContainerUri = reviewUri + "/comments";
+                                    writer.triple(RdfGithubIssueReviewUtils.createDiscussionProperty(reviewUri, commentContainerUri));
+                                    writer.triple(RdfGithubIssueCommentUtils.createReviewCommentContainerRdfTypeProperty(commentContainerUri));
 
-                                    writer.triple(RdfGithubIssueCommentUtils.createCommentIdentifierProperty(commentUri, cid));
-                                    if (c.getBody() != null) {
-                                        writer.triple(RdfGithubIssueCommentUtils.createCommentDescriptionProperty(commentUri, c.getBody()));
-                                    }
-                                    if (c.getUser() != null) {
-                                        writer.triple(RdfGithubIssueCommentUtils.createCommentAuthorProperty(commentUri, c.getUser().getHtmlUrl().toString()));
-                                    }
-                                    if (c.getCreatedAt() != null) {
-                                        writer.triple(RdfGithubIssueCommentUtils.createCommentCreatedAtProperty(commentUri, localDateTimeFrom(c.getCreatedAt())));
-                                    }
-                                    writer.triple(RdfGithubIssueCommentUtils.createReviewCommentOfProperty(commentUri, reviewUri));
+                                    int commentOrdinal = 1;
+                                    Map<Long, Integer> replyCount = new HashMap<>();
 
-                                    Long replyTo = c.getInReplyToId();
-                                    if (replyTo == null) {
-                                        writer.triple(RdfGithubIssueCommentUtils.createCommentIsRootProperty(commentUri, true));
-                                        replyCount.put(cid, 0);
-                                    } else {
-                                        writer.triple(RdfGithubIssueCommentUtils.createCommentIsRootProperty(commentUri, false));
-                                        String parentUri = commentContainerUri + "/" + replyTo;
-                                        writer.triple(RdfGithubIssueCommentUtils.createReviewCommentReplyToProperty(commentUri, parentUri));
-                                        writer.triple(RdfGithubIssueCommentUtils.createHasCommentReplyProperty(parentUri, commentUri));
-                                        replyCount.compute(replyTo, (k,v) -> v == null ? 1 : v + 1);
+                                    for (GHPullRequestReviewComment c : reviewComments) {
+                                        long cid = c.getId();
+                                        String commentUri = commentContainerUri + "/" + cid;
+
+                                        writer.triple(RdfGithubIssueReviewUtils.createContainerMembershipProperty(commentContainerUri, commentOrdinal++, commentUri));
+                                        writer.triple(RdfGithubIssueCommentUtils.createReviewCommentRdfTypeProperty(commentUri));
+
+                                        writer.triple(RdfGithubIssueCommentUtils.createCommentIdentifierProperty(commentUri, cid));
+                                        if (c.getBody() != null) {
+                                            writer.triple(RdfGithubIssueCommentUtils.createCommentDescriptionProperty(commentUri, c.getBody()));
+                                        }
+                                        if (c.getUser() != null) {
+                                            writer.triple(RdfGithubIssueCommentUtils.createCommentAuthorProperty(commentUri, c.getUser().getHtmlUrl().toString()));
+                                        }
+                                        if (c.getCreatedAt() != null) {
+                                            writer.triple(RdfGithubIssueCommentUtils.createCommentCreatedAtProperty(commentUri, localDateTimeFrom(c.getCreatedAt())));
+                                        }
+                                        writer.triple(RdfGithubIssueCommentUtils.createReviewCommentOfProperty(commentUri, reviewUri));
+
+                                        Long replyTo = c.getInReplyToId();
+                                        if (replyTo == null) {
+                                            writer.triple(RdfGithubIssueCommentUtils.createCommentIsRootProperty(commentUri, true));
+                                            replyCount.put(cid, 0);
+                                        } else {
+                                            writer.triple(RdfGithubIssueCommentUtils.createCommentIsRootProperty(commentUri, false));
+                                            String parentUri = commentContainerUri + "/" + replyTo;
+                                            writer.triple(RdfGithubIssueCommentUtils.createReviewCommentReplyToProperty(commentUri, parentUri));
+                                            writer.triple(RdfGithubIssueCommentUtils.createHasCommentReplyProperty(parentUri, commentUri));
+                                            replyCount.compute(replyTo, (k,v) -> v == null ? 1 : v + 1);
+                                        }
+
+                                        commentCount++;
                                     }
 
-                                    commentCount++;
+
                                 }
 
                                 for (Map.Entry<Long, Integer> e : replyCount.entrySet()) {
                                     String cUri = commentContainerUri + "/" + e.getKey();
                                     writer.triple(RdfGithubIssueCommentUtils.createCommentReplyCountProperty(cUri, e.getValue()));
+
                                 }
 
-                                writer.triple(RdfGithubIssueReviewUtils.createReviewCommentCountProperty(reviewUri, commentCount));
                             }
 
 
-                            writer.triple(RdfGithubIssueReviewUtils.createIssueReviewCountProperty(githubIssueUri, reviewCount));
 
                         }
 
