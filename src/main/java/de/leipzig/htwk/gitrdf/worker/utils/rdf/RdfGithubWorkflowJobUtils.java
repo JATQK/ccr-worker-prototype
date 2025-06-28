@@ -27,6 +27,7 @@ public final class RdfGithubWorkflowJobUtils {
     public static Node conclusionProperty() { return RdfUtils.uri(GH_NS + "workflowJobConclusion"); }
     public static Node startedAtProperty() { return RdfUtils.uri(GH_NS + "workflowJobStartedAt"); }
     public static Node completedAtProperty() { return RdfUtils.uri(GH_NS + "workflowJobCompletedAt"); }
+    public static Node stepProperty() { return RdfUtils.uri(GH_NS + "workflowStep"); }
 
     // Triple creation
     public static Triple createWorkflowJobRdfTypeProperty(String jobUri) {
@@ -55,5 +56,9 @@ public final class RdfGithubWorkflowJobUtils {
 
     public static Triple createWorkflowJobCompletedAtProperty(String jobUri, LocalDateTime completed) {
         return Triple.create(RdfUtils.uri(jobUri), completedAtProperty(), RdfUtils.dateTimeLiteral(completed));
+    }
+
+    public static Triple createWorkflowJobStepProperty(String jobUri, String stepUri) {
+        return Triple.create(RdfUtils.uri(jobUri), stepProperty(), RdfUtils.uri(stepUri));
     }
 }
