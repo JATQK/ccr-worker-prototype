@@ -8,6 +8,7 @@ import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.kohsuke.github.GHWorkflowRun;
 
+
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 

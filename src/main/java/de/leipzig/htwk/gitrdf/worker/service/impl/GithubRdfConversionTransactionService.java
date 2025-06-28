@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.jena.graph.Node;
@@ -65,6 +66,8 @@ import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GHWorkflowJob;
 import org.kohsuke.github.GHWorkflowRun;
 import org.kohsuke.github.GitHub;
+import org.kohsuke.github.GHWorkflowJob;
+import org.kohsuke.github.GHWorkflowRun;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -262,28 +265,29 @@ public class GithubRdfConversionTransactionService {
     }
 
     private void writeWorkflowRunInfo(GHPullRequest pr, StreamRDF writer, String issueUri) {
-        if (pr == null) {
+
+        if (pr == null || !pr.isMerged()) {
+
             return;
         }
 
         try {
-            if (!pr.isMerged()) {
-                return;
-            }
+
             GHRepository repo = pr.getRepository();
             String mergeSha = pr.getMergeCommitSha();
             if (repo == null || mergeSha == null) {
                 return;
             }
 
-            // List<GHWorkflowRun> runs = repo.queryWorkflowRuns()
-            //         .headSha(mergeSha)
-            //         .list()
-            //         .toList();
 
             List<GHWorkflowRun> runs = repo.queryWorkflowRuns()
+                    .branch(pr.getBase().getRef())
                     .list()
-                    .toList();
+                    .toList()
+                    .stream()
+                    .filter(run -> mergeSha.equalsIgnoreCase(run.getHeadSha()))
+                    .collect(Collectors.toList());
+
 
             for (GHWorkflowRun run : runs) {
                 String runUri = run.getHtmlUrl().toString();
@@ -951,6 +955,7 @@ public class GithubRdfConversionTransactionService {
                                 GHPullRequest pullRequest = githubRepositoryHandle.getPullRequest(issueNumber);
                                 writeMergeInfo(ghIssue, pullRequest, writer, issueUri);
                                 writeWorkflowRunInfo(pullRequest, writer, issueUri);
+
                             }
                         }
 
