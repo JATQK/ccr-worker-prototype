@@ -14,7 +14,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,14 +23,11 @@ import java.util.Set;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.jena.graph.Node;
-import org.apache.jena.graph.Triple;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.StreamRDF;
 import org.apache.jena.riot.system.StreamRDFWriter;
-import org.apache.jena.graph.Triple;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -59,17 +55,10 @@ import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.hibernate.engine.jdbc.BlobProxy;
 import org.kohsuke.github.GHIssue;
-import org.kohsuke.github.GHIssueComment;
 import org.kohsuke.github.GHIssueState;
-import org.kohsuke.github.GHLabel;
 import org.kohsuke.github.GHMilestone;
-import org.kohsuke.github.GHPullRequest;
-import org.kohsuke.github.GHPullRequestReview;
-import org.kohsuke.github.GHPullRequestReviewComment;
 import org.kohsuke.github.GHRepository;
-import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GitHub;
-import org.kohsuke.github.PagedIterable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,7 +78,6 @@ import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils;
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 
@@ -624,24 +612,12 @@ public class GithubRdfConversionTransactionService {
                         calculateCommitMessage(writer, commitUri, commit);
                     }
 
-                    // No possible solution found yet for merge commits -> maybe traverse to parent? Maybe both
-                    //Property mergeCommitProperty = rdfModel.createProperty(gitUri + "MergeCommit");
-                    //commit.getParent()
-
                     // Branch
                     // TODO: better way to handle merges? (so commit could have multiple branches)
                     if(gitCommitRepositoryFilter.isEnableCommitBranch()) {
                         calculateCommitBranch(commitBranchCalculator, writer, commit, commitUri);
                     }
 
-                    // Tag
-
-                    //if(gitCommitRepositoryFilter.isEnableCommitTag()) {
-                    //    if (tagNames.containsKey(commitId)) {
-                    //        String tagName = tagNames.get(commitId);
-                    //        writer.triple(RdfCommitUtils.createCommitTagProperty(commitUri, tagName));
-                    //    }
-                    //}
 
                     List<String> tagNames = commitToTags.get(commitId);
 
@@ -725,6 +701,8 @@ public class GithubRdfConversionTransactionService {
 
             lockHandler.renewLockOnRenewTimeFulfillment();
 
+
+
             // issues
             StopWatch issueWatch = new StopWatch();
             issueWatch.start();
@@ -753,30 +731,8 @@ public class GithubRdfConversionTransactionService {
                         int issueNumber = ghIssue.getNumber(); 
                         String githubIssueUri = ghIssue.getHtmlUrl().toString();
 
-                        if (ghIssue.isPullRequest()) {
-                            boolean reviewersEnabled = false;
-                            boolean mergedByEnabled = false;
-                            try {
-                                reviewersEnabled = githubIssueRepositoryFilter.isEnableIssueReviewers();
-                                mergedByEnabled = githubIssueRepositoryFilter.isEnableIssueMergedBy();
-                            } catch (Exception ignore) {
-                                // optional filter flags may not be present
-                            }
-
-                            if (reviewersEnabled || mergedByEnabled) {
-                                GHPullRequest pr = githubRepositoryHandle.getPullRequest(issueNumber);
-
-                                if (reviewersEnabled) {
-                                    writeReviewersAsTripleToIssue(writer, githubIssueUri, pr.getRequestedReviewers());
-                                    writeReviewsAsTriplesToIssue(writer, githubIssueUri, pr.listReviews());
-                                }
-
-                                if (mergedByEnabled && pr.getMergedBy() != null) {
-                                    writer.triple(RdfGithubIssueUtils.createIssueMergedByProperty(
-                                            githubIssueUri,
-                                            pr.getMergedBy().getHtmlUrl().toString()));
-                                }
-                            }
+                        if (issueNumber != 9956) {
+                            continue;
                         }
 
                         writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(githubIssueUri));
@@ -809,14 +765,6 @@ public class GithubRdfConversionTransactionService {
                             String githubIssueUserUri = ghIssue.getUser().getHtmlUrl().toString();
                             writer.triple(
                                     RdfGithubIssueUtils.createIssueUserProperty(githubIssueUri, githubIssueUserUri));
-                        }
-
-                        if (githubIssueRepositoryFilter.isEnableIssueLabels()) {
-                            writeLabelCollectionAsTriplesToIssue(writer, githubIssueUri, ghIssue.getLabels());
-                        }
-
-                        if (githubIssueRepositoryFilter.isEnableIssueAssignees()) {
-                            writeAssigneesAsTripleToIssue(writer, githubIssueUri, ghIssue.getAssignees());
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueMilestone()) {
@@ -854,9 +802,85 @@ public class GithubRdfConversionTransactionService {
                             }
                         }
 
+
+                        // WORK HERE
+                        if (githubIssueRepositoryFilter.isEnableIssueReviewers()) {
+                            // Add to the github issue
+                            // github:hasReview ex:issue/12345/reviews/5001 ;
+                            // github:reviewCount 1 .
+                        }
+
                         if (githubIssueRepositoryFilter.isEnableIssueComments()) {
-                            // Issue comments are intentionally ignored. Conversation
-                            // metadata for issues is no longer written.
+                            // Add to the github issue
+                            //github:hasComment ...issue/12345/comments/001 , ...issue/12345/comments/002 ;
+                            // github:commentCount 2 ;
+                        }
+
+
+
+                        // WORK HERE
+                        if (githubIssueRepositoryFilter.isEnableIssueReviewers()) {
+                        // Add the Reviews and their comments to the main rdf as seperate uris under /issues/PR_ID/reviews/REVIEW_ID
+                        // issue/12345/reviews/5001
+                        //      rdf:type github:Review ;
+                        //      github:identifier "5001"^^xsd:string ;
+                        //      github:reviewOf ex:issue/12345 ;
+                        //      github:description "Looks good" ;
+                        //      github:state github:APPROVED ;
+                        //      github:createdAt "2025-06-26T20:00:00Z"^^xsd:dateTime ;
+                        //      github:updatedAt "2025-06-26T20:30:00Z"^^xsd:dateTime ;
+                        //      github:author ex:user/anna ;
+                        //      github:commitId "abc123def" ;
+                        //      github:authorAssociation github:COLLABORATOR ;
+                        //      github:reviewCommentCount 1 ;
+                        //      github:hasReviewComment ex:issue/12345/reviews/5001/comments/6001 .
+
+                            // ReviewComment is build in a separate method which should reflect a generalized way of creating comments for issues
+                        //  issue/12345/reviews/5001/comments/6001
+                        //     rdf:type github:ReviewComment ;
+                        //     github:identifier "6001"^^xsd:string ;
+                        //     github:description "Consider adding a test." ;
+                        //     github:createdAt "2025-06-26T20:05:00Z"^^xsd:dateTime ;
+                        //     github:author ex:user/ben ;
+                        //     github:isRootComment true ;
+                        //     github:commentReplyCount 1 ;
+                        //     github:hasCommentReply ex:issue/12345/reviews/5001/comments/6002 ;
+                        //     github:reviewCommentOf ex:issue/12345/reviews/5001 .
+
+                        // issue/12345/reviews/5001/comments/6002
+                        //     rdf:type github:ReviewComment ;
+                        //     github:identifier "6002"^^xsd:string ;
+                        //     github:description "Agreed, added one." ;
+                        //     github:createdAt "2025-06-26T20:10:00Z"^^xsd:dateTime ;
+                        //     github:author ex:user/anna ;
+                        //     github:isRootComment false ;
+                        //     github:reviewCommentReplyTo ex:issue/12345/reviews/5001/comments/6001 ;
+                        //     github:reviewCommentOf ex:issue/12345/reviews/5001 .
+                        }
+
+                        // WORK HERE
+                        if (githubIssueRepositoryFilter.isEnableIssueComments()) {
+                            // Add the Comments to the main rdf as seperate uris under /issues/ISSUE_ID/comments/COMMENT_ID
+                        // issue/12345/comments/001
+                        //     rdf:type github:IssueComment ;
+                        //     github:identifier "001" ;
+                        //     github:description "Any update on this?" ;
+                        //     github:createdAt "2025-06-25T12:00:00Z"^^xsd:dateTime ;
+                        //     github:author ex:user/david ;
+                        //     github:isRootComment true ;
+                        //     github:commentReplyCount 1 ;
+                        //     github:hasCommentReply ex:issue/12345/comments/002 ;
+                        //     github:commentOf ex:issue/12345 .
+
+                        // issue/12345/comments/002
+                        //     rdf:type github:IssueComment ;
+                        //     github:identifier "002" ;
+                        //     github:description "Working on it." ;
+                        //     github:createdAt "2025-06-25T13:00:00Z"^^xsd:dateTime ;
+                        //     github:author ex:user/maintainer ;
+                        //     github:isRootComment false ;
+                        //     github:commentReplyTo ex:issue/12345/comments/001 ;
+                        //     github:commentOf ex:issue/12345 .
                         }
 
                         issueCounter++;
@@ -1162,163 +1186,6 @@ public class GithubRdfConversionTransactionService {
 
     }
 
-    private void writeLabelCollectionAsTriplesToIssue(
-            StreamRDF writer,
-            String issueUri,
-            Collection<GHLabel> labels) {
-
-        for (GHLabel label : labels) {
-            writer.triple(RdfGithubIssueUtils.createIssueLabelProperty(issueUri, label.getUrl()));
-        }
-
-    }
-
-    private void writeAssigneesAsTripleToIssue(
-            StreamRDF writer,
-            String issueUri,
-            List<GHUser> assignees) {
-
-        for (GHUser assignee : assignees) {
-            writer.triple(RdfGithubIssueUtils.createIssueAssigneeProperty(issueUri, assignee.getHtmlUrl().toString()));
-        }
-
-    }
-
-    private void writeReviewersAsTripleToIssue(
-            StreamRDF writer,
-            String issueUri,
-            Collection<GHUser> reviewers) {
-
-        for (GHUser reviewer : reviewers) {
-            writer.triple(RdfGithubIssueUtils.createIssueReviewerProperty(issueUri, reviewer.getHtmlUrl().toString()));
-        }
-
-    }
-
-    private void writeReviewsAsTriplesToIssue(
-            StreamRDF writer,
-            String issueUri,
-            PagedIterable<GHPullRequestReview> reviews) throws IOException {
-
-        for (GHPullRequestReview review : reviews) {
-            long reviewId = review.getId();
-            if (!seenReviewIds.add(reviewId)) {
-
-                // avoid duplicate entries for the same review
-                continue;
-            }
-
-            String reviewUri = issueUri + "#review-" + reviewId;
-
-            writer.triple(RdfGithubIssueUtils.createHasReviewProperty(issueUri, reviewUri));
-
-            writer.triple(RdfGithubIssueUtils.createReviewRdfTypeProperty(reviewUri));
-            writer.triple(RdfGithubIssueUtils.createReviewOfProperty(reviewUri, issueUri));
-            writer.triple(RdfGithubIssueUtils.createReviewIdProperty(reviewUri, reviewId));
-
-
-            if (review.getHtmlUrl() != null) {
-                writer.triple(RdfGithubIssueUtils.createReviewHtmlUrlProperty(reviewUri,
-                        review.getHtmlUrl().toString()));
-            }
-
-            if (review.getCommitId() != null) {
-                writer.triple(RdfGithubIssueUtils.createReviewCommitIdProperty(reviewUri,
-                        review.getCommitId()));
-            }
-
-
-            GHUser user = review.getUser();
-            if (user != null) {
-                writer.triple(RdfGithubIssueUtils.createReviewUserProperty(reviewUri, user.getHtmlUrl().toString()));
-            }
-
-            String body = review.getBody();
-            if (body != null) {
-                writer.triple(RdfGithubIssueUtils.createReviewBodyProperty(reviewUri, body));
-            }
-
-            if (review.getState() != null) {
-
-                writer.triple(RdfGithubIssueUtils.createReviewStateProperty(reviewUri, review.getState().toString()));
-
-            }
-
-            if (review.getSubmittedAt() != null) {
-                LocalDateTime submitted = localDateTimeFrom(review.getSubmittedAt());
-                writer.triple(RdfGithubIssueUtils.createReviewSubmittedAtProperty(reviewUri, submitted));
-            }
-
-            // review comments
-            writeReviewCommentsAsTriples(writer, reviewUri, review.listReviewComments());
-        }
-
-    }
-
-    private void writeReviewCommentsAsTriples(
-            StreamRDF writer,
-            String reviewUri,
-            PagedIterable<GHPullRequestReviewComment> comments) throws IOException {
-
-        String conversationUri = reviewUri + "#conversation";
-        writer.triple(RdfGithubIssueUtils.createHasConversationProperty(reviewUri, conversationUri));
-        writer.triple(RdfGithubIssueUtils.createConversationOfProperty(conversationUri, reviewUri));
-        writer.triple(RdfGithubIssueUtils.createConversationRdfType(conversationUri));
-
-        int index = 0;
-        String first = null;
-        String previous = null;
-        for (GHPullRequestReviewComment comment : comments) {
-            String commentUri = comment.getHtmlUrl().toString();
-            index++;
-            if (first == null) first = commentUri;
-            if (previous != null) {
-                writer.triple(RdfGithubIssueUtils.createNextCommentProperty(previous, commentUri));
-                writer.triple(RdfGithubIssueUtils.createPreviousCommentProperty(commentUri, previous));
-            }
-            writer.triple(RdfGithubIssueUtils.createPartOfConversationProperty(commentUri, conversationUri));
-            writer.triple(RdfGithubIssueUtils.createReviewCommentProperty(reviewUri, commentUri));
-            writer.triple(RdfGithubIssueUtils.createCommentRdfTypeProperty(commentUri));
-            writer.triple(RdfGithubIssueUtils.createReviewCommentOfProperty(commentUri, reviewUri));
-
-            GHUser user = comment.getUser();
-            if (user != null) {
-                writer.triple(RdfGithubIssueUtils.createReviewCommentUserProperty(
-                        commentUri, user.getHtmlUrl().toString()));
-            }
-
-            String body = comment.getBody();
-            if (body != null) {
-                writer.triple(RdfGithubIssueUtils.createReviewCommentBodyProperty(commentUri, body));
-            }
-
-            if (comment.getCreatedAt() != null) {
-                LocalDateTime created = localDateTimeFrom(comment.getCreatedAt());
-                writer.triple(RdfGithubIssueUtils.createReviewCommentCreatedAtProperty(commentUri, created));
-            }
-
-            if (comment.getUpdatedAt() != null) {
-                LocalDateTime updated = localDateTimeFrom(comment.getUpdatedAt());
-                writer.triple(RdfGithubIssueUtils.createReviewCommentUpdatedAtProperty(commentUri, updated));
-            }
-            previous = commentUri;
-        }
-
-        writer.triple(RdfGithubIssueUtils.createCommentCountProperty(conversationUri, index));
-        if (first != null) {
-            writer.triple(RdfGithubIssueUtils.createFirstCommentProperty(conversationUri, first));
-            writer.triple(RdfGithubIssueUtils.createLastCommentProperty(conversationUri, previous));
-        }
-
-    }
-
-    private void writeCommentsAsTriplesToIssue(StreamRDF writer,
-            String issueUri,
-            PagedIterable<GHIssueComment> comments)
-            throws IOException {
-        // Issue comments are no longer exported to RDF.
-    }
-
     private int calculateSkipCountAndThrowExceptionIfIntegerOverflowIsImminent(
             int currentIteration, int commitsPerIteration) {
 
@@ -1344,14 +1211,6 @@ public class GithubRdfConversionTransactionService {
 
     private String getGithubCommitUri(String owner, String repository, String commitHash) {
         return getGithubCommitBaseUri(owner, repository) + commitHash;
-    }
-
-    private String getGithubIssueBaseUri(String owner, String repository) {
-        return "https://github.com/" + owner + "/" + repository + "/issues/";
-    }
-
-    private String getGithubIssueUri(String owner, String repository, long issueId) {
-        return getGithubIssueBaseUri(owner, repository) + issueId;
     }
 
     public String getGithubUserUri(String userName) {
