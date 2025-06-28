@@ -1199,12 +1199,6 @@ public class GithubRdfConversionTransactionService {
             String issueUri,
             PagedIterable<GHPullRequestReview> reviews) throws IOException {
 
-        String reviewsUri = issueUri + "/reviews";
-        writer.triple(RdfGithubIssueUtils.createIssueReviewsProperty(issueUri, reviewsUri));
-        writer.triple(RdfGithubIssueUtils.createReviewContainerTypeProperty(reviewsUri));
-        writer.triple(Triple.create(RdfUtils.uri(reviewsUri), RdfGithubIssueUtils.rdfTypeProperty(), RdfUtils.uri("rdf:Bag")));
-
-        int index = 1;
         for (GHPullRequestReview review : reviews) {
             long reviewId = review.getId();
             if (!seenReviewIds.add(reviewId)) {
@@ -1213,10 +1207,9 @@ public class GithubRdfConversionTransactionService {
                 continue;
             }
 
+            String reviewUri = issueUri + "#review-" + reviewId;
 
-            String reviewUri = reviewsUri + "/" + reviewId;
-
-            writer.triple(Triple.create(RdfUtils.uri(reviewsUri), RdfUtils.uri("rdf:_" + index++), RdfUtils.uri(reviewUri)));
+            writer.triple(RdfGithubIssueUtils.createHasReviewProperty(issueUri, reviewUri));
 
             writer.triple(RdfGithubIssueUtils.createReviewRdfTypeProperty(reviewUri));
             writer.triple(RdfGithubIssueUtils.createReviewOfProperty(reviewUri, issueUri));
@@ -1266,15 +1259,23 @@ public class GithubRdfConversionTransactionService {
             String reviewUri,
             PagedIterable<GHPullRequestReviewComment> comments) throws IOException {
 
-        String containerUri = reviewUri + "#comments";
-        writer.triple(RdfGithubIssueUtils.createReviewDiscussionProperty(reviewUri, containerUri));
-        writer.triple(RdfGithubIssueUtils.createDiscussionOfProperty(containerUri, reviewUri));
-        writer.triple(RdfGithubIssueUtils.createDiscussionRdfTypeBag(containerUri));
+        String conversationUri = reviewUri + "#conversation";
+        writer.triple(RdfGithubIssueUtils.createHasConversationProperty(reviewUri, conversationUri));
+        writer.triple(RdfGithubIssueUtils.createConversationOfProperty(conversationUri, reviewUri));
+        writer.triple(RdfGithubIssueUtils.createConversationRdfType(conversationUri));
 
-        int index = 1;
+        int index = 0;
+        String first = null;
+        String previous = null;
         for (GHPullRequestReviewComment comment : comments) {
             String commentUri = comment.getHtmlUrl().toString();
-            writer.triple(Triple.create(RdfUtils.uri(containerUri), RdfGithubIssueUtils.bagItemProperty(index++), RdfUtils.uri(commentUri)));
+            index++;
+            if (first == null) first = commentUri;
+            if (previous != null) {
+                writer.triple(RdfGithubIssueUtils.createNextCommentProperty(previous, commentUri));
+                writer.triple(RdfGithubIssueUtils.createPreviousCommentProperty(commentUri, previous));
+            }
+            writer.triple(RdfGithubIssueUtils.createPartOfConversationProperty(commentUri, conversationUri));
             writer.triple(RdfGithubIssueUtils.createReviewCommentProperty(reviewUri, commentUri));
             writer.triple(RdfGithubIssueUtils.createCommentRdfTypeProperty(commentUri));
             writer.triple(RdfGithubIssueUtils.createReviewCommentOfProperty(commentUri, reviewUri));
@@ -1299,6 +1300,13 @@ public class GithubRdfConversionTransactionService {
                 LocalDateTime updated = localDateTimeFrom(comment.getUpdatedAt());
                 writer.triple(RdfGithubIssueUtils.createReviewCommentUpdatedAtProperty(commentUri, updated));
             }
+            previous = commentUri;
+        }
+
+        writer.triple(RdfGithubIssueUtils.createCommentCountProperty(conversationUri, index));
+        if (first != null) {
+            writer.triple(RdfGithubIssueUtils.createFirstCommentProperty(conversationUri, first));
+            writer.triple(RdfGithubIssueUtils.createLastCommentProperty(conversationUri, previous));
         }
 
     }
@@ -1308,15 +1316,23 @@ public class GithubRdfConversionTransactionService {
             PagedIterable<GHIssueComment> comments)
             throws IOException { // <-- propagate
 
-        String containerUri = issueUri + "#comments";
-        writer.triple(RdfGithubIssueUtils.createIssueDiscussionProperty(issueUri, containerUri));
-        writer.triple(RdfGithubIssueUtils.createDiscussionOfProperty(containerUri, issueUri));
-        writer.triple(RdfGithubIssueUtils.createDiscussionRdfTypeBag(containerUri));
+        String conversationUri = issueUri + "#conversation";
+        writer.triple(RdfGithubIssueUtils.createHasConversationProperty(issueUri, conversationUri));
+        writer.triple(RdfGithubIssueUtils.createConversationOfProperty(conversationUri, issueUri));
+        writer.triple(RdfGithubIssueUtils.createConversationRdfType(conversationUri));
 
-        int index = 1;
+        int index = 0;
+        String first = null;
+        String previous = null;
         for (GHIssueComment comment : comments) {
             String commentUri = comment.getHtmlUrl().toString();
-            writer.triple(Triple.create(RdfUtils.uri(containerUri), RdfGithubIssueUtils.bagItemProperty(index++), RdfUtils.uri(commentUri)));
+            index++;
+            if (first == null) first = commentUri;
+            if (previous != null) {
+                writer.triple(RdfGithubIssueUtils.createNextCommentProperty(previous, commentUri));
+                writer.triple(RdfGithubIssueUtils.createPreviousCommentProperty(commentUri, previous));
+            }
+            writer.triple(RdfGithubIssueUtils.createPartOfConversationProperty(commentUri, conversationUri));
             writer.triple(RdfGithubIssueUtils.createIssueCommentProperty(issueUri, commentUri));
             writer.triple(RdfGithubIssueUtils.createCommentRdfTypeProperty(commentUri));
             writer.triple(RdfGithubIssueUtils.createIssueCommentOfProperty(commentUri, issueUri));
@@ -1342,6 +1358,12 @@ public class GithubRdfConversionTransactionService {
                 LocalDateTime updated = localDateTimeFrom(comment.getUpdatedAt());
                 writer.triple(RdfGithubIssueUtils.createIssueCommentUpdatedAtProperty(commentUri, updated));
             }
+            previous = commentUri;
+        }
+        writer.triple(RdfGithubIssueUtils.createCommentCountProperty(conversationUri, index));
+        if (first != null) {
+            writer.triple(RdfGithubIssueUtils.createFirstCommentProperty(conversationUri, first));
+            writer.triple(RdfGithubIssueUtils.createLastCommentProperty(conversationUri, previous));
         }
     }
 
