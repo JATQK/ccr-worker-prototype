@@ -57,6 +57,7 @@ import org.hibernate.engine.jdbc.BlobProxy;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueState;
 import org.kohsuke.github.GHMilestone;
+import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHPullRequestReview;
@@ -228,6 +229,32 @@ public class GithubRdfConversionTransactionService {
 
         }
 
+    }
+
+    private void writeMergeInfo(GHIssue issue, GHPullRequest pr, StreamRDF writer, String issueUri) {
+        if (issue == null || !issue.isPullRequest() || pr == null) {
+            return;
+        }
+        try {
+            writer.triple(RdfGithubIssueUtils.createIssueMergedProperty(issueUri, pr.isMerged()));
+
+            Date mergedAt = pr.getMergedAt();
+            if (mergedAt != null) {
+                writer.triple(RdfGithubIssueUtils.createIssueMergedAtProperty(issueUri, localDateTimeFrom(mergedAt)));
+            }
+
+            if (pr.getMergedBy() != null) {
+                writer.triple(RdfGithubIssueUtils.createIssueMergedByProperty(issueUri,
+                        pr.getMergedBy().getHtmlUrl().toString()));
+            }
+
+            if (pr.getMergeCommitSha() != null) {
+                writer.triple(RdfGithubIssueUtils.createIssueMergeCommitShaProperty(issueUri, pr.getMergeCommitSha()));
+            }
+        } catch (IOException e) {
+            log.warn("Error while writing merge info for issue {}: {}", issueUri, e.getMessage());
+        }
+        // TODO: Add addional merge information if available
     }
 
     private Git performGitClone(String ownerName, String repositoryName, File gitWorkingDirectory) throws GitAPIException {
@@ -733,12 +760,31 @@ public class GithubRdfConversionTransactionService {
                             doesWriterContainNonWrittenRdfStreamElements = true;
                         }
 
-                        int issueNumber = ghIssue.getNumber(); 
+                        int issueNumber = ghIssue.getNumber();
                         String githubIssueUri = ghIssue.getHtmlUrl().toString();
 
-                        if (issueNumber != 9956) {
+                        if (githubIssueUri == null || githubIssueUri.isEmpty()) {
+                            log.warn(
+                                    "Issue with number {} fallback to githubRepositoryURI because its githubIssueURI is null or empty",
+                                    issueNumber);
+                            githubIssueUri = getGithubRepositoryUri(owner, repositoryName);
+                        }
+
+                        // REMOVE ON DEPLOYMENT
+                        // if (issueNumber != 9956) {
+                        //     continue;
+                        // }
+
+                        // REMOVE ON DEPLOYMENT
+                        if (!githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() == null) {
                             continue;
                         }
+                        if (githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() != GHIssueState.CLOSED) {
+                            log.warn("Issue with number {} is not closed, skipping", issueNumber);
+                            continue;
+                        }
+                        
+
 
                         writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(githubIssueUri));
                         writer.triple(RdfGithubIssueUtils.createIssueRepositoryProperty(
@@ -766,7 +812,6 @@ public class GithubRdfConversionTransactionService {
 
                         if (githubIssueRepositoryFilter.isEnableIssueUser() && ghIssue.getUser() != null) {
 
-                            //String githubIssueUserUri = getGithubUserUri(ghIssue.getUser().getLogin());
                             String githubIssueUserUri = ghIssue.getUser().getHtmlUrl().toString();
                             writer.triple(
                                     RdfGithubIssueUtils.createIssueUserProperty(githubIssueUri, githubIssueUserUri));
@@ -807,18 +852,13 @@ public class GithubRdfConversionTransactionService {
                             }
                         }
 
-                        // WORK HERE
                         if (githubIssueRepositoryFilter.isEnableIssueMergedInfo()) {
-                            // Basic merge status
-                            // merged -> true/false boolean
-                            // mergedAt -> timestamp of merge (ISO 8601 format)
-                            // mergedBy -> URI of user who performed the merge
-
-                            // Merge commit information
-                            // mergeCommitSha -> SHA of the actual merge commit
-                            // squashed -> boolean if PR was squash-merged
-                            // rebased -> boolean if PR was rebase-merged
+                            if (ghIssue.isPullRequest()) {
+                                GHPullRequest pullRequest = githubRepositoryHandle.getPullRequest(issueNumber);
+                                writeMergeInfo(ghIssue, pullRequest, writer, githubIssueUri);
+                            }
                         }
+
 
                         if (githubIssueRepositoryFilter.isEnableIssueReviewers() && ghIssue.isPullRequest()) {
                             GHPullRequest pr = ghIssue.getRepository().getPullRequest(issueNumber);
@@ -826,7 +866,9 @@ public class GithubRdfConversionTransactionService {
 
                             String reviewContainerUri = githubIssueUri + "/reviews";
                             writer.triple(RdfGithubIssueReviewUtils.createIssueReviewsProperty(githubIssueUri, reviewContainerUri));
+
                             writer.triple(RdfGithubIssueReviewUtils.createReviewContainerRdfTypeProperty(reviewContainerUri));
+
 
                             int reviewOrdinal = 1;
                             int reviewCount = 0;
@@ -840,8 +882,10 @@ public class GithubRdfConversionTransactionService {
                                 String reviewUri = reviewContainerUri + "/" + reviewId;
 
                                 writer.triple(RdfGithubIssueReviewUtils.createIssueHasReviewProperty(githubIssueUri, reviewUri));
+
                                 writer.triple(RdfGithubIssueReviewUtils.createContainerMembershipProperty(reviewContainerUri, reviewOrdinal++, reviewUri));
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewRdfTypeProperty(reviewUri));
+
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewIdentifierProperty(reviewUri, reviewId));
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewOfProperty(reviewUri, githubIssueUri));
 
@@ -870,7 +914,9 @@ public class GithubRdfConversionTransactionService {
                                 List<GHPullRequestReviewComment> reviewComments = review.listComments().toList();
                                 String commentContainerUri = reviewUri + "/comments";
                                 writer.triple(RdfGithubIssueReviewUtils.createDiscussionProperty(reviewUri, commentContainerUri));
+
                                 writer.triple(RdfGithubIssueCommentUtils.createReviewCommentContainerRdfTypeProperty(commentContainerUri));
+
 
                                 int commentOrdinal = 1;
                                 int commentCount = 0;
@@ -879,8 +925,10 @@ public class GithubRdfConversionTransactionService {
                                 for (GHPullRequestReviewComment c : reviewComments) {
                                     long cid = c.getId();
                                     String commentUri = commentContainerUri + "/" + cid;
+
                                     writer.triple(RdfGithubIssueReviewUtils.createContainerMembershipProperty(commentContainerUri, commentOrdinal++, commentUri));
                                     writer.triple(RdfGithubIssueCommentUtils.createReviewCommentRdfTypeProperty(commentUri));
+
                                     writer.triple(RdfGithubIssueCommentUtils.createCommentIdentifierProperty(commentUri, cid));
                                     if (c.getBody() != null) {
                                         writer.triple(RdfGithubIssueCommentUtils.createCommentDescriptionProperty(commentUri, c.getBody()));
@@ -916,32 +964,33 @@ public class GithubRdfConversionTransactionService {
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewCommentCountProperty(reviewUri, commentCount));
                             }
 
-                            writer.triple(RdfGithubIssueReviewUtils.createIssueReviewCountProperty(githubIssueUri, reviewCount));
-                        }
 
+                            writer.triple(RdfGithubIssueReviewUtils.createIssueReviewCountProperty(githubIssueUri, reviewCount));
+
+                        }
 
                         if (githubIssueRepositoryFilter.isEnableIssueComments()) {
                             // Add the Comments to the main rdf as seperate uris under /issues/ISSUE_ID/comments/COMMENT_ID
-                        // issue/12345/comments/001
-                        //     rdf:type github:IssueComment ;
-                        //     github:identifier "001" ;
-                        //     github:description "Any update on this?" ;
-                        //     github:createdAt "2025-06-25T12:00:00Z"^^xsd:dateTime ;
-                        //     github:author ex:user/david ;
-                        //     github:isRootComment true ;
-                        //     github:commentReplyCount 1 ;
-                        //     github:hasCommentReply ex:issue/12345/comments/002 ;
-                        //     github:commentOf ex:issue/12345 .
+                            // issue/12345/comments/001
+                            //     rdf:type github:IssueComment ;
+                            //     github:identifier "001" ;
+                            //     github:description "Any update on this?" ;
+                            //     github:createdAt "2025-06-25T12:00:00Z"^^xsd:dateTime ;
+                            //     github:author ex:user/david ;
+                            //     github:isRootComment true ;
+                            //     github:commentReplyCount 1 ;
+                            //     github:hasCommentReply ex:issue/12345/comments/002 ;
+                            //     github:commentOf ex:issue/12345 .
 
-                        // issue/12345/comments/002
-                        //     rdf:type github:IssueComment ;
-                        //     github:identifier "002" ;
-                        //     github:description "Working on it." ;
-                        //     github:createdAt "2025-06-25T13:00:00Z"^^xsd:dateTime ;
-                        //     github:author ex:user/maintainer ;
-                        //     github:isRootComment false ;
-                        //     github:commentReplyTo ex:issue/12345/comments/001 ;
-                        //     github:commentOf ex:issue/12345 .
+                            // issue/12345/comments/002
+                            //     rdf:type github:IssueComment ;
+                            //     github:identifier "002" ;
+                            //     github:description "Working on it." ;
+                            //     github:createdAt "2025-06-25T13:00:00Z"^^xsd:dateTime ;
+                            //     github:author ex:user/maintainer ;
+                            //     github:isRootComment false ;
+                            //     github:commentReplyTo ex:issue/12345/comments/001 ;
+                            //     github:commentOf ex:issue/12345 .
                         }
 
                         issueCounter++;
