@@ -88,7 +88,6 @@ public final class RdfGithubIssueUtils {
     // Review linkage
     public static Node hasReviewProperty() { return RdfUtils.uri(GH_NS + "hasReview"); }
 
-    public static Node reviewCountProperty() { return RdfUtils.uri(GH_NS + "reviewCount"); }
 
     public static Node reviewContainerProperty() { return RdfUtils.uri(GH_NS + "reviewContainer"); }
 
@@ -109,14 +108,12 @@ public final class RdfGithubIssueUtils {
 
     public static Node authorAssociationProperty() { return RdfUtils.uri(GH_NS + "authorAssociation"); }
 
-    public static Node reviewCommentCountProperty() { return RdfUtils.uri(GH_NS + "reviewCommentCount"); }
 
     public static Node hasReviewCommentProperty() { return RdfUtils.uri(GH_NS + "hasReviewComment"); }
 
     // Comment linkage
     public static Node hasCommentProperty() { return RdfUtils.uri(GH_NS + "hasComment"); }
 
-    public static Node commentCountProperty() { return RdfUtils.uri(GH_NS + "commentCount"); }
 
     public static Node discussionProperty() { return RdfUtils.uri(GH_NS + "discussion"); }
 
@@ -133,7 +130,6 @@ public final class RdfGithubIssueUtils {
 
     public static Node isRootCommentProperty() { return RdfUtils.uri(GH_NS + "isRootComment"); }
 
-    public static Node commentReplyCountProperty() { return RdfUtils.uri(GH_NS + "commentReplyCount"); }
 
     public static Node hasCommentReplyProperty() { return RdfUtils.uri(GH_NS + "hasCommentReply"); }
 
@@ -221,9 +217,6 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(issueUri), hasReviewProperty(), RdfUtils.uri(reviewUri));
     }
 
-    public static Triple createIssueReviewCountProperty(String issueUri, long count) {
-        return Triple.create(RdfUtils.uri(issueUri), reviewCountProperty(), RdfUtils.nonNegativeIntegerLiteral(count));
-    }
 
     public static Triple createIssueReviewContainerProperty(String issueUri, String containerUri) {
         return Triple.create(RdfUtils.uri(issueUri), reviewContainerProperty(), RdfUtils.uri(containerUri));
@@ -262,9 +255,6 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(reviewUri), authorAssociationProperty(), RdfUtils.stringLiteral(association));
     }
 
-    public static Triple createReviewCommentCountProperty(String reviewUri, long count) {
-        return Triple.create(RdfUtils.uri(reviewUri), reviewCommentCountProperty(), RdfUtils.nonNegativeIntegerLiteral(count));
-    }
 
     public static Triple createReviewHasCommentProperty(String reviewUri, String commentUri) {
         return Triple.create(RdfUtils.uri(reviewUri), hasReviewCommentProperty(), RdfUtils.uri(commentUri));
@@ -275,9 +265,6 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(issueUri), hasCommentProperty(), RdfUtils.uri(commentUri));
     }
 
-    public static Triple createIssueCommentCountProperty(String issueUri, long count) {
-        return Triple.create(RdfUtils.uri(issueUri), commentCountProperty(), RdfUtils.nonNegativeIntegerLiteral(count));
-    }
 
     public static Triple createIssueDiscussionProperty(String issueUri, String discussionUri) {
         return Triple.create(RdfUtils.uri(issueUri), discussionProperty(), RdfUtils.uri(discussionUri));
@@ -308,9 +295,6 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(commentUri), isRootCommentProperty(), RdfUtils.stringLiteral(Boolean.toString(isRoot)));
     }
 
-    public static Triple createCommentReplyCountProperty(String commentUri, long count) {
-        return Triple.create(RdfUtils.uri(commentUri), commentReplyCountProperty(), RdfUtils.nonNegativeIntegerLiteral(count));
-    }
 
     public static Triple createHasCommentReplyProperty(String commentUri, String replyUri) {
         return Triple.create(RdfUtils.uri(commentUri), hasCommentReplyProperty(), RdfUtils.uri(replyUri));
