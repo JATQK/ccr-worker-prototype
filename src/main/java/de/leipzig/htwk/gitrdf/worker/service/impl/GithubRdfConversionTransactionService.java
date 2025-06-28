@@ -23,6 +23,7 @@ import java.util.Set;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.jena.graph.Node;
+import org.apache.jena.graph.Triple;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.RDFFormat;
@@ -84,6 +85,7 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueReviewUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueCommentUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils;
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 
@@ -864,10 +866,11 @@ public class GithubRdfConversionTransactionService {
                             GHPullRequest pr = ghIssue.getRepository().getPullRequest(issueNumber);
                             List<GHPullRequestReview> reviews = pr.listReviews().toList();
 
-                            String reviewContainerUri = githubIssueUri + "/reviews";
-                            writer.triple(RdfGithubIssueReviewUtils.createIssueReviewsProperty(githubIssueUri, reviewContainerUri));
-
-                            writer.triple(RdfGithubIssueReviewUtils.createReviewContainerRdfTypeProperty(reviewContainerUri));
+                            String reviewListUri = githubIssueUri + "/reviews";
+                            writer.triple(Triple.create(
+                                    RdfUtils.uri(githubIssueUri),
+                                    RdfGithubIssueReviewUtils.reviewsProperty(),
+                                    RdfUtils.uri(reviewListUri)));
 
 
                             int reviewOrdinal = 1;
@@ -877,11 +880,14 @@ public class GithubRdfConversionTransactionService {
                                 if (!seenReviewIds.add(reviewId)) {
                                     continue;
                                 }
-                                String reviewUri = reviewContainerUri + "/" + reviewId;
+
+                                reviewCount++;
+                                String reviewUri = reviewListUri + "/" + reviewId;
+
 
                                 writer.triple(RdfGithubIssueReviewUtils.createIssueHasReviewProperty(githubIssueUri, reviewUri));
 
-                                writer.triple(RdfGithubIssueReviewUtils.createContainerMembershipProperty(reviewContainerUri, reviewOrdinal++, reviewUri));
+                                writer.triple(RdfGithubIssueReviewUtils.createContainerMembershipProperty(reviewListUri, reviewOrdinal++, reviewUri));
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewRdfTypeProperty(reviewUri));
 
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewIdentifierProperty(reviewUri, reviewId));

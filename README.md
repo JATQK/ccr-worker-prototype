@@ -47,14 +47,14 @@ Reviews expose their comments via a dedicated container located at `#comments` r
 [New Spring Initializr Template](https://start.spring.io/#!type=maven-project&language=java&platformVersion=3.2.2&packaging=jar&jvmVersion=21&groupId=de.leipzig.htwk.gitrdf&artifactId=worker&name=worker&description=Archetype%20project%20for%20HTWK%20Leipzig%20-%20Project%20to%20transform%20git%20to%20RDF&packageName=de.leipzig.htwk.gitrdf.worker&dependencies=lombok,devtools,data-jpa,postgresql,testcontainers,integration,flyway)
 
 
-## Review Container Example
+## Review List Example
 
-Pull request reviews are now grouped inside a dedicated container.
+Pull request reviews are now collected in a simple list resource.
 
 ```turtle
 <#pr123> github:reviews <#pr123/reviews> .
 
-<#pr123/reviews> a github:ReviewContainer, rdf:Bag ;
+<#pr123/reviews>
     rdf:_1 <#pr123/reviews/1> ;
     rdf:_2 <#pr123/reviews/2> .
 ```
