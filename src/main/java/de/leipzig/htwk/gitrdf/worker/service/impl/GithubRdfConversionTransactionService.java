@@ -802,6 +802,7 @@ public class GithubRdfConversionTransactionService {
                             }
                         }
 
+                        // WORK HERE
                         if (githubIssueRepositoryFilter.isEnableIssueMergedInfo()) {
                             // Basic merge status
                             // merged -> true/false boolean
@@ -821,6 +822,7 @@ public class GithubRdfConversionTransactionService {
                             // github:reviewCount 1 .
                         }
 
+                        // WORK HERE
                         if (githubIssueRepositoryFilter.isEnableIssueComments()) {
                             // Add to the github issue
                             //github:hasComment ...issue/12345/comments/001 , ...issue/12345/comments/002 ;
@@ -828,8 +830,6 @@ public class GithubRdfConversionTransactionService {
                         }
 
 
-
-                        // WORK HERE
                         if (githubIssueRepositoryFilter.isEnableIssueReviewers()) {
                         // Add the Reviews and their comments to the main rdf as seperate uris under /issues/PR_ID/reviews/REVIEW_ID
                         // issue/12345/reviews/5001
@@ -869,7 +869,7 @@ public class GithubRdfConversionTransactionService {
                         //     github:reviewCommentOf ex:issue/12345/reviews/5001 .
                         }
 
-                        // WORK HERE
+
                         if (githubIssueRepositoryFilter.isEnableIssueComments()) {
                             // Add the Comments to the main rdf as seperate uris under /issues/ISSUE_ID/comments/COMMENT_ID
                         // issue/12345/comments/001
