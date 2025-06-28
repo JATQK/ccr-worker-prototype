@@ -127,5 +127,4 @@ public final class RdfGithubIssueUtils {
     public static Triple createIssueRepositoryProperty(String issueUri, String repoUri) {
         return Triple.create(RdfUtils.uri(issueUri), repositoryProperty(), RdfUtils.uri(repoUri));
     }
-
 }
