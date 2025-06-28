@@ -151,6 +151,43 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "comments");
     }
 
+    // Conversation related nodes
+    public static Node hasConversationProperty() {
+        return RdfUtils.uri(GH_NS + "hasConversation");
+    }
+
+    public static Node conversationOfProperty() {
+        return RdfUtils.uri(GH_NS + "conversationOf");
+    }
+
+    public static Node commentCountProperty() {
+        return RdfUtils.uri(GH_NS + "commentCount");
+    }
+
+    public static Node firstCommentProperty() {
+        return RdfUtils.uri(GH_NS + "firstComment");
+    }
+
+    public static Node lastCommentProperty() {
+        return RdfUtils.uri(GH_NS + "lastComment");
+    }
+
+    public static Node partOfConversationProperty() {
+        return RdfUtils.uri(GH_NS + "partOfConversation");
+    }
+
+    public static Node nextCommentProperty() {
+        return RdfUtils.uri(GH_NS + "nextComment");
+    }
+
+    public static Node previousCommentProperty() {
+        return RdfUtils.uri(GH_NS + "previousComment");
+    }
+
+    public static Node conversationType() { return RdfUtils.uri(GH_NS + "Conversation"); }
+
+    public static Node hasReviewProperty() { return RdfUtils.uri(GH_NS + "hasReview"); }
+
     public static Node commentOfProperty() {
         return RdfUtils.uri(GH_NS + "commentOf");
     }
@@ -438,6 +475,47 @@ public final class RdfGithubIssueUtils {
     public static Triple createDiscussionRdfTypeBag(String containerUri) {
         return Triple.create(RdfUtils.uri(containerUri), rdfTypeProperty(), RdfUtils.uri("rdf:Bag"));
 
+    }
+
+    // Conversation triple creators
+    public static Triple createHasConversationProperty(String parentUri, String conversationUri) {
+        return Triple.create(RdfUtils.uri(parentUri), hasConversationProperty(), RdfUtils.uri(conversationUri));
+    }
+
+    public static Triple createConversationOfProperty(String conversationUri, String parentUri) {
+        return Triple.create(RdfUtils.uri(conversationUri), conversationOfProperty(), RdfUtils.uri(parentUri));
+    }
+
+    public static Triple createConversationRdfType(String conversationUri) {
+        return Triple.create(RdfUtils.uri(conversationUri), rdfTypeProperty(), conversationType());
+    }
+
+    public static Triple createCommentCountProperty(String conversationUri, int count) {
+        return Triple.create(RdfUtils.uri(conversationUri), commentCountProperty(), RdfUtils.nonNegativeIntegerLiteral(count));
+    }
+
+    public static Triple createFirstCommentProperty(String conversationUri, String commentUri) {
+        return Triple.create(RdfUtils.uri(conversationUri), firstCommentProperty(), RdfUtils.uri(commentUri));
+    }
+
+    public static Triple createLastCommentProperty(String conversationUri, String commentUri) {
+        return Triple.create(RdfUtils.uri(conversationUri), lastCommentProperty(), RdfUtils.uri(commentUri));
+    }
+
+    public static Triple createPartOfConversationProperty(String commentUri, String conversationUri) {
+        return Triple.create(RdfUtils.uri(commentUri), partOfConversationProperty(), RdfUtils.uri(conversationUri));
+    }
+
+    public static Triple createNextCommentProperty(String commentUri, String nextCommentUri) {
+        return Triple.create(RdfUtils.uri(commentUri), nextCommentProperty(), RdfUtils.uri(nextCommentUri));
+    }
+
+    public static Triple createPreviousCommentProperty(String commentUri, String previousCommentUri) {
+        return Triple.create(RdfUtils.uri(commentUri), previousCommentProperty(), RdfUtils.uri(previousCommentUri));
+    }
+
+    public static Triple createHasReviewProperty(String issueUri, String reviewUri) {
+        return Triple.create(RdfUtils.uri(issueUri), hasReviewProperty(), RdfUtils.uri(reviewUri));
     }
 
 }
