@@ -862,13 +862,6 @@ public class GithubRdfConversionTransactionService {
                             GHPullRequest pr = ghIssue.getRepository().getPullRequest(issueNumber);
                             List<GHPullRequestReview> reviews = pr.listReviews().toList();
 
-          
-
-                            
-                            
-
-                            int reviewOrdinal = 1;
-
                             for (GHPullRequestReview review : reviews) {
                                 long reviewId = review.getId();
                                 if (!seenReviewIds.add(reviewId)) {
