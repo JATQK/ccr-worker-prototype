@@ -192,6 +192,7 @@ public final class RdfGithubIssueUtils {
 
 
 
+
     // Merge information triples
     public static Triple createIssueMergedProperty(String issueUri, boolean merged) {
         return Triple.create(RdfUtils.uri(issueUri), mergedProperty(), RdfUtils.stringLiteral(Boolean.toString(merged)));
@@ -312,6 +313,5 @@ public final class RdfGithubIssueUtils {
     public static Triple createCommentReplyToProperty(String commentUri, String parentUri) {
         return Triple.create(RdfUtils.uri(commentUri), commentReplyToProperty(), RdfUtils.uri(parentUri));
     }
-
 
 }

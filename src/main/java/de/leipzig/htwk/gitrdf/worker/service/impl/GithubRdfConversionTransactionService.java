@@ -866,8 +866,9 @@ public class GithubRdfConversionTransactionService {
 
                             String reviewContainerUri = githubIssueUri + "/reviews";
                             writer.triple(RdfGithubIssueReviewUtils.createIssueReviewsProperty(githubIssueUri, reviewContainerUri));
-                            writer.triple(Triple.create(RdfUtils.uri(reviewContainerUri), RdfGithubIssueUtils.rdfTypeProperty(), RdfUtils.uri("github:ReviewContainer")));
-                            writer.triple(Triple.create(RdfUtils.uri(reviewContainerUri), RdfGithubIssueUtils.rdfTypeProperty(), RdfUtils.uri("rdf:Bag")));
+
+                            writer.triple(RdfGithubIssueReviewUtils.createReviewContainerRdfTypeProperty(reviewContainerUri));
+
 
                             int reviewOrdinal = 1;
                             int reviewCount = 0;
@@ -881,8 +882,10 @@ public class GithubRdfConversionTransactionService {
                                 String reviewUri = reviewContainerUri + "/" + reviewId;
 
                                 writer.triple(RdfGithubIssueReviewUtils.createIssueHasReviewProperty(githubIssueUri, reviewUri));
-                                writer.triple(Triple.create(RdfUtils.uri(reviewContainerUri), RdfGithubIssueUtils.bagItemProperty(reviewOrdinal++), RdfUtils.uri(reviewUri)));
-                                writer.triple(Triple.create(RdfUtils.uri(reviewUri), RdfGithubIssueUtils.rdfTypeProperty(), RdfUtils.uri("github:Review")));
+
+                                writer.triple(RdfGithubIssueReviewUtils.createContainerMembershipProperty(reviewContainerUri, reviewOrdinal++, reviewUri));
+                                writer.triple(RdfGithubIssueReviewUtils.createReviewRdfTypeProperty(reviewUri));
+
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewIdentifierProperty(reviewUri, reviewId));
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewOfProperty(reviewUri, githubIssueUri));
 
@@ -911,8 +914,9 @@ public class GithubRdfConversionTransactionService {
                                 List<GHPullRequestReviewComment> reviewComments = review.listComments().toList();
                                 String commentContainerUri = reviewUri + "/comments";
                                 writer.triple(RdfGithubIssueReviewUtils.createDiscussionProperty(reviewUri, commentContainerUri));
-                                writer.triple(Triple.create(RdfUtils.uri(commentContainerUri), RdfGithubIssueUtils.rdfTypeProperty(), RdfUtils.uri("github:ReviewCommentContainer")));
-                                writer.triple(Triple.create(RdfUtils.uri(commentContainerUri), RdfGithubIssueUtils.rdfTypeProperty(), RdfUtils.uri("rdf:Bag")));
+
+                                writer.triple(RdfGithubIssueCommentUtils.createReviewCommentContainerRdfTypeProperty(commentContainerUri));
+
 
                                 int commentOrdinal = 1;
                                 int commentCount = 0;
@@ -921,8 +925,10 @@ public class GithubRdfConversionTransactionService {
                                 for (GHPullRequestReviewComment c : reviewComments) {
                                     long cid = c.getId();
                                     String commentUri = commentContainerUri + "/" + cid;
-                                    writer.triple(Triple.create(RdfUtils.uri(commentContainerUri), RdfGithubIssueUtils.bagItemProperty(commentOrdinal++), RdfUtils.uri(commentUri)));
-                                    writer.triple(Triple.create(RdfUtils.uri(commentUri), RdfGithubIssueUtils.rdfTypeProperty(), RdfUtils.uri("github:ReviewComment")));
+
+                                    writer.triple(RdfGithubIssueReviewUtils.createContainerMembershipProperty(commentContainerUri, commentOrdinal++, commentUri));
+                                    writer.triple(RdfGithubIssueCommentUtils.createReviewCommentRdfTypeProperty(commentUri));
+
                                     writer.triple(RdfGithubIssueCommentUtils.createCommentIdentifierProperty(commentUri, cid));
                                     if (c.getBody() != null) {
                                         writer.triple(RdfGithubIssueCommentUtils.createCommentDescriptionProperty(commentUri, c.getBody()));
@@ -957,6 +963,7 @@ public class GithubRdfConversionTransactionService {
 
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewCommentCountProperty(reviewUri, commentCount));
                             }
+
 
                             writer.triple(RdfGithubIssueReviewUtils.createIssueReviewCountProperty(githubIssueUri, reviewCount));
 
