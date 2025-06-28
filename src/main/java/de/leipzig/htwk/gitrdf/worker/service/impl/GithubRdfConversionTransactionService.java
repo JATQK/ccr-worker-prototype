@@ -938,7 +938,7 @@ public class GithubRdfConversionTransactionService {
                                     writer.triple(RdfGithubIssueCommentUtils.createReviewCommentOfProperty(commentUri, reviewUri));
 
                                     Long replyTo = c.getInReplyToId();
-                                    if (replyTo == null) {
+                                    if (replyTo == null || replyTo == 0) {
                                         writer.triple(RdfGithubIssueCommentUtils.createCommentIsRootProperty(commentUri, true));
                                         replyCount.put(cid, 0);
                                     } else {
