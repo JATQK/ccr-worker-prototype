@@ -65,6 +65,7 @@ import org.kohsuke.github.GHPullRequestReview;
 import org.kohsuke.github.GHPullRequestReviewComment;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
+import org.kohsuke.github.GHCommit;
 import org.kohsuke.github.GHWorkflowJob;
 import org.kohsuke.github.GHWorkflowRun;
 import org.kohsuke.github.GitHub;
@@ -132,6 +133,18 @@ public class GithubRdfConversionTransactionService {
      * when GitHub returns the same review multiple times.
      */
     private final Set<Long> seenReviewIds = new HashSet<>();
+
+    private static class PullRequestInfo {
+        final String issueUri;
+        final String mergeCommitSha;
+        final LocalDateTime mergedAt;
+
+        PullRequestInfo(String issueUri, String mergeCommitSha, LocalDateTime mergedAt) {
+            this.issueUri = issueUri;
+            this.mergeCommitSha = mergeCommitSha;
+            this.mergedAt = mergedAt;
+        }
+    }
 
     public GithubRdfConversionTransactionService(
             GithubHandlerService githubHandlerService,
@@ -365,6 +378,8 @@ public class GithubRdfConversionTransactionService {
 
             Map<ObjectId, List<String>> commitToTags = getTagsForCommits(gitRepository);
 
+            Map<String, PullRequestInfo> commitPrMap = buildCommitPrMap(githubRepositoryHandle);
+
             lockHandler.renewLockOnRenewTimeFulfillment();
 
             // Metadata
@@ -560,6 +575,28 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         calculateCommitIssues(writer, commitUri, commit.getFullMessage(), owner, repositoryName);
+
+                        if (commit.getParentCount() > 1) {
+                            writer.triple(RdfCommitUtils.createCommitIsMergeCommitProperty(commitUri, true));
+                        }
+                        for (RevCommit parent : commit.getParents()) {
+                            String parentUri = getGithubCommitUri(owner, repositoryName, parent.getName());
+                            writer.triple(RdfCommitUtils.createCommitHasParentProperty(commitUri, parentUri));
+                        }
+
+                        PullRequestInfo prInfo = commitPrMap.get(gitHash);
+                        if (prInfo != null) {
+                            writer.triple(RdfCommitUtils.createCommitPartOfPullRequestProperty(commitUri, prInfo.issueUri));
+                            writer.triple(RdfCommitUtils.createCommitPartOfIssueProperty(commitUri, prInfo.issueUri));
+                            writer.triple(RdfGithubIssueUtils.createIssueContainsCommitProperty(prInfo.issueUri, commitUri));
+                            writer.triple(RdfCommitUtils.createCommitIsMergedProperty(commitUri, true));
+                            if (prInfo.mergedAt != null) {
+                                writer.triple(RdfCommitUtils.createCommitMergedAtProperty(commitUri, prInfo.mergedAt));
+                            }
+                            if (gitHash.equals(prInfo.mergeCommitSha)) {
+                                writer.triple(RdfCommitUtils.createCommitMergedIntoIssueProperty(commitUri, prInfo.issueUri));
+                            }
+                        }
 
                         // Branch
                         // TODO: better way to handle merges? (so commit could have multiple branches)
@@ -1016,6 +1053,38 @@ public class GithubRdfConversionTransactionService {
         return bufferedInputStream;
     }
 
+    private Map<String, PullRequestInfo> buildCommitPrMap(GHRepository repo) throws IOException, InterruptedException {
+        Map<String, PullRequestInfo> map = new HashMap<>();
+        PagedIterable<GHPullRequest> prs = executeWithRetry(
+                () -> repo.queryPullRequests().state(GHIssueState.CLOSED).list(),
+                "queryPullRequests");
+
+        for (GHPullRequest pr : prs) {
+            if (!pr.isMerged()) {
+                continue;
+            }
+
+            String prUri = pr.getHtmlUrl().toString();
+            LocalDateTime mergedAt = null;
+            Date merged = pr.getMergedAt();
+            if (merged != null) {
+                mergedAt = localDateTimeFrom(merged);
+            }
+
+            PullRequestInfo info = new PullRequestInfo(prUri, pr.getMergeCommitSha(), mergedAt);
+
+            if (pr.getMergeCommitSha() != null) {
+                map.put(pr.getMergeCommitSha(), info);
+            }
+
+            for (GHCommit c : executeWithRetry(() -> pr.listCommits().toList(), "listCommits for PR " + pr.getNumber())) {
+                map.put(c.getSHA1(), info);
+            }
+        }
+
+        return map;
+    }
+
     public static Map<ObjectId, List<String>> getTagsForCommits(Repository repository) throws IOException {
 
         Map<ObjectId, List<String>> commitToTags = new HashMap<>();
@@ -1144,6 +1213,9 @@ public class GithubRdfConversionTransactionService {
     private void calculateCommitIssues(StreamRDF writer, String commitUri, String message, String owner, String repositoryName) {
         for (String number : RdfCommitUtils.extractIssueNumbers(message)) {
             String issueUri = getGithubIssueUri(owner, repositoryName, number);
+            writer.triple(RdfCommitUtils.createCommitReferencesIssueProperty(commitUri, issueUri));
+            writer.triple(RdfGithubIssueUtils.createIssueReferencedByCommitProperty(issueUri, commitUri));
+            // keep legacy predicate
             writer.triple(RdfCommitUtils.createCommitIssueProperty(commitUri, issueUri));
         }
     }

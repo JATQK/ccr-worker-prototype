@@ -127,6 +127,39 @@ public final class RdfCommitUtils {
     public static Node commitIssueProperty() {
         return uri(GH_NS + "issue");
     }
+
+    // New predicates
+    public static Node commitReferencesIssueProperty() {
+        return uri(GH_NS + "referencesIssue");
+    }
+
+    public static Node partOfIssueProperty() {
+        return uri(GH_NS + "partOfIssue");
+    }
+
+    public static Node partOfPullRequestProperty() {
+        return uri(GH_NS + "partOfPullRequest");
+    }
+
+    public static Node isMergedProperty() {
+        return uri(GH_NS + "isMerged");
+    }
+
+    public static Node mergedAtProperty() {
+        return uri(GH_NS + "mergedAt");
+    }
+
+    public static Node mergedIntoIssueProperty() {
+        return uri(GH_NS + "mergedIntoIssue");
+    }
+
+    public static Node isMergeCommitProperty() {
+        return uri(NS + "isMergeCommit");
+    }
+
+    public static Node hasParentProperty() {
+        return uri(NS + "hasParent");
+    }
     public static Node tagResource() {
         return uri(NS + "tag");
     }
@@ -361,6 +394,39 @@ public final class RdfCommitUtils {
         return Triple.create(uri(commitUri), commitTagNameProperty(), stringLiteral(tagName));
     }
 
+    // Additional relations
+    public static Triple createCommitReferencesIssueProperty(String commitUri, String issueUri) {
+        return Triple.create(uri(commitUri), commitReferencesIssueProperty(), uri(issueUri));
+    }
+
+    public static Triple createCommitPartOfIssueProperty(String commitUri, String issueUri) {
+        return Triple.create(uri(commitUri), partOfIssueProperty(), uri(issueUri));
+    }
+
+    public static Triple createCommitPartOfPullRequestProperty(String commitUri, String prUri) {
+        return Triple.create(uri(commitUri), partOfPullRequestProperty(), uri(prUri));
+    }
+
+    public static Triple createCommitIsMergedProperty(String commitUri, boolean merged) {
+        return Triple.create(uri(commitUri), isMergedProperty(), RdfUtils.booleanLiteral(merged));
+    }
+
+    public static Triple createCommitMergedAtProperty(String commitUri, LocalDateTime mergedAt) {
+        return Triple.create(uri(commitUri), mergedAtProperty(), RdfUtils.dateTimeLiteral(mergedAt));
+    }
+
+    public static Triple createCommitMergedIntoIssueProperty(String commitUri, String issueUri) {
+        return Triple.create(uri(commitUri), mergedIntoIssueProperty(), uri(issueUri));
+    }
+
+    public static Triple createCommitIsMergeCommitProperty(String commitUri, boolean isMergeCommit) {
+        return Triple.create(uri(commitUri), isMergeCommitProperty(), RdfUtils.booleanLiteral(isMergeCommit));
+    }
+
+    public static Triple createCommitHasParentProperty(String commitUri, String parentCommitUri) {
+        return Triple.create(uri(commitUri), hasParentProperty(), uri(parentCommitUri));
+    }
+
     /**
      * Extract referenced issue numbers from a commit message.
      * Supports patterns like "Fixes #123" or "#123".
@@ -370,7 +436,7 @@ public final class RdfCommitUtils {
             return Collections.emptySet();
         }
         Set<String> result = new LinkedHashSet<>();
-        Pattern p = Pattern.compile("(?i)(?:fix(?:es)?|close(?:s)?|resolve(?:s)?|)\\s*#(\\d+)");
+        Pattern p = Pattern.compile("(?i)(?:fixes|closes|resolves|addresses)?\\s*#(\\d+)");
         Matcher m = p.matcher(commitMessage);
         while (m.find()) {
             result.add(m.group(1));

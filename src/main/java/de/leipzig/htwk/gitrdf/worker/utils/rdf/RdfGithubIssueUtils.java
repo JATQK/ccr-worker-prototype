@@ -85,6 +85,15 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "mergeCommitSha");
     }
 
+    // Commit linking
+    public static Node containsCommitProperty() {
+        return RdfUtils.uri(GH_NS + "containsCommit");
+    }
+
+    public static Node referencedByCommitProperty() {
+        return RdfUtils.uri(GH_NS + "referencedByCommit");
+    }
+
 
     public static Triple createRdfTypeProperty(String issueUri) {
         return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri("github:GithubIssue"));
@@ -149,6 +158,14 @@ public final class RdfGithubIssueUtils {
 
     public static Triple createIssueMergeCommitShaProperty(String issueUri, String sha) {
         return Triple.create(RdfUtils.uri(issueUri), mergeCommitShaProperty(), RdfUtils.stringLiteral(sha));
+    }
+
+    public static Triple createIssueContainsCommitProperty(String issueUri, String commitUri) {
+        return Triple.create(RdfUtils.uri(issueUri), containsCommitProperty(), RdfUtils.uri(commitUri));
+    }
+
+    public static Triple createIssueReferencedByCommitProperty(String issueUri, String commitUri) {
+        return Triple.create(RdfUtils.uri(issueUri), referencedByCommitProperty(), RdfUtils.uri(commitUri));
     }
 
 }
