@@ -27,7 +27,18 @@ public final class RdfGithubIssueDiscussionUtils {
     public static Node reviewDiscussionOfProperty() { return uri(GH_NS + "discussionOf"); }
     public static Node reviewDiscussionReplyToProperty() { return uri(GH_NS + "discussionReplyTo"); }
 
+    public static Node discussionUserProperty() { return uri(GH_NS + "discussionUser"); }
 
+    public static Node discussionCreatedAtProperty() { return uri(GH_NS + "discussionCreatedAt"); }
+
+    // Fix the existing methods to use proper property names
+    public static Triple createDiscussionUserProperty(String discussionUri, String userURI) {
+        return Triple.create(uri(discussionUri), discussionUserProperty(), uri(userURI));
+    }
+
+    public static Triple createDiscussionCreatedAtProperty(String discussionUri, LocalDateTime createdAt) {
+        return Triple.create(uri(discussionUri), discussionCreatedAtProperty(), RdfUtils.dateTimeLiteral(createdAt));
+    }
     public static Triple createReviewDiscussionRdfTypeProperty(String discussionUri) {
         return Triple.create(RdfUtils.uri(discussionUri), rdfTypeProperty(),
                 RdfUtils.uri("github:GithubIssueReviewDiscussion"));
@@ -39,14 +50,6 @@ public final class RdfGithubIssueDiscussionUtils {
 
     public static Triple createDiscussionDescriptionProperty(String DiscussionUri, String body) {
         return Triple.create(uri(DiscussionUri), descriptionProperty(), RdfUtils.stringLiteral(body));
-    }
-
-    public static Triple createDiscussionUserProperty(String DiscussionUri, String userURI) {
-        return Triple.create(uri(DiscussionUri), RdfGithubIssueUtils.userProperty(), uri(userURI));
-    }
-
-    public static Triple createDiscussionCreatedAtProperty(String DiscussionUri, LocalDateTime createdAt) {
-        return Triple.create(uri(DiscussionUri), RdfGithubIssueUtils.submittedAtProperty(), RdfUtils.dateTimeLiteral(createdAt));
     }
 
     public static Triple createDiscussionIsRootProperty(String DiscussionUri, boolean root) {

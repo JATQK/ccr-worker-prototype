@@ -466,7 +466,7 @@ public class GithubRdfConversionTransactionService {
             // git commits
             // ********************** ** REMOVE ON DEPLOYMENT ** **********************
             // REMOVE ON DEPLOYMENT
-            var computeCommits = true; // Set to false to skip commit processing
+            var computeCommits = false; // Set to false to skip commit processing
             var maxComputedCommits = 200;  // limit the number of commits to process
             // ********************** ** ******************** ** **********************
 
@@ -918,26 +918,69 @@ public class GithubRdfConversionTransactionService {
 
                                 // Process the discussion of the review
                                 for (GHPullRequestReviewComment c : reviewComments) {
-                                    LocalDateTime created = localDateTimeFrom(c.getCreatedAt());
-                                    LocalDateTime updated = c.getUpdatedAt() != null
-                                            ? localDateTimeFrom(c.getUpdatedAt())
-                                            : created;
-                                    if (firstCommentAt == null || created.isBefore(firstCommentAt)) {
-                                        firstCommentAt = created;
+                                    long cid = c.getId();
+                                    String discussionUri = _discussionUri + cid;
+
+                                    // Basic discussion properties
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewDiscussionProperty(reviewUri,
+                                            discussionUri));
+                                    writer.triple(RdfGithubIssueDiscussionUtils
+                                            .createReviewDiscussionRdfTypeProperty(discussionUri));
+                                    writer.triple(RdfGithubIssueDiscussionUtils
+                                            .createDiscussionIdentifierProperty(discussionUri, cid));
+                                    writer.triple(RdfGithubIssueDiscussionUtils
+                                            .createReviewDiscussionOfProperty(discussionUri, reviewUri));
+
+                                    // Content and user
+                                    if (c.getBody() != null && !c.getBody().isEmpty()) {
+                                        writer.triple(RdfGithubIssueDiscussionUtils
+                                                .createDiscussionDescriptionProperty(discussionUri, c.getBody()));
                                     }
-                                    if (lastCommentAt == null || updated.isAfter(lastCommentAt)) {
-                                        lastCommentAt = updated;
+                                    if (c.getUser() != null) {
+                                        writer.triple(RdfGithubIssueDiscussionUtils.createDiscussionUserProperty(
+                                                discussionUri, c.getUser().getHtmlUrl().toString()));
+                                    }
+                                    if (c.getCreatedAt() != null) {
+                                        writer.triple(RdfGithubIssueDiscussionUtils.createDiscussionCreatedAtProperty(
+                                                discussionUri, localDateTimeFrom(c.getCreatedAt())));
                                     }
 
+                                    // HIERARCHY HANDLING - This was missing!
                                     Long parentId = c.getInReplyToId();
-                                    long threadId = parentId != null ? parentId : c.getId();
-                                    threadIds.add(threadId);
+                                    boolean isRoot = (parentId == null || parentId.equals(cid));
 
-                                    if (parentId == null || parentId == c.getId()) {
-                                        rootCommentCount++;
+                                    // Mark if this is a root discussion
+                                    writer.triple(RdfGithubIssueDiscussionUtils
+                                            .createDiscussionIsRootProperty(discussionUri, isRoot));
+
+                                    // If this is a reply, link to parent
+                                    if (!isRoot && parentId != null) {
+                                        String parentDiscussionUri = _discussionUri + parentId;
+                                        writer.triple(
+                                                RdfGithubIssueDiscussionUtils.createReviewDiscussionReplyToProperty(
+                                                        discussionUri, parentDiscussionUri));
+
+                                        // Also create the reverse relationship - parent has this as a reply
+                                        writer.triple(RdfGithubIssueDiscussionUtils
+                                                .createHasDiscussionReplyProperty(parentDiscussionUri, discussionUri));
+                                    }
+                                }
+
+                                // REPLY COUNT CALCULATION - This was completely missing!
+                                // After processing all comments, calculate and write reply counts
+                                for (GHPullRequestReviewComment c : reviewComments) {
+                                    long cid = c.getId();
+                                    String discussionUri = _discussionUri + cid;
+
+                                    // Count direct replies to this comment
+                                    List<Long> directReplies = repliesByParent.getOrDefault(cid, new ArrayList<>());
+                                    if (!directReplies.isEmpty()) {
+                                        writer.triple(RdfGithubIssueDiscussionUtils.createDiscussionReplyCountProperty(
+                                                discussionUri, directReplies.size()));
                                     } else {
-                                        repliesByParent.computeIfAbsent(parentId, k -> new ArrayList<>())
-                                                .add(c.getId());
+                                        // Even root comments with no replies should have a count of 0
+                                        writer.triple(RdfGithubIssueDiscussionUtils
+                                                .createDiscussionReplyCountProperty(discussionUri, 0));
                                     }
                                 }
 
