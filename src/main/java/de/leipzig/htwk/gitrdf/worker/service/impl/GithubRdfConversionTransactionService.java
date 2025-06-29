@@ -23,8 +23,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfTurtleTidier;
-
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.jena.graph.Node;
 import org.apache.jena.rdf.model.Resource;
@@ -68,7 +66,6 @@ import org.kohsuke.github.GHPullRequestReviewComment;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GHWorkflowJob;
-import org.kohsuke.github.GHWorkflowJobStep;
 import org.kohsuke.github.GHWorkflowRun;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.PagedIterable;
@@ -94,8 +91,8 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueDiscussionUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueReviewUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowJobUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowStepUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfTurtleTidier;
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 
@@ -251,6 +248,7 @@ public class GithubRdfConversionTransactionService {
             writer.triple(RdfGithubIssueUtils.createIssueMergedProperty(issueUri, pr.isMerged()));
 
             Date mergedAt = pr.getMergedAt();
+            
             if (mergedAt != null) {
                 writer.triple(RdfGithubIssueUtils.createIssueMergedAtProperty(issueUri, localDateTimeFrom(mergedAt)));
             }
@@ -489,40 +487,6 @@ private void writeJobProperties(GHWorkflowJob job, StreamRDF writer, String runU
     }
     if (job.getCompletedAt() != null) {
         writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobCompletedAtProperty(jobUri, localDateTimeFrom(job.getCompletedAt())));
-    }
-
-    if (job.getSteps() != null) {
-        List<GHWorkflowJobStep> steps = job.getSteps();
-        for (int i = 0; i < steps.size(); i++) {
-            GHWorkflowJobStep step = steps.get(i);
-            String stepUri = jobUri + "/steps/" + step.getNumber();
-
-            writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStepProperty(jobUri, stepUri));
-            writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepRdfTypeProperty(stepUri));
-            writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepNumberProperty(stepUri, step.getNumber()));
-
-            if (step.getName() != null) {
-                writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepNameProperty(stepUri, step.getName()));
-            }
-            if (step.getStatus() != null) {
-                writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepStatusProperty(stepUri, step.getStatus()));
-            }
-            if (step.getConclusion() != null) {
-                writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepConclusionProperty(stepUri, step.getConclusion()));
-            }
-            if (step.getStartedAt() != null) {
-                writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepStartedAtProperty(stepUri, localDateTimeFrom(step.getStartedAt())));
-            }
-            if (step.getCompletedAt() != null) {
-                writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepCompletedAtProperty(stepUri, localDateTimeFrom(step.getCompletedAt())));
-            }
-
-            if (i < steps.size() - 1) {
-                GHWorkflowJobStep nextStep = steps.get(i + 1);
-                String nextStepUri = jobUri + "/steps/" + nextStep.getNumber();
-                writer.triple(RdfGithubWorkflowStepUtils.createWorkflowNextStepProperty(stepUri, nextStepUri));
-            }
-        }
     }
 }
 

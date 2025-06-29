@@ -30,7 +30,7 @@ public final class RdfGithubIssueDiscussionUtils {
 
     public static Triple createReviewDiscussionRdfTypeProperty(String discussionUri) {
         return Triple.create(RdfUtils.uri(discussionUri), rdfTypeProperty(),
-                RdfUtils.uri("github:GithubIssueReviewDiscussionDiscussion"));
+                RdfUtils.uri("github:GithubIssueReviewDiscussion"));
     }
 
     public static Triple createDiscussionIdentifierProperty(String DiscussionUri, long id) {
