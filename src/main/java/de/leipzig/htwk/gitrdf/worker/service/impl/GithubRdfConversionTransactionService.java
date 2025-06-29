@@ -68,6 +68,7 @@ import org.kohsuke.github.GHPullRequestReviewComment;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GHWorkflowJob;
+import org.kohsuke.github.GHWorkflowJob.Step;
 import org.kohsuke.github.GHWorkflowRun;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.PagedIterable;
@@ -92,6 +93,7 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueDiscussionUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueReviewUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowJobUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowStepUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfTurtleTidier;
 import jakarta.persistence.EntityManager;
@@ -1572,6 +1574,20 @@ public class GithubRdfConversionTransactionService {
         if (job.getCompletedAt() != null) {
             writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobCompletedAtProperty(jobUri,
                     localDateTimeFrom(job.getCompletedAt())));
+        }
+
+        // Write step names with minimal information
+        List<Step> steps = job.getSteps();
+        if (steps != null) {
+            for (Step step : steps) {
+                String stepUri = jobUri + "/steps/" + step.getNumber();
+                writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStepProperty(jobUri, stepUri));
+                writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepRdfTypeProperty(stepUri));
+                writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepNumberProperty(stepUri, step.getNumber()));
+                if (step.getName() != null) {
+                    writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepNameProperty(stepUri, step.getName()));
+                }
+            }
         }
     }
 
