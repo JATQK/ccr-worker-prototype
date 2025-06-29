@@ -594,8 +594,6 @@ public class GithubRdfConversionTransactionService {
                             calculateCommitMessage(writer, commitUri, commit);
                         }
 
-                        calculateCommitIssues(writer, commitUri, commit.getFullMessage(), owner, repositoryName);
-
                         if (commit.getParentCount() > 1) {
                             writer.triple(RdfCommitUtils.createCommitIsMergeCommitProperty(commitUri, true));
                         }
@@ -605,6 +603,7 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         PullRequestInfo prInfo = commitPrMap.get(gitHash);
+                        calculateCommitIssues(writer, commitUri, commit.getFullMessage(), owner, repositoryName, prInfo);
                         if (prInfo != null) {
                             writer.triple(RdfCommitUtils.createCommitPartOfPullRequestProperty(commitUri, prInfo.issueUri));
                             writer.triple(RdfCommitUtils.createCommitPartOfIssueProperty(commitUri, prInfo.issueUri));
@@ -1227,14 +1226,30 @@ public class GithubRdfConversionTransactionService {
 
     }
 
-    private void calculateCommitIssues(StreamRDF writer, String commitUri, String message, String owner, String repositoryName) {
-        for (String number : RdfCommitUtils.extractIssueNumbers(message)) {
+    private void calculateCommitIssues(StreamRDF writer, String commitUri, String message,
+            String owner, String repositoryName, PullRequestInfo prInfo) {
+        Set<String> issueNumbers = RdfCommitUtils.extractIssueNumbers(message);
+
+        if (prInfo != null) {
+            String prNumber = extractIssueNumberFromUri(prInfo.issueUri);
+            issueNumbers.remove(prNumber);
+        }
+
+        for (String number : issueNumbers) {
             String issueUri = getGithubIssueUri(owner, repositoryName, number);
             writer.triple(RdfCommitUtils.createCommitReferencesIssueProperty(commitUri, issueUri));
             writer.triple(RdfGithubIssueUtils.createIssueReferencedByCommitProperty(issueUri, commitUri));
             // keep legacy predicate
             writer.triple(RdfCommitUtils.createCommitIssueProperty(commitUri, issueUri));
         }
+    }
+
+    private String extractIssueNumberFromUri(String uri) {
+        int idx = uri.lastIndexOf('/');
+        if (idx >= 0 && idx + 1 < uri.length()) {
+            return uri.substring(idx + 1);
+        }
+        return uri;
     }
 
     private void calculateCommitterEmail(StreamRDF writer, String commitUri, PersonIdent committerIdent) {
