@@ -61,11 +61,11 @@ import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueState;
 import org.kohsuke.github.GHMilestone;
 import org.kohsuke.github.GHPullRequest;
+import org.kohsuke.github.GHPullRequestCommitDetail;
 import org.kohsuke.github.GHPullRequestReview;
 import org.kohsuke.github.GHPullRequestReviewComment;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
-import org.kohsuke.github.GHCommit;
 import org.kohsuke.github.GHWorkflowJob;
 import org.kohsuke.github.GHWorkflowRun;
 import org.kohsuke.github.GitHub;
@@ -1081,8 +1081,8 @@ public class GithubRdfConversionTransactionService {
                 map.put(pr.getMergeCommitSha(), info);
             }
 
-            for (GHCommit c : executeWithRetry(() -> pr.listCommits().toList(), "listCommits for PR " + pr.getNumber())) {
-                map.put(c.getSHA1(), info);
+            for (GHPullRequestCommitDetail c : executeWithRetry(() -> pr.listCommits().toList(), "listCommits for PR " + pr.getNumber())) {
+                map.put(c.getSha(), info);
             }
         }
 
