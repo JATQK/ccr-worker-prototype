@@ -559,6 +559,8 @@ public class GithubRdfConversionTransactionService {
                             calculateCommitMessage(writer, commitUri, commit);
                         }
 
+                        calculateCommitIssues(writer, commitUri, commit.getFullMessage(), owner, repositoryName);
+
                         // Branch
                         // TODO: better way to handle merges? (so commit could have multiple branches)
                         if (gitCommitRepositoryFilter.isEnableCommitBranch()) {
@@ -1131,6 +1133,13 @@ public class GithubRdfConversionTransactionService {
 
     }
 
+    private void calculateCommitIssues(StreamRDF writer, String commitUri, String message, String owner, String repositoryName) {
+        for (String number : RdfCommitUtils.extractIssueNumbers(message)) {
+            String issueUri = getGithubIssueUri(owner, repositoryName, number);
+            writer.triple(RdfCommitUtils.createCommitIssueProperty(commitUri, issueUri));
+        }
+    }
+
     private void calculateCommitterEmail(StreamRDF writer, String commitUri, PersonIdent committerIdent) {
 
         if (committerIdent == null) {
@@ -1333,6 +1342,14 @@ public class GithubRdfConversionTransactionService {
 
     private String getGithubCommitUri(String owner, String repository, String commitHash) {
         return getGithubCommitBaseUri(owner, repository) + commitHash;
+    }
+
+    private String getGithubIssueBaseUri(String owner, String repository) {
+        return "https://github.com/" + owner + "/" + repository + "/issues/";
+    }
+
+    private String getGithubIssueUri(String owner, String repository, String issueNumber) {
+        return getGithubIssueBaseUri(owner, repository) + issueNumber;
     }
 
     public String getGithubUserUri(String userName) {

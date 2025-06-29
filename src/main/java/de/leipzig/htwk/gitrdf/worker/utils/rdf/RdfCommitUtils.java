@@ -9,6 +9,11 @@ import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.stringLiteral;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.uri;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
@@ -114,6 +119,13 @@ public final class RdfCommitUtils {
 
     public static Node commitGitHubUserProperty() {
         return uri(GH_NS + "user");
+    }
+
+    /**
+     * Links a commit to a referenced GitHub issue.
+     */
+    public static Node commitIssueProperty() {
+        return uri(GH_NS + "issue");
     }
     public static Node tagResource() {
         return uri(NS + "tag");
@@ -281,6 +293,10 @@ public final class RdfCommitUtils {
         //return Triple.create(uri(commitUri), commitGitHubUserProperty(), stringLiteral(commiterGitHubUser));
         return Triple.create(uri(commitUri), commitGitHubUserProperty(), uri(commiterGitHubUser));
     }
+
+    public static Triple createCommitIssueProperty(String commitUri, String issueUri) {
+        return Triple.create(uri(commitUri), commitIssueProperty(), uri(issueUri));
+    }
     public static Triple createCommitResource(String commitUri, Node commitNode) {
         return Triple.create(uri(commitUri), commitResource(), commitNode);
     }
@@ -343,6 +359,23 @@ public final class RdfCommitUtils {
 
     public static Triple createCommitTagProperty(String commitUri, String tagName) {
         return Triple.create(uri(commitUri), commitTagNameProperty(), stringLiteral(tagName));
+    }
+
+    /**
+     * Extract referenced issue numbers from a commit message.
+     * Supports patterns like "Fixes #123" or "#123".
+     */
+    public static Set<String> extractIssueNumbers(String commitMessage) {
+        if (commitMessage == null) {
+            return Collections.emptySet();
+        }
+        Set<String> result = new LinkedHashSet<>();
+        Pattern p = Pattern.compile("(?i)(?:fix(?:es)?|close(?:s)?|resolve(?:s)?|)\\s*#(\\d+)");
+        Matcher m = p.matcher(commitMessage);
+        while (m.find()) {
+            result.add(m.group(1));
+        }
+        return result;
     }
 
     // Metadata
