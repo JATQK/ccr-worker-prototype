@@ -30,7 +30,7 @@ public final class RdfGithubIssueCommentUtils {
 
     public static Triple createReviewCommentRdfTypeProperty(String dcommentUri) {
         return Triple.create(RdfUtils.uri(dcommentUri), rdfTypeProperty(),
-                RdfUtils.uri("github:GithubIssueReviewCommentComment"));
+                RdfUtils.uri("github:GithubIssueReviewComment"));
     }
 
     public static Triple createCommentIdentifierProperty(String CommentUri, long id) {

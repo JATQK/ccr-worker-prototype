@@ -58,6 +58,7 @@ import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.hibernate.engine.jdbc.BlobProxy;
 import org.kohsuke.github.GHCheckRun;
 import org.kohsuke.github.GHIssue;
+import org.kohsuke.github.GHIssueComment;
 import org.kohsuke.github.GHIssueState;
 import org.kohsuke.github.GHMilestone;
 import org.kohsuke.github.GHPullRequest;
@@ -69,7 +70,6 @@ import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GHWorkflowJob;
 import org.kohsuke.github.GHWorkflowRun;
 import org.kohsuke.github.GitHub;
-import org.kohsuke.github.GHIssueComment;
 import org.kohsuke.github.PagedIterable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -87,8 +87,8 @@ import de.leipzig.htwk.gitrdf.worker.handler.LockHandler;
 import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueDiscussionUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueCommentUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueDiscussionUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueReviewUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowJobUtils;
@@ -169,7 +169,6 @@ public class GithubRdfConversionTransactionService {
         this.entityManager = entityManager;
         this.commitsPerIteration = commitsPerIteration;
     }
-
 
     @Transactional(rollbackFor = { IOException.class, GitAPIException.class, URISyntaxException.class,
             InterruptedException.class }) // Runtime-Exceptions are rollbacked by default; Checked-Exceptions not
@@ -465,8 +464,8 @@ public class GithubRdfConversionTransactionService {
             // git commits
             // ********************** ** REMOVE ON DEPLOYMENT ** **********************
             // REMOVE ON DEPLOYMENT
-            var computeCommits = true;
-            var maxComputedCommits = 200;
+            var computeCommits = true; // Set to false to skip commit processing
+            var maxComputedCommits = 200;  // limit the number of commits to process
             // ********************** ** ******************** ** **********************
 
             if (computeCommits) {
@@ -519,15 +518,11 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         try {
-
                             committerIdent = commit.getCommitterIdent();
-
                         } catch (RuntimeException ex) {
-
                             log.warn("Error while trying to identify the committer for the git commit '{}'. " +
                                     "Skipping committer email and name entry. Error is '{}'", gitHash, ex.getMessage(),
                                     ex);
-
                         }
 
                         String commitUri = getGithubCommitUri(owner, repositoryName, gitHash);
@@ -756,12 +751,10 @@ public class GithubRdfConversionTransactionService {
                         if (dcreatedAt == null || dcreatedAt.toInstant().isBefore(oneYearAgo.toInstant())) {
                             continue;
                         }
-
                         // REMOVE ON DEPLOYMENT
                         // if (!"9956".equals(String.valueOf(issueNumber)) && !"9954".equals(String.valueOf(issueNumber))) {
                         //     continue;
                         // }
-
                         // REMOVE ON DEPLOYMENT
                         // if (githubIssueRepositoryFilter.isEnableIssueState()
                         //         && ghIssue.getState() != GHIssueState.CLOSED) {
@@ -772,19 +765,16 @@ public class GithubRdfConversionTransactionService {
                         // if (issueCounter >= 50) {
                         // continue;
                         // }
-
                         // REMOVE ON DEPLOYMENT
                         // if (issueCounter >= 100) {
                         //     break;
                         // }
-
                         //REMOVE ON DEPLOYMENT
                         if (issueOutsideCounter >= 200) {
                             log.warn("Skipping issue with number {} because outside counter reached limit",
                                     issueNumber);
                             break;
                         }
-                        
                         // ********************** ** **************** ** **********************
 
                         writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(issueUri));
@@ -924,6 +914,7 @@ public class GithubRdfConversionTransactionService {
                                 LocalDateTime firstCommentAt = null;
                                 LocalDateTime lastCommentAt = null;
 
+                                // Process the discussion of the review
                                 for (GHPullRequestReviewComment c : reviewComments) {
                                     LocalDateTime created = localDateTimeFrom(c.getCreatedAt());
                                     LocalDateTime updated = c.getUpdatedAt() != null
@@ -993,27 +984,11 @@ public class GithubRdfConversionTransactionService {
                                         writer.triple(RdfGithubIssueDiscussionUtils.createDiscussionCreatedAtProperty(
                                                 discussionUri, localDateTimeFrom(c.getCreatedAt())));
                                     }
-
-                                    // Long parentId = c.getInReplyToId();
-                                    // if (parentId == null || parentId == c.getId()) {
-                                    //     writer.triple(RdfGithubIssueDiscussionUtils.createCommentIsRootProperty(discussionUri, true));
-                                    //     writer.triple(RdfGithubIssueReviewUtils.createRootCommentsProperty(reviewUri, discussionUri));
-                                    // } else {
-                                    //     writer.triple(RdfGithubIssueDiscussionUtils.createCommentIsRootProperty(discussionUri, false));
-                                    //     String parentUri = commentListUri + "/" + parentId;
-                                    //     writer.triple(RdfGithubIssueDiscussionUtils.createReviewCommentReplyToProperty(discussionUri, parentUri));
-                                    // }
-
-                                    // List<Long> replies = repliesByParent.getOrDefault(cid, List.of());
-                                    // writer.triple(RdfGithubIssueDiscussionUtils.createCommentReplyCountProperty(discussionUri, replies.size()));
-                                    // for (Long rid : replies) {
-                                    //     String replyUri = commentListUri + "/" + rid;
-                                    //     writer.triple(RdfGithubIssueDiscussionUtils.createHasCommentReplyProperty(discussionUri, replyUri));
-                                    // }
                                 }
                             }
                         }
 
+                        // Issue Comments
                         if (githubIssueRepositoryFilter.isEnableIssueComments()) {
                             List<GHIssueComment> issueComments = getIssueCommentsCached(ghIssue);
                             for (GHIssueComment c : issueComments) {
@@ -1040,7 +1015,9 @@ public class GithubRdfConversionTransactionService {
                             }
                         }
 
+                        // Count the iteration of issues
                         issueCounter++;
+                        // Count the outside of limit the number of issues to process
                         issueOutsideCounter++;
 
                         if (issueCounter > 100) {
@@ -1068,7 +1045,7 @@ public class GithubRdfConversionTransactionService {
         }
 
         log.info("Finished overall processing. Start to load rdf file into postgres blob storage");
-
+        // Tidy up the Turtle RDF
         RdfTurtleTidier.tidyFile(rdfTempFile);
 
         BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(rdfTempFile));
