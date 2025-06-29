@@ -650,6 +650,7 @@ public class GithubRdfConversionTransactionService {
             // issues
             StopWatch issueWatch = new StopWatch();
             issueWatch.start();
+            int issueOutsideCounter = 0;
 
             if (githubIssueRepositoryFilter.doesContainAtLeastOneEnabledFilterOption()) {
 
@@ -711,6 +712,13 @@ public class GithubRdfConversionTransactionService {
                         //     break;
                         // }
 
+                        //REMOVE ON DEPLOYMENT
+                        if (issueOutsideCounter >= 400) {
+                            log.warn("Skipping issue with number {} because outside counter reached limit",
+                                    issueNumber);
+                            break;
+                        }
+                        
                         // ********************** ** **************** ** **********************
 
                         writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(issueUri));
@@ -971,13 +979,13 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         issueCounter++;
+                        issueOutsideCounter++;
 
                         if (issueCounter > 100) {
                             log.info("Finish issue rdf conversion batch");
                             writer.finish();
                             doesWriterContainNonWrittenRdfStreamElements = false;
-                            // Limit the Issue processing to 100 issues 
-                            //issueCounter = 0;
+                            issueCounter = 0;
                             lockHandler.renewLockOnRenewTimeFulfillment();
                         } else {
                             log.info("Processed issue #{} with id {} and uri '{}'", issueCounter, issueUri);
