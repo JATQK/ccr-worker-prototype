@@ -23,6 +23,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfTurtleTidier;
+
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.jena.graph.Node;
 import org.apache.jena.rdf.model.Resource;
@@ -1362,6 +1364,8 @@ private boolean shouldIncludeJobDetails(GHWorkflowRun run) {
         }
 
         log.info("Finished overall processing. Start to load rdf file into postgres blob storage");
+
+        RdfTurtleTidier.tidyFile(rdfTempFile);
 
         BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(rdfTempFile));
 

@@ -18,6 +18,7 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.hibernate.engine.jdbc.BlobProxy;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfTurtleTidier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -135,6 +136,8 @@ public class GitRdfConversionTransactionService {
             }
 
         }
+
+        RdfTurtleTidier.tidyFile(tempFile);
 
         BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(tempFile));
 
