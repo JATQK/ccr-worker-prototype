@@ -134,6 +134,15 @@ public class GithubRdfConversionTransactionService {
      */
     private final Set<Long> seenReviewIds = new HashSet<>();
 
+    /**
+     * Caches for GitHub API objects to avoid unnecessary API calls during a
+     * conversion run.
+     */
+    private final Map<Integer, GHPullRequest> pullRequestCache = new HashMap<>();
+    private final Map<Integer, List<GHPullRequestReview>> reviewCache = new HashMap<>();
+    private final Map<Long, List<GHPullRequestReviewComment>> reviewCommentsCache = new HashMap<>();
+    private final Map<Integer, List<GHPullRequestCommitDetail>> commitCache = new HashMap<>();
+
     private static class PullRequestInfo {
         final String issueUri;
         final String mergeCommitSha;
@@ -167,6 +176,13 @@ public class GithubRdfConversionTransactionService {
             File rdfTempFile,
             TimeLog timeLog,
             LockHandler lockHandler) throws IOException, GitAPIException, URISyntaxException, InterruptedException {
+
+        // Clear caches for this conversion run
+        pullRequestCache.clear();
+        reviewCache.clear();
+        reviewCommentsCache.clear();
+        commitCache.clear();
+        seenReviewIds.clear();
 
         Git gitHandler = null;
 
@@ -825,9 +841,8 @@ public class GithubRdfConversionTransactionService {
 
                         if (githubIssueRepositoryFilter.isEnableIssueMergedInfo()) {
                             if (ghIssue.isPullRequest()) {
-                                GHPullRequest pullRequest = executeWithRetry(
-                                        () -> githubRepositoryHandle.getPullRequest(issueNumber),
-                                        "getPullRequest " + issueNumber);
+                                GHPullRequest pullRequest = getPullRequestCached(
+                                        githubRepositoryHandle, issueNumber);
                                 writeMergeInfo(ghIssue, pullRequest, writer, issueUri);
                                 writeWorkflowRunInfo(pullRequest, writer, issueUri);
                             }
@@ -843,12 +858,9 @@ public class GithubRdfConversionTransactionService {
 
                         // Reviews
                         if (githubIssueRepositoryFilter.isEnableIssueReviewers() && ghIssue.isPullRequest()) {
-                            GHPullRequest pr = executeWithRetry(
-                                    () -> ghIssue.getRepository().getPullRequest(issueNumber),
-                                    "getPullRequest " + issueNumber);
-                            List<GHPullRequestReview> reviews = executeWithRetry(
-                                    () -> pr.listReviews().toList(),
-                                    "listReviews for PR " + issueNumber);
+                            GHPullRequest pr = getPullRequestCached(
+                                    ghIssue.getRepository(), issueNumber);
+                            List<GHPullRequestReview> reviews = getReviewsCached(pr);
 
                             for (GHPullRequestReview review : reviews) {
                                 long reviewId = review.getId();
@@ -887,9 +899,7 @@ public class GithubRdfConversionTransactionService {
                                 }
 
                                 // Review Discussions
-                                List<GHPullRequestReviewComment> reviewComments = executeWithRetry(
-                                        () -> review.listReviewComments().toList(),
-                                        "listReviewComments for review " + reviewId);
+                                List<GHPullRequestReviewComment> reviewComments = getReviewCommentsCached(review);
                                 int reviewCommentCount = reviewComments.size();
 
                                 // If there are no review comments, skip further processing about comments for this review
@@ -1081,7 +1091,7 @@ public class GithubRdfConversionTransactionService {
                 map.put(pr.getMergeCommitSha(), info);
             }
 
-            for (GHPullRequestCommitDetail c : executeWithRetry(() -> pr.listCommits().toList(), "listCommits for PR " + pr.getNumber())) {
+            for (GHPullRequestCommitDetail c : getCommitsCached(pr)) {
                 map.put(c.getSha(), info);
             }
         }
@@ -1564,6 +1574,50 @@ public class GithubRdfConversionTransactionService {
         return run.getConclusion() != null &&
                 (run.getConclusion().equals("failure") ||
                         run.getConclusion().equals("success"));
+    }
+
+    private GHPullRequest getPullRequestCached(GHRepository repo, int number)
+            throws IOException, InterruptedException {
+        GHPullRequest pr = pullRequestCache.get(number);
+        if (pr == null) {
+            pr = executeWithRetry(() -> repo.getPullRequest(number), "getPullRequest " + number);
+            pullRequestCache.put(number, pr);
+        }
+        return pr;
+    }
+
+    private List<GHPullRequestReview> getReviewsCached(GHPullRequest pr)
+            throws IOException, InterruptedException {
+        int number = pr.getNumber();
+        List<GHPullRequestReview> reviews = reviewCache.get(number);
+        if (reviews == null) {
+            reviews = executeWithRetry(() -> pr.listReviews().toList(), "listReviews for PR " + number);
+            reviewCache.put(number, reviews);
+        }
+        return reviews;
+    }
+
+    private List<GHPullRequestReviewComment> getReviewCommentsCached(GHPullRequestReview review)
+            throws IOException, InterruptedException {
+        long id = review.getId();
+        List<GHPullRequestReviewComment> comments = reviewCommentsCache.get(id);
+        if (comments == null) {
+            comments = executeWithRetry(() -> review.listReviewComments().toList(),
+                    "listReviewComments for review " + id);
+            reviewCommentsCache.put(id, comments);
+        }
+        return comments;
+    }
+
+    private List<GHPullRequestCommitDetail> getCommitsCached(GHPullRequest pr)
+            throws IOException, InterruptedException {
+        int number = pr.getNumber();
+        List<GHPullRequestCommitDetail> commits = commitCache.get(number);
+        if (commits == null) {
+            commits = executeWithRetry(() -> pr.listCommits().toList(), "listCommits for PR " + pr.getNumber());
+            commitCache.put(number, commits);
+        }
+        return commits;
     }
 
     private <T> T executeWithRetry(java.util.concurrent.Callable<T> callable, String description)
