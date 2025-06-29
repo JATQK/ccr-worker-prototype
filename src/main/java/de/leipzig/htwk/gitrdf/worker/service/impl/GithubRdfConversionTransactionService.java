@@ -443,8 +443,12 @@ public class GithubRdfConversionTransactionService {
             lockHandler.renewLockOnRenewTimeFulfillment();
 
             // git commits
-            var computeCommitsDeleteForProduction = false;
-            if (computeCommitsDeleteForProduction) {
+            // ********************** ** REMOVE ON DEPLOYMENT ** **********************
+            // REMOVE ON DEPLOYMENT
+            var computeCommits = true;
+            // ********************** ** ******************** ** **********************
+
+            if (computeCommits) {
                 for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
                     log.info("Start iterations of git commits. Current iteration count: {}", iteration);
@@ -750,7 +754,7 @@ public class GithubRdfConversionTransactionService {
                         // }
 
                         //REMOVE ON DEPLOYMENT
-                        if (issueOutsideCounter >= 400) {
+                        if (issueOutsideCounter >= 200) {
                             log.warn("Skipping issue with number {} because outside counter reached limit",
                                     issueNumber);
                             break;
