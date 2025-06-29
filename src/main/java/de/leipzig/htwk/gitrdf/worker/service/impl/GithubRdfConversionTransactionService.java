@@ -13,6 +13,7 @@ import java.nio.charset.IllegalCharsetNameException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -248,7 +249,7 @@ public class GithubRdfConversionTransactionService {
             writer.triple(RdfGithubIssueUtils.createIssueMergedProperty(issueUri, pr.isMerged()));
 
             Date mergedAt = pr.getMergedAt();
-            
+
             if (mergedAt != null) {
                 writer.triple(RdfGithubIssueUtils.createIssueMergedAtProperty(issueUri, localDateTimeFrom(mergedAt)));
             }
@@ -267,91 +268,7 @@ public class GithubRdfConversionTransactionService {
         // TODO: Add addional merge information if available
     }
 
-    // private void writeWorkflowRunInfo(GHPullRequest pr, StreamRDF writer, String issueUri) {
-
-    //     if (pr == null) {
-    //         return;
-    //     }
-
-    //     try {
-    //         if (!pr.isMerged()) {
-    //             log.debug("Pull request {} is not merged, skipping workflow run info.", pr.getHtmlUrl());
-    //             return;
-    //         }
-    //         GHRepository repo = pr.getRepository();
-    //         String mergeSha = pr.getMergeCommitSha();
-    //         if (repo == null || mergeSha == null) {
-    //             return;
-    //         }
-
-    //         List<GHWorkflowRun> runs = repo.queryWorkflowRuns()
-    //                 .branch(pr.getBase().getRef())
-    //                 .list()
-    //                 .toList()
-    //                 .stream()
-    //                 .filter(run -> mergeSha.equalsIgnoreCase(run.getHeadSha()))
-    //                 .collect(Collectors.toList());
-
-    //         for (GHWorkflowRun run : runs) {
-    //             String runUri = run.getHtmlUrl().toString();
-    //             writer.triple(RdfGithubWorkflowUtils.createWorkflowRunProperty(issueUri, runUri));
-    //             writer.triple(RdfGithubWorkflowUtils.createWorkflowRunRdfTypeProperty(runUri));
-    //             writer.triple(RdfGithubWorkflowUtils.createWorkflowRunIdProperty(runUri, run.getId()));
-
-    //             if (run.getName() != null) {
-    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowNameProperty(runUri, run.getName()));
-    //             }
-    //             if (run.getStatus() != null) {
-    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowStatusProperty(runUri, run.getStatus()));
-    //             }
-    //             if (run.getConclusion() != null) {
-    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowConclusionProperty(runUri, run.getConclusion()));
-    //             }
-    //             if (run.getEvent() != null) {
-    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowEventProperty(runUri, run.getEvent()));
-    //             }
-
-    //             writer.triple(RdfGithubWorkflowUtils.createWorkflowRunNumberProperty(runUri, run.getRunNumber()));
-    //             writer.triple(RdfGithubWorkflowUtils.createWorkflowCommitShaProperty(runUri, mergeSha));
-    //             if (run.getHtmlUrl() != null) {
-    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowHtmlUrlProperty(runUri, run.getHtmlUrl().toString()));
-    //             }
-    //             if (run.getCreatedAt() != null) {
-    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowCreatedAtProperty(runUri, localDateTimeFrom(run.getCreatedAt())));
-    //             }
-    //             if (run.getUpdatedAt() != null) {
-    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowUpdatedAtProperty(runUri, localDateTimeFrom(run.getUpdatedAt())));
-    //             }
-
-    //             for (GHWorkflowJob job : run.listJobs().toList()) {
-    //                 String jobUri = runUri + "/jobs/" + job.getId();
-    //                 writer.triple(RdfGithubWorkflowUtils.createWorkflowJobProperty(runUri, jobUri));
-    //                 writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobRdfTypeProperty(jobUri));
-    //                 writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobIdProperty(jobUri, job.getId()));
-    //                 if (job.getName() != null) {
-    //                     writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobNameProperty(jobUri, job.getName()));
-    //                 }
-    //                 if (job.getStatus() != null) {
-    //                     writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStatusProperty(jobUri, job.getStatus()));
-    //                 }
-    //                 if (job.getConclusion() != null) {
-    //                     writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobConclusionProperty(jobUri, job.getConclusion()));
-    //                 }
-    //                 if (job.getStartedAt() != null) {
-    //                     writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStartedAtProperty(jobUri, localDateTimeFrom(job.getStartedAt())));
-    //                 }
-    //                 if (job.getCompletedAt() != null) {
-    //                     writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobCompletedAtProperty(jobUri, localDateTimeFrom(job.getCompletedAt())));
-    //                 }
-    //             }
-    //         }
-
-    //     } catch (IOException e) {
-    //         log.warn("Error while writing workflow run info for issue {}: {}", issueUri, e.getMessage());
-    //     }
-    // }
-
-private void writeWorkflowRunInfo(GHPullRequest pr, StreamRDF writer, String issueUri) {
+    private void writeWorkflowRunInfo(GHPullRequest pr, StreamRDF writer, String issueUri) {
     if (pr == null ) {
         return;
     }
@@ -388,115 +305,13 @@ private void writeWorkflowRunInfo(GHPullRequest pr, StreamRDF writer, String iss
     }
 }
 
-private String extractRunIdFromUrl(String detailsUrl) {
-    // Extract run ID from URL like: https://github.com/owner/repo/actions/runs/12345
-    Pattern pattern = Pattern.compile(".*/actions/runs/(\\d+)");
-    Matcher matcher = pattern.matcher(detailsUrl);
-    return matcher.find() ? matcher.group(1) : null;
-}
-
-private void writeWorkflowRunData(GHWorkflowRun run, StreamRDF writer, String issueUri, String mergeSha) 
-        throws IOException {
-    
-    String runUri = run.getHtmlUrl().toString();
-    
-    // Write workflow run properties
-    writer.triple(RdfGithubWorkflowUtils.createWorkflowRunProperty(issueUri, runUri));
-    writer.triple(RdfGithubWorkflowUtils.createWorkflowRunRdfTypeProperty(runUri));
-    writer.triple(RdfGithubWorkflowUtils.createWorkflowRunIdProperty(runUri, run.getId()));
-
-    // Batch property writes to reduce overhead
-    writeWorkflowRunProperties(run, writer, runUri, mergeSha);
-    
-    // Optimization 2: Only fetch jobs if needed, with pagination control
-    if (shouldIncludeJobDetails(run)) {
-        writeWorkflowJobData(run, writer, runUri);
-    }
-}
-
-private void writeWorkflowRunProperties(GHWorkflowRun run, StreamRDF writer, String runUri, String mergeSha) {
-    // Group property writes together for better performance
-    if (run.getName() != null) {
-        writer.triple(RdfGithubWorkflowUtils.createWorkflowNameProperty(runUri, run.getName()));
-    }
-    if (run.getStatus() != null) {
-        writer.triple(RdfGithubWorkflowUtils.createWorkflowStatusProperty(runUri, run.getStatus()));
-    }
-    if (run.getConclusion() != null) {
-        writer.triple(RdfGithubWorkflowUtils.createWorkflowConclusionProperty(runUri, run.getConclusion()));
-    }
-    if (run.getEvent() != null) {
-        writer.triple(RdfGithubWorkflowUtils.createWorkflowEventProperty(runUri, run.getEvent()));
+    private String extractRunIdFromUrl(String detailsUrl) {
+        // Extract run ID from URL like: https://github.com/owner/repo/actions/runs/12345
+        Pattern pattern = Pattern.compile(".*/actions/runs/(\\d+)");
+        Matcher matcher = pattern.matcher(detailsUrl);
+        return matcher.find() ? matcher.group(1) : null;
     }
 
-    writer.triple(RdfGithubWorkflowUtils.createWorkflowRunNumberProperty(runUri, run.getRunNumber()));
-    writer.triple(RdfGithubWorkflowUtils.createWorkflowCommitShaProperty(runUri, mergeSha));
-    try {
-        if (run.getHtmlUrl() != null) {
-            writer.triple(RdfGithubWorkflowUtils.createWorkflowHtmlUrlProperty(runUri, run.getHtmlUrl().toString()));
-        }
-        if (run.getCreatedAt() != null) {
-            writer.triple(RdfGithubWorkflowUtils.createWorkflowCreatedAtProperty(runUri, localDateTimeFrom(run.getCreatedAt())));
-        }
-        if (run.getUpdatedAt() != null) {
-            writer.triple(RdfGithubWorkflowUtils.createWorkflowUpdatedAtProperty(runUri, localDateTimeFrom(run.getUpdatedAt())));
-        }
-    } catch(IOException e) {
-            log.warn("Error while writing workflow run properties for run {}: {}", run.getId(), e.getMessage());
-        }
-}
-
-private void writeWorkflowJobData(GHWorkflowRun run, StreamRDF writer, String runUri) throws IOException {
-    // Optimization 3: Limit job fetching with early termination
-    PagedIterable<GHWorkflowJob> jobIterable = run.listJobs().withPageSize(25);
-    
-    int maxJobsToProcess = 30; // Reasonable limit on jobs per run
-    int jobsProcessed = 0;
-    
-    for (GHWorkflowJob job : jobIterable) {
-        if (jobsProcessed >= maxJobsToProcess) {
-            log.debug("Reached max jobs limit ({}) for workflow run {}", maxJobsToProcess, run.getId());
-            break;
-        }
-        
-        writeJobProperties(job, writer, runUri);
-        jobsProcessed++;
-    }
-    
-    log.debug("Processed {} jobs for workflow run {}", jobsProcessed, run.getId());
-}
-
-private void writeJobProperties(GHWorkflowJob job, StreamRDF writer, String runUri) {
-    String jobUri = runUri + "/jobs/" + job.getId();
-    
-    writer.triple(RdfGithubWorkflowUtils.createWorkflowJobProperty(runUri, jobUri));
-    writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobRdfTypeProperty(jobUri));
-    writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobIdProperty(jobUri, job.getId()));
-    
-    if (job.getName() != null) {
-        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobNameProperty(jobUri, job.getName()));
-    }
-    if (job.getStatus() != null) {
-        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStatusProperty(jobUri, job.getStatus()));
-    }
-    if (job.getConclusion() != null) {
-        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobConclusionProperty(jobUri, job.getConclusion()));
-    }
-    if (job.getStartedAt() != null) {
-        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStartedAtProperty(jobUri, localDateTimeFrom(job.getStartedAt())));
-    }
-    if (job.getCompletedAt() != null) {
-        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobCompletedAtProperty(jobUri, localDateTimeFrom(job.getCompletedAt())));
-    }
-}
-
-private boolean shouldIncludeJobDetails(GHWorkflowRun run) {
-    // Optimization 4: Only fetch job details for certain conditions
-    // You can customize this logic based on your needs
-    return run.getConclusion() != null && 
-           (run.getConclusion().equals("failure") || 
-            run.getConclusion().equals("success"));
-}
     private Git performGitClone(String ownerName, String repositoryName, File gitWorkingDirectory)
             throws GitAPIException {
 
@@ -804,15 +619,11 @@ private boolean shouldIncludeJobDetails(GHWorkflowRun run) {
                         PersonIdent committerIdent = null;
 
                         try {
-
                             authorIdent = commit.getAuthorIdent();
-
                         } catch (RuntimeException ex) {
-
                             log.warn("Error while trying to identify the author for the git commit '{}'. " +
                                     "Skipping author email and name entry. Error is '{}'", gitHash, ex.getMessage(),
                                     ex);
-
                         }
 
                         try {
@@ -981,7 +792,6 @@ private boolean shouldIncludeJobDetails(GHWorkflowRun run) {
 
                 timeLog.setGitBranchSnapshottingTime(branchSnapshottingWatch.getTime());
             } else {
-
                 timeLog.setGitBranchSnapshottingTime(0L);
 
             }
@@ -997,9 +807,7 @@ private boolean shouldIncludeJobDetails(GHWorkflowRun run) {
                 if (githubRepositoryHandle.hasIssues()) {
 
                     log.info("Start issue processing");
-
                     int issueCounter = 0;
-
                     boolean doesWriterContainNonWrittenRdfStreamElements = false;
 
                     for (GHIssue ghIssue : githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100)
@@ -1021,30 +829,40 @@ private boolean shouldIncludeJobDetails(GHWorkflowRun run) {
                             issueUri = getGithubRepositoryUri(owner, repositoryName);
                         }
 
+                        if (!githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() == null) {
+                            continue;
+                        }
+
+                        // ********************** ** REMOVE ON DEPLOYMENT ** **********************
+                        ZonedDateTime oneYearAgo = ZonedDateTime.now().minusYears(1);
+                        // REMOVE ON DEPLOYMENT
+                        Date dcreatedAt = ghIssue.getCreatedAt();
+                        if (dcreatedAt == null || dcreatedAt.toInstant().isBefore(oneYearAgo.toInstant())) {
+                            continue;
+                        }
+
                         // REMOVE ON DEPLOYMENT
                         // if (!"9956".equals(String.valueOf(issueNumber)) && !"9954".equals(String.valueOf(issueNumber))) {
                         //     continue;
                         // }
 
                         // REMOVE ON DEPLOYMENT
-                        if (!githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() == null) {
-                            continue;
-                        }
-                        // REMOVE ON DEPLOYMENT
-                        if (githubIssueRepositoryFilter.isEnableIssueState()
-                                && ghIssue.getState() != GHIssueState.CLOSED) {
-                            log.warn("Issue with number {} is not closed, skipping", issueNumber);
-                            continue;
-                        }
+                        // if (githubIssueRepositoryFilter.isEnableIssueState()
+                        //         && ghIssue.getState() != GHIssueState.CLOSED) {
+                        //     log.warn("Issue with number {} is not closed, skipping", issueNumber);
+                        //     continue;
+                        // }
                         // REMOVE ON DEPLOYMENT
                         // if (issueCounter >= 50) {
                         // continue;
                         // }
 
                         // REMOVE ON DEPLOYMENT
-                        if (issueCounter >= 100) {
-                            break;
-                        }
+                        // if (issueCounter >= 100) {
+                        //     break;
+                        // }
+
+                        // ********************** ** **************** ** **********************
 
                         writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(issueUri));
                         writer.triple(RdfGithubIssueUtils.createIssueRepositoryProperty(
@@ -1071,14 +889,12 @@ private boolean shouldIncludeJobDetails(GHWorkflowRun run) {
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueUser() && ghIssue.getUser() != null) {
-
                             String githubIssueUserUri = ghIssue.getUser().getHtmlUrl().toString();
                             writer.triple(
                                     RdfGithubIssueUtils.createIssueUserProperty(issueUri, githubIssueUserUri));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueMilestone()) {
-
                             GHMilestone issueMilestone = ghIssue.getMilestone();
                             if (issueMilestone != null) {
                                 writer.triple(RdfGithubIssueUtils.createIssueMilestoneProperty(issueUri,
@@ -1087,13 +903,11 @@ private boolean shouldIncludeJobDetails(GHWorkflowRun run) {
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueCreatedAt() && ghIssue.getCreatedAt() != null) {
-
                             LocalDateTime createdAt = localDateTimeFrom(ghIssue.getCreatedAt());
                             writer.triple(RdfGithubIssueUtils.createIssueSubmittedAtProperty(issueUri, createdAt));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueUpdatedAt()) {
-
                             Date updatedAtUtilDate = ghIssue.getUpdatedAt();
                             if (updatedAtUtilDate != null) {
                                 LocalDateTime updatedAt = localDateTimeFrom(updatedAtUtilDate);
@@ -1103,7 +917,6 @@ private boolean shouldIncludeJobDetails(GHWorkflowRun run) {
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueClosedAt()) {
-
                             Date closedAtUtilDate = ghIssue.getClosedAt();
                             if (closedAtUtilDate != null) {
                                 LocalDateTime closedAt = localDateTimeFrom(closedAtUtilDate);
@@ -1685,4 +1498,113 @@ private boolean shouldIncludeJobDetails(GHWorkflowRun run) {
         return instant.atZone(ZoneId.of("Europe/Berlin")).toLocalDateTime();
     }
 
+    // Github Workflows
+
+    private void writeWorkflowRunData(GHWorkflowRun run, StreamRDF writer, String issueUri, String mergeSha)
+            throws IOException {
+
+        String runUri = run.getHtmlUrl().toString();
+
+        // Write workflow run properties
+        writer.triple(RdfGithubWorkflowUtils.createWorkflowRunProperty(issueUri, runUri));
+        writer.triple(RdfGithubWorkflowUtils.createWorkflowRunRdfTypeProperty(runUri));
+        writer.triple(RdfGithubWorkflowUtils.createWorkflowRunIdProperty(runUri, run.getId()));
+
+        // Batch property writes to reduce overhead
+        writeWorkflowRunProperties(run, writer, runUri, mergeSha);
+
+        // Optimization 2: Only fetch jobs if needed, with pagination control
+        if (shouldIncludeJobDetails(run)) {
+            writeWorkflowJobData(run, writer, runUri);
+        }
+    }
+
+    private void writeWorkflowRunProperties(GHWorkflowRun run, StreamRDF writer, String runUri, String mergeSha) {
+        // Group property writes together for better performance
+        if (run.getName() != null) {
+            writer.triple(RdfGithubWorkflowUtils.createWorkflowNameProperty(runUri, run.getName()));
+        }
+        if (run.getStatus() != null) {
+            writer.triple(RdfGithubWorkflowUtils.createWorkflowStatusProperty(runUri, run.getStatus()));
+        }
+        if (run.getConclusion() != null) {
+            writer.triple(RdfGithubWorkflowUtils.createWorkflowConclusionProperty(runUri, run.getConclusion()));
+        }
+        if (run.getEvent() != null) {
+            writer.triple(RdfGithubWorkflowUtils.createWorkflowEventProperty(runUri, run.getEvent()));
+        }
+
+        writer.triple(RdfGithubWorkflowUtils.createWorkflowRunNumberProperty(runUri, run.getRunNumber()));
+        writer.triple(RdfGithubWorkflowUtils.createWorkflowCommitShaProperty(runUri, mergeSha));
+        try {
+            if (run.getHtmlUrl() != null) {
+                writer.triple(
+                        RdfGithubWorkflowUtils.createWorkflowHtmlUrlProperty(runUri, run.getHtmlUrl().toString()));
+            }
+            if (run.getCreatedAt() != null) {
+                writer.triple(RdfGithubWorkflowUtils.createWorkflowCreatedAtProperty(runUri,
+                        localDateTimeFrom(run.getCreatedAt())));
+            }
+            if (run.getUpdatedAt() != null) {
+                writer.triple(RdfGithubWorkflowUtils.createWorkflowUpdatedAtProperty(runUri,
+                        localDateTimeFrom(run.getUpdatedAt())));
+            }
+        } catch (IOException e) {
+            log.warn("Error while writing workflow run properties for run {}: {}", run.getId(), e.getMessage());
+        }
+    }
+
+    private void writeWorkflowJobData(GHWorkflowRun run, StreamRDF writer, String runUri) throws IOException {
+        // Optimization 3: Limit job fetching with early termination
+        PagedIterable<GHWorkflowJob> jobIterable = run.listJobs().withPageSize(25);
+
+        int maxJobsToProcess = 30; // Reasonable limit on jobs per run
+        int jobsProcessed = 0;
+
+        for (GHWorkflowJob job : jobIterable) {
+            if (jobsProcessed >= maxJobsToProcess) {
+                log.debug("Reached max jobs limit ({}) for workflow run {}", maxJobsToProcess, run.getId());
+                break;
+            }
+
+            writeJobProperties(job, writer, runUri);
+            jobsProcessed++;
+        }
+
+        log.debug("Processed {} jobs for workflow run {}", jobsProcessed, run.getId());
+    }
+
+    private void writeJobProperties(GHWorkflowJob job, StreamRDF writer, String runUri) {
+        String jobUri = runUri + "/jobs/" + job.getId();
+
+        writer.triple(RdfGithubWorkflowUtils.createWorkflowJobProperty(runUri, jobUri));
+        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobRdfTypeProperty(jobUri));
+        writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobIdProperty(jobUri, job.getId()));
+
+        if (job.getName() != null) {
+            writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobNameProperty(jobUri, job.getName()));
+        }
+        if (job.getStatus() != null) {
+            writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStatusProperty(jobUri, job.getStatus()));
+        }
+        if (job.getConclusion() != null) {
+            writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobConclusionProperty(jobUri, job.getConclusion()));
+        }
+        if (job.getStartedAt() != null) {
+            writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStartedAtProperty(jobUri,
+                    localDateTimeFrom(job.getStartedAt())));
+        }
+        if (job.getCompletedAt() != null) {
+            writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobCompletedAtProperty(jobUri,
+                    localDateTimeFrom(job.getCompletedAt())));
+        }
+    }
+
+    private boolean shouldIncludeJobDetails(GHWorkflowRun run) {
+        // Optimization 4: Only fetch job details for certain conditions
+        // You can customize this logic based on your needs
+        return run.getConclusion() != null &&
+                (run.getConclusion().equals("failure") ||
+                        run.getConclusion().equals("success"));
+    }
 }
