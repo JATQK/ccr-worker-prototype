@@ -125,6 +125,8 @@ public class GithubRdfConversionTransactionService {
 
     private final int commitsPerIteration;
 
+    private static final int RETRY_DELAY_MS = 1000;
+
     /**
      * Track already written pull request review IDs to avoid duplicate triples
      * when GitHub returns the same review multiple times.
@@ -233,7 +235,8 @@ public class GithubRdfConversionTransactionService {
         // TODO: Add addional merge information if available
     }
 
-    private void writeWorkflowRunInfo(GHPullRequest pr, StreamRDF writer, String issueUri) {
+    private void writeWorkflowRunInfo(GHPullRequest pr, StreamRDF writer, String issueUri)
+            throws IOException, InterruptedException {
     if (pr == null ) {
         return;
     }
@@ -246,9 +249,11 @@ public class GithubRdfConversionTransactionService {
         // Approach 1: Get check runs directly from the PR's head commit
         String headSha = pr.getHead().getSha();
         GHRepository repo = pr.getRepository();
-        
+
         // Get check runs for the specific commit
-        List<GHCheckRun> checkRuns = repo.getCommit(headSha).getCheckRuns().toList();
+        List<GHCheckRun> checkRuns = executeWithRetry(
+                () -> repo.getCommit(headSha).getCheckRuns().toList(),
+                "getCheckRuns for " + headSha);
         
         for (GHCheckRun checkRun : checkRuns) {
             // Check runs have details_url that often points to workflow runs
@@ -258,7 +263,9 @@ public class GithubRdfConversionTransactionService {
                 // Extract workflow run ID from URL
                 String runId = extractRunIdFromUrl(checkRun.getDetailsUrl().toString());
                 if (runId != null) {
-                    GHWorkflowRun run = repo.getWorkflowRun(Long.parseLong(runId));
+                    GHWorkflowRun run = executeWithRetry(
+                            () -> repo.getWorkflowRun(Long.parseLong(runId)),
+                            "getWorkflowRun " + runId);
                     writeWorkflowRunData(run, writer, issueUri, headSha);
                 }
             }
@@ -767,7 +774,9 @@ public class GithubRdfConversionTransactionService {
 
                         if (githubIssueRepositoryFilter.isEnableIssueMergedInfo()) {
                             if (ghIssue.isPullRequest()) {
-                                GHPullRequest pullRequest = githubRepositoryHandle.getPullRequest(issueNumber);
+                                GHPullRequest pullRequest = executeWithRetry(
+                                        () -> githubRepositoryHandle.getPullRequest(issueNumber),
+                                        "getPullRequest " + issueNumber);
                                 writeMergeInfo(ghIssue, pullRequest, writer, issueUri);
                                 writeWorkflowRunInfo(pullRequest, writer, issueUri);
                             }
@@ -783,8 +792,12 @@ public class GithubRdfConversionTransactionService {
 
                         // Reviews
                         if (githubIssueRepositoryFilter.isEnableIssueReviewers() && ghIssue.isPullRequest()) {
-                            GHPullRequest pr = ghIssue.getRepository().getPullRequest(issueNumber);
-                            List<GHPullRequestReview> reviews = pr.listReviews().toList();
+                            GHPullRequest pr = executeWithRetry(
+                                    () -> ghIssue.getRepository().getPullRequest(issueNumber),
+                                    "getPullRequest " + issueNumber);
+                            List<GHPullRequestReview> reviews = executeWithRetry(
+                                    () -> pr.listReviews().toList(),
+                                    "listReviews for PR " + issueNumber);
 
                             for (GHPullRequestReview review : reviews) {
                                 long reviewId = review.getId();
@@ -823,7 +836,9 @@ public class GithubRdfConversionTransactionService {
                                 }
 
                                 // Review Discussions
-                                List<GHPullRequestReviewComment> reviewComments = review.listReviewComments().toList();
+                                List<GHPullRequestReviewComment> reviewComments = executeWithRetry(
+                                        () -> review.listReviewComments().toList(),
+                                        "listReviewComments for review " + reviewId);
                                 int reviewCommentCount = reviewComments.size();
 
                                 // If there are no review comments, skip further processing about comments for this review
@@ -1341,7 +1356,7 @@ public class GithubRdfConversionTransactionService {
     // Github Workflows
 
     private void writeWorkflowRunData(GHWorkflowRun run, StreamRDF writer, String issueUri, String mergeSha)
-            throws IOException {
+            throws IOException, InterruptedException {
 
         String runUri = run.getHtmlUrl().toString();
 
@@ -1394,9 +1409,11 @@ public class GithubRdfConversionTransactionService {
         }
     }
 
-    private void writeWorkflowJobData(GHWorkflowRun run, StreamRDF writer, String runUri) throws IOException {
+    private void writeWorkflowJobData(GHWorkflowRun run, StreamRDF writer, String runUri) throws IOException, InterruptedException {
         // Optimization 3: Limit job fetching with early termination
-        PagedIterable<GHWorkflowJob> jobIterable = run.listJobs().withPageSize(25);
+        PagedIterable<GHWorkflowJob> jobIterable = executeWithRetry(
+                () -> run.listJobs().withPageSize(25),
+                "listJobs for run " + run.getId());
 
         int maxJobsToProcess = 30; // Reasonable limit on jobs per run
         int jobsProcessed = 0;
@@ -1446,5 +1463,30 @@ public class GithubRdfConversionTransactionService {
         return run.getConclusion() != null &&
                 (run.getConclusion().equals("failure") ||
                         run.getConclusion().equals("success"));
+    }
+
+    private <T> T executeWithRetry(java.util.concurrent.Callable<T> callable, String description)
+            throws IOException, InterruptedException {
+        IOException last = null;
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            try {
+                return callable.call();
+            } catch (IOException e) {
+                last = e;
+                if (attempt == 2) {
+                    throw e;
+                }
+                log.warn("{} failed on attempt {}/2: {}. Retrying after delay...", description, attempt, e.getMessage());
+                Thread.sleep(RETRY_DELAY_MS);
+            } catch (Exception e) {
+                if (attempt == 2) {
+                    if (e instanceof RuntimeException) throw (RuntimeException) e;
+                    throw new RuntimeException(e);
+                }
+                log.warn("{} failed on attempt {}/2: {}. Retrying after delay...", description, attempt, e.getMessage());
+                Thread.sleep(RETRY_DELAY_MS);
+            }
+        }
+        throw last == null ? new IOException("Unknown error in executeWithRetry") : last;
     }
 }
