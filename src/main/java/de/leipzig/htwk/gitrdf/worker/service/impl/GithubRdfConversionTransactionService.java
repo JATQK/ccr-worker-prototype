@@ -1073,17 +1073,20 @@ public class GithubRdfConversionTransactionService {
                 () -> repo.queryPullRequests().state(GHIssueState.CLOSED).list(),
                 "queryPullRequests");
 
+        ZonedDateTime oneYearAgo = ZonedDateTime.now().minusYears(1);
+
         for (GHPullRequest pr : prs) {
             if (!pr.isMerged()) {
                 continue;
             }
 
-            String prUri = pr.getHtmlUrl().toString();
-            LocalDateTime mergedAt = null;
             Date merged = pr.getMergedAt();
-            if (merged != null) {
-                mergedAt = localDateTimeFrom(merged);
+            if (merged == null || merged.toInstant().isBefore(oneYearAgo.toInstant())) {
+                continue;
             }
+
+            String prUri = pr.getHtmlUrl().toString();
+            LocalDateTime mergedAt = localDateTimeFrom(merged);
 
             PullRequestInfo info = new PullRequestInfo(prUri, pr.getMergeCommitSha(), mergedAt);
 
