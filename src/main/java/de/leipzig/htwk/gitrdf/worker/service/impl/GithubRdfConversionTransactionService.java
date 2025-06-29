@@ -466,6 +466,7 @@ public class GithubRdfConversionTransactionService {
             // ********************** ** REMOVE ON DEPLOYMENT ** **********************
             // REMOVE ON DEPLOYMENT
             var computeCommits = true;
+            var maxComputedCommits = 200;
             // ********************** ** ******************** ** **********************
 
             if (computeCommits) {
@@ -495,7 +496,12 @@ public class GithubRdfConversionTransactionService {
                         log.debug("Starting commit loop");
 
                     for (RevCommit commit : commits) {
-
+                        maxComputedCommits--;
+                        if (maxComputedCommits < 0) {
+                            log.info("Max computed commits reached, stopping commit processing.");
+                            finished = true;
+                            break;
+                        }
                         finished = false;
 
                         ObjectId commitId = commit.getId();
