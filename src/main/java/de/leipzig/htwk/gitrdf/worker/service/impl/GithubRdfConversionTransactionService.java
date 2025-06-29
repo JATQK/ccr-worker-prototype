@@ -69,6 +69,7 @@ import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GHWorkflowJob;
 import org.kohsuke.github.GHWorkflowRun;
 import org.kohsuke.github.GitHub;
+import org.kohsuke.github.GHIssueComment;
 import org.kohsuke.github.PagedIterable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -87,6 +88,7 @@ import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueDiscussionUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueCommentUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueReviewUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowJobUtils;
@@ -141,6 +143,7 @@ public class GithubRdfConversionTransactionService {
     private final Map<Integer, GHPullRequest> pullRequestCache = new HashMap<>();
     private final Map<Integer, List<GHPullRequestReview>> reviewCache = new HashMap<>();
     private final Map<Long, List<GHPullRequestReviewComment>> reviewCommentsCache = new HashMap<>();
+    private final Map<Integer, List<GHIssueComment>> issueCommentsCache = new HashMap<>();
     private final Map<Integer, List<GHPullRequestCommitDetail>> commitCache = new HashMap<>();
 
     private static class PullRequestInfo {
@@ -181,6 +184,7 @@ public class GithubRdfConversionTransactionService {
         pullRequestCache.clear();
         reviewCache.clear();
         reviewCommentsCache.clear();
+        issueCommentsCache.clear();
         commitCache.clear();
         seenReviewIds.clear();
 
@@ -1005,27 +1009,29 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueComments()) {
-                            // Add the Comments to the main rdf as seperate uris under /issues/ISSUE_ID/comments/COMMENT_ID
-                            // issue/12345/comments/001
-                            //     rdf:type github:IssueComment ;
-                            //     github:identifier "001" ;
-                            //     github:description "Any update on this?" ;
-                            //     github:createdAt "2025-06-25T12:00:00Z"^^xsd:dateTime ;
-                            //     github:author ex:user/david ;
-                            //     github:isRootComment true ;
-                            //     github:commentReplyCount 1 ;
-                            //     github:hasCommentReply ex:issue/12345/comments/002 ;
-                            //     github:commentOf ex:issue/12345 .
+                            List<GHIssueComment> issueComments = getIssueCommentsCached(ghIssue);
+                            for (GHIssueComment c : issueComments) {
+                                long cid = c.getId();
+                                String commentUri = issueUri + "#issuecomment-" + cid;
 
-                            // issue/12345/comments/002
-                            //     rdf:type github:IssueComment ;
-                            //     github:identifier "002" ;
-                            //     github:description "Working on it." ;
-                            //     github:createdAt "2025-06-25T13:00:00Z"^^xsd:dateTime ;
-                            //     github:author ex:user/maintainer ;
-                            //     github:isRootComment false ;
-                            //     github:commentReplyTo ex:issue/12345/comments/001 ;
-                            //     github:commentOf ex:issue/12345 .
+                                writer.triple(RdfGithubIssueCommentUtils.createReviewCommentRdfTypeProperty(commentUri));
+                                writer.triple(RdfGithubIssueCommentUtils.createCommentIdentifierProperty(commentUri, cid));
+                                writer.triple(RdfGithubIssueCommentUtils.createReviewCommentOfProperty(commentUri, issueUri));
+
+                                if (c.getBody() != null && !c.getBody().isEmpty()) {
+                                    writer.triple(RdfGithubIssueCommentUtils.createCommentDescriptionProperty(commentUri, c.getBody()));
+                                }
+                                if (c.getUser() != null) {
+                                    writer.triple(RdfGithubIssueCommentUtils.createCommentUserProperty(commentUri,
+                                            c.getUser().getHtmlUrl().toString()));
+                                }
+                                if (c.getCreatedAt() != null) {
+                                    writer.triple(RdfGithubIssueCommentUtils.createCommentCreatedAtProperty(commentUri,
+                                            localDateTimeFrom(c.getCreatedAt())));
+                                }
+                                // Issue comments have no threading, treat all as root
+                                writer.triple(RdfGithubIssueCommentUtils.createCommentIsRootProperty(commentUri, true));
+                            }
                         }
 
                         issueCounter++;
@@ -1623,6 +1629,18 @@ public class GithubRdfConversionTransactionService {
             comments = executeWithRetry(() -> review.listReviewComments().toList(),
                     "listReviewComments for review " + id);
             reviewCommentsCache.put(id, comments);
+        }
+        return comments;
+    }
+
+    private List<GHIssueComment> getIssueCommentsCached(GHIssue issue)
+            throws IOException, InterruptedException {
+        int number = issue.getNumber();
+        List<GHIssueComment> comments = issueCommentsCache.get(number);
+        if (comments == null) {
+            comments = executeWithRetry(() -> issue.listComments().toList(),
+                    "listComments for issue " + number);
+            issueCommentsCache.put(number, comments);
         }
         return comments;
     }
