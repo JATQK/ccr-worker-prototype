@@ -8,7 +8,6 @@ import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.kohsuke.github.GHWorkflowRun;
 
-
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -19,6 +18,10 @@ public final class RdfGithubWorkflowJobUtils {
 
     public static Node rdfTypeProperty() {
         return RdfUtils.uri("rdf:type");
+    }
+
+    public static Node createWorkflowJobUri(String runUri, Long jobId) {
+        return RdfUtils.uri(runUri + "/job/" + jobId);
     }
 
     public static Node identifierProperty() { return RdfUtils.uri(GH_NS + "workflowJobId"); }

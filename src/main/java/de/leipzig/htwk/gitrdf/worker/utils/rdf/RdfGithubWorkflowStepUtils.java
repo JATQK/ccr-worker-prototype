@@ -16,6 +16,10 @@ public final class RdfGithubWorkflowStepUtils {
     public static Node rdfTypeProperty() {
         return RdfUtils.uri("rdf:type");
     }
+    
+    public static Node createWorkflowStepUri(String jobUri, Integer stepNumber) {
+        return RdfUtils.uri(jobUri + "#step:" + stepNumber + ":1");
+    }
 
     public static Node identifierProperty() { return RdfUtils.uri(GH_NS + "workflowStepId"); }
     public static Node nameProperty() { return RdfUtils.uri(GH_NS + "workflowStepName"); }
@@ -36,4 +40,5 @@ public final class RdfGithubWorkflowStepUtils {
     public static Triple createWorkflowStepNumberProperty(String stepUri, int number) {
         return Triple.create(RdfUtils.uri(stepUri), numberProperty(), RdfUtils.integerLiteral(number));
     }
+
 }

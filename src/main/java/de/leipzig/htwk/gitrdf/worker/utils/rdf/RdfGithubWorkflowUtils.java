@@ -2,13 +2,13 @@ package de.leipzig.htwk.gitrdf.worker.utils.rdf;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
 
+import java.net.URL;
 import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.kohsuke.github.GHEvent;
 import org.kohsuke.github.GHWorkflowRun;
-
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -22,6 +22,10 @@ public final class RdfGithubWorkflowUtils {
         return RdfUtils.uri("rdf:type");
     }
 
+    public static Node createWorkflowUri(URL runUri) {
+        return RdfUtils.uri(runUri.toString());
+    }
+
     public static Node workflowRunProperty() { return RdfUtils.uri(GH_NS + "workflowRun"); }
     public static Node identifierProperty() { return RdfUtils.uri(GH_NS + "workflowRunId"); }
     public static Node nameProperty() { return RdfUtils.uri(GH_NS + "workflowName"); }
@@ -30,7 +34,6 @@ public final class RdfGithubWorkflowUtils {
     public static Node eventProperty() { return RdfUtils.uri(GH_NS + "workflowEvent"); }
     public static Node runNumberProperty() { return RdfUtils.uri(GH_NS + "workflowRunNumber"); }
     public static Node commitShaProperty() { return RdfUtils.uri(GH_NS + "workflowCommitSha"); }
-    public static Node htmlUrlProperty() { return RdfUtils.uri(GH_NS + "workflowHtmlUrl"); }
     public static Node createdAtProperty() { return RdfUtils.uri(GH_NS + "workflowCreatedAt"); }
     public static Node updatedAtProperty() { return RdfUtils.uri(GH_NS + "workflowUpdatedAt"); }
     public static Node jobProperty() { return RdfUtils.uri(GH_NS + "workflowJob"); }
@@ -70,10 +73,6 @@ public final class RdfGithubWorkflowUtils {
 
     public static Triple createWorkflowCommitShaProperty(String runUri, String sha) {
         return Triple.create(RdfUtils.uri(runUri), commitShaProperty(), RdfUtils.stringLiteral(sha));
-    }
-
-    public static Triple createWorkflowHtmlUrlProperty(String runUri, String url) {
-        return Triple.create(RdfUtils.uri(runUri), htmlUrlProperty(), RdfUtils.uri(url));
     }
 
     public static Triple createWorkflowCreatedAtProperty(String runUri, LocalDateTime created) {

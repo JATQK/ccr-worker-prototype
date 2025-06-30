@@ -397,9 +397,6 @@ public class GithubRdfConversionTransactionService {
 
             commitConversionWatch.start();
 
-            Map<ObjectId, List<String>> commitToTags = getTagsForCommits(gitRepository);
-
-            Map<String, PullRequestInfo> commitPrMap = buildCommitPrMap(githubRepositoryHandle);
 
             lockHandler.renewLockOnRenewTimeFulfillment();
 
@@ -471,6 +468,11 @@ public class GithubRdfConversionTransactionService {
             // ********************** ** ******************** ** **********************
 
             if (computeCommits) {
+
+                Map<ObjectId, List<String>> commitToTags = getTagsForCommits(gitRepository);
+
+                Map<String, PullRequestInfo> commitPrMap = buildCommitPrMap(githubRepositoryHandle);
+
                 for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
                     log.info("Start iterations of git commits. Current iteration count: {}", iteration);
@@ -772,7 +774,7 @@ public class GithubRdfConversionTransactionService {
                         //     break;
                         // }
                         //REMOVE ON DEPLOYMENT
-                        if (issueOutsideCounter >= 200) {
+                        if (issueOutsideCounter >= 20) {
                             log.warn("Skipping issue with number {} because outside counter reached limit",
                                     issueNumber);
                             break;
@@ -1521,7 +1523,7 @@ public class GithubRdfConversionTransactionService {
     private void writeWorkflowRunData(GHWorkflowRun run, StreamRDF writer, String issueUri, String mergeSha)
             throws IOException, InterruptedException {
 
-        String runUri = run.getHtmlUrl().toString();
+        String runUri = RdfGithubWorkflowUtils.createWorkflowUri(run.getHtmlUrl()).toString();
 
         // Write workflow run properties
         writer.triple(RdfGithubWorkflowUtils.createWorkflowRunProperty(issueUri, runUri));
@@ -1555,10 +1557,6 @@ public class GithubRdfConversionTransactionService {
         writer.triple(RdfGithubWorkflowUtils.createWorkflowRunNumberProperty(runUri, run.getRunNumber()));
         writer.triple(RdfGithubWorkflowUtils.createWorkflowCommitShaProperty(runUri, mergeSha));
         try {
-            if (run.getHtmlUrl() != null) {
-                writer.triple(
-                        RdfGithubWorkflowUtils.createWorkflowHtmlUrlProperty(runUri, run.getHtmlUrl().toString()));
-            }
             if (run.getCreatedAt() != null) {
                 writer.triple(RdfGithubWorkflowUtils.createWorkflowCreatedAtProperty(runUri,
                         localDateTimeFrom(run.getCreatedAt())));
@@ -1578,7 +1576,7 @@ public class GithubRdfConversionTransactionService {
                 () -> run.listJobs().withPageSize(25),
                 "listJobs for run " + run.getId());
 
-        int maxJobsToProcess = 30; // Reasonable limit on jobs per run
+        int maxJobsToProcess = 200; // Reasonable limit on jobs per run
         int jobsProcessed = 0;
 
         for (GHWorkflowJob job : jobIterable) {
@@ -1595,7 +1593,7 @@ public class GithubRdfConversionTransactionService {
     }
 
     private void writeJobProperties(GHWorkflowJob job, StreamRDF writer, String runUri) {
-        String jobUri = runUri + "/jobs/" + job.getId();
+        String jobUri = RdfGithubWorkflowJobUtils.createWorkflowJobUri(runUri, job.getId()).toString();
 
         writer.triple(RdfGithubWorkflowUtils.createWorkflowJobProperty(runUri, jobUri));
         writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobRdfTypeProperty(jobUri));
@@ -1623,7 +1621,7 @@ public class GithubRdfConversionTransactionService {
         List<Step> steps = job.getSteps();
         if (steps != null) {
             for (Step step : steps) {
-                String stepUri = jobUri + "/steps/" + step.getNumber();
+                String stepUri = RdfGithubWorkflowStepUtils.createWorkflowStepUri(jobUri, step.getNumber()).toString();
                 writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStepProperty(jobUri, stepUri));
                 writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepRdfTypeProperty(stepUri));
                 writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepNumberProperty(stepUri, step.getNumber()));
@@ -1635,11 +1633,11 @@ public class GithubRdfConversionTransactionService {
     }
 
     private boolean shouldIncludeJobDetails(GHWorkflowRun run) {
-        // Optimization 4: Only fetch job details for certain conditions
-        // You can customize this logic based on your needs
         return run.getConclusion() != null &&
-                (run.getConclusion().equals("failure") ||
-                        run.getConclusion().equals("success"));
+                (run.getConclusion().equals(
+                        GHWorkflowRun.Conclusion.SUCCESS)
+                        || run.getConclusion().equals(GHWorkflowRun.Conclusion.FAILURE)
+                        );
     }
 
     private GHPullRequest getPullRequestCached(GHRepository repo, int number)
