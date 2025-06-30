@@ -6,6 +6,8 @@ import org.kohsuke.github.GHCommit;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
 
+import de.leipzig.htwk.gitrdf.worker.utils.GithubUriUtils;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -34,7 +36,7 @@ public class RdfGitCommitUserUtils {
                 return null;
             }
 
-            return "https://github.com/" + login;
+            return GithubUriUtils.getUserUri(login);
         } catch (IOException e) {
             log.info("Could not retrieve github-user from commit hash '{}'", commitHash, e);
             return null;

@@ -87,6 +87,7 @@ import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
 import de.leipzig.htwk.gitrdf.worker.handler.LockHandler;
 import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.GithubUriUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueCommentUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueDiscussionUtils;
@@ -362,7 +363,7 @@ public class GithubRdfConversionTransactionService {
             lockHandler.renewLockOnRenewTimeFulfillment();
 
             String githubRepositoryName = String.format("%s/%s", owner, repositoryName);
-            String repositoryUri = getGithubRepositoryUri(owner, repositoryName);
+            String repositoryUri = GithubUriUtils.getRepositoryUri(owner, repositoryName);
 
             GHRepository githubRepositoryHandle = gitHubHandle.getRepository(githubRepositoryName);
             // See: https://jena.apache.org/documentation/io/rdf-output.html#streamed-block-formats
@@ -433,7 +434,7 @@ public class GithubRdfConversionTransactionService {
                     String submodulePath = submoduleWalk.getPath();
                     String submoduleUrl = submoduleWalk.getModulesUrl();
                     String submoduleCommitHash = submoduleWalk.getObjectId().getName();
-                    String submoduleCommitHashUri = getGithubCommitUri(owner, repositoryName, submoduleCommitHash);
+                    String submoduleCommitHashUri = GithubUriUtils.getCommitUri(owner, repositoryName, submoduleCommitHash);
 
                     Resource submoduleResource = ResourceFactory.createResource();
                     Node submoduleNode = submoduleResource.asNode();
@@ -529,7 +530,7 @@ public class GithubRdfConversionTransactionService {
                                     ex);
                         }
 
-                        String commitUri = getGithubCommitUri(owner, repositoryName, gitHash);
+                        String commitUri = GithubUriUtils.getCommitUri(owner, repositoryName, gitHash);
                         //String commitUri = GIT_NAMESPACE + ":GitCommit";
 
                         if (log.isDebugEnabled())
@@ -607,7 +608,7 @@ public class GithubRdfConversionTransactionService {
                             writer.triple(RdfCommitUtils.createCommitIsMergeCommitProperty(commitUri, true));
                         }
                         for (RevCommit parent : commit.getParents()) {
-                            String parentUri = getGithubCommitUri(owner, repositoryName, parent.getName());
+                            String parentUri = GithubUriUtils.getCommitUri(owner, repositoryName, parent.getName());
                             writer.triple(RdfCommitUtils.createCommitHasParentProperty(commitUri, parentUri));
                         }
 
@@ -697,7 +698,7 @@ public class GithubRdfConversionTransactionService {
                 BranchSnapshotCalculator branchSnapshotCalculator = new BranchSnapshotCalculator(
                         writer,
                         gitRepository,
-                        getGithubCommitUri(owner, repositoryName, headCommitId.getName()),
+                        GithubUriUtils.getCommitUri(owner, repositoryName, headCommitId.getName()),
                         lockHandler);
 
                 branchSnapshotCalculator.calculateBranchSnapshot();
@@ -741,7 +742,7 @@ public class GithubRdfConversionTransactionService {
                             log.warn(
                                     "Issue with number {} fallback to githubRepositoryURI because its issueUri is null or empty",
                                     issueNumber);
-                            issueUri = getGithubRepositoryUri(owner, repositoryName);
+                            issueUri = GithubUriUtils.getRepositoryUri(owner, repositoryName);
                         }
 
                         if (!githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() == null) {
@@ -784,7 +785,7 @@ public class GithubRdfConversionTransactionService {
                         writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(issueUri));
                         writer.triple(RdfGithubIssueUtils.createIssueRepositoryProperty(
                                 issueUri,
-                                getGithubRepositoryUri(owner, repositoryName)));
+                                GithubUriUtils.getRepositoryUri(owner, repositoryName)));
 
                         if (githubIssueRepositoryFilter.isEnableIssueNumber()) {
                             writer.triple(RdfGithubIssueUtils.createIssueNumberProperty(issueUri, issueNumber));
@@ -1272,7 +1273,7 @@ public class GithubRdfConversionTransactionService {
         }
 
         for (String number : issueNumbers) {
-            String issueUri = getGithubIssueUri(owner, repositoryName, number);
+            String issueUri = GithubUriUtils.getIssueUri(owner, repositoryName, number);
             writer.triple(RdfCommitUtils.createCommitReferencesIssueProperty(commitUri, issueUri));
             writer.triple(RdfGithubIssueUtils.createIssueReferencedByCommitProperty(issueUri, commitUri));
             // keep legacy predicate
@@ -1480,29 +1481,7 @@ public class GithubRdfConversionTransactionService {
         return (int) skips;
     }
 
-    private String getGithubRepositoryUri(String owner, String repository) {
-        return "https://github.com/" + owner + "/" + repository + "/";
-    }
 
-    private String getGithubCommitBaseUri(String owner, String repository) {
-        return "https://github.com/" + owner + "/" + repository + "/commit/";
-    }
-
-    private String getGithubCommitUri(String owner, String repository, String commitHash) {
-        return getGithubCommitBaseUri(owner, repository) + commitHash;
-    }
-
-    private String getGithubIssueBaseUri(String owner, String repository) {
-        return "https://github.com/" + owner + "/" + repository + "/issues/";
-    }
-
-    private String getGithubIssueUri(String owner, String repository, String issueNumber) {
-        return getGithubIssueBaseUri(owner, repository) + issueNumber;
-    }
-
-    public String getGithubUserUri(String userName) {
-        return "https://github.com/" + userName;
-    }
 
     private LocalDateTime localDateTimeFrom(Date utilDate) {
         return localDateTimeFrom(utilDate.getTime());
