@@ -20,10 +20,6 @@ public final class RdfGithubWorkflowJobUtils {
         return RdfUtils.uri("rdf:type");
     }
 
-    public static Node createWorkflowJobUri(String runUri, Long jobId) {
-        return RdfUtils.uri(runUri + "/job/" + jobId);
-    }
-
     public static Node identifierProperty() { return RdfUtils.uri(GH_NS + "workflowJobId"); }
     public static Node nameProperty() { return RdfUtils.uri(GH_NS + "workflowJobName"); }
     public static Node statusProperty() { return RdfUtils.uri(GH_NS + "workflowJobStatus"); }

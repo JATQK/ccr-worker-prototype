@@ -2,7 +2,6 @@ package de.leipzig.htwk.gitrdf.worker.utils.rdf;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
 
-import java.net.URL;
 import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Node;
@@ -20,10 +19,6 @@ public final class RdfGithubWorkflowUtils {
 
     public static Node rdfTypeProperty() {
         return RdfUtils.uri("rdf:type");
-    }
-
-    public static Node createWorkflowUri(URL runUri) {
-        return RdfUtils.uri(runUri.toString());
     }
 
     public static Node workflowRunProperty() { return RdfUtils.uri(GH_NS + "workflowRun"); }

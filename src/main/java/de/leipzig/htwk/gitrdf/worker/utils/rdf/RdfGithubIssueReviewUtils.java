@@ -13,13 +13,12 @@ import lombok.NoArgsConstructor;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfGithubIssueReviewUtils {
-
     private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
-
 
     public static Node rdfTypeProperty() {
         return RdfUtils.uri("rdf:type");
     }
+    
     public static Node reviewProperty() { return uri(GH_NS + "review"); }
     public static Node reviewOfProperty() { return uri(GH_NS + "reviewOf"); }
     public static Node identifierProperty() { return uri(GH_NS + "reviewId"); }
@@ -36,8 +35,6 @@ public final class RdfGithubIssueReviewUtils {
     public static Node lastActivityProperty() {
         return uri(GH_NS + "lastActivity");
     }
-    
-
 
     public static Triple createReviewDiscussionProperty(String reviewUri, String discussionUri) {
         return Triple.create(uri(reviewUri), discussionProperty(), uri(discussionUri));
@@ -52,7 +49,6 @@ public final class RdfGithubIssueReviewUtils {
         return Triple.create(RdfUtils.uri(issueUri), RdfGithubIssueReviewUtils.reviewProperty(), RdfUtils.uri(
                 reviewId));
             }
-
 
     public static Triple createReviewIdentifierProperty(String reviewUri, long id) {
         return Triple.create(uri(reviewUri), identifierProperty(), RdfUtils.longLiteral(id));
@@ -86,8 +82,6 @@ public final class RdfGithubIssueReviewUtils {
         return Triple.create(uri(reviewUri), commitIdProperty(), RdfUtils.stringLiteral(commitId));
     }
 
-
-
     public static Triple createRootCommentsProperty(String reviewUri, String commentUri) {
         return Triple.create(uri(reviewUri), rootCommentsProperty(), uri(commentUri));
     }
@@ -115,8 +109,5 @@ public final class RdfGithubIssueReviewUtils {
     public static Triple createLastActivityProperty(String reviewUri, LocalDateTime dateTime) {
         return Triple.create(uri(reviewUri), lastActivityProperty(), RdfUtils.dateTimeLiteral(dateTime));
     }
-
-
-    
 
 }

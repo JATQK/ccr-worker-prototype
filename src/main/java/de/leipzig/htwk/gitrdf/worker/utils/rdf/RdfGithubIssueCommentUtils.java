@@ -19,13 +19,15 @@ public final class RdfGithubIssueCommentUtils {
     public static Node rdfTypeProperty() {
         return RdfUtils.uri("rdf:type");
     }
-    public static Node identifierProperty() { return uri(GH_NS + "commentId"); }
-    public static Node descriptionProperty() { return uri(GH_NS + "description"); }
-    public static Node isRootCommentProperty() { return uri(GH_NS + "isRootComment"); }
-    public static Node dcommentReplyCountProperty() { return uri(GH_NS + "commentReplyCount"); }
-    public static Node hasCommentReplyProperty() { return uri(GH_NS + "hasCommentReply"); }
-    public static Node reviewCommentOfProperty() { return uri(GH_NS + "commentOf"); }
-    public static Node reviewCommentReplyToProperty() { return uri(GH_NS + "commentReplyTo"); }
+
+    public static Node issueApiUriProperty() { return RdfUtils.uri(GH_NS + "issueApiUri"); }
+    public static Node identifierProperty() { return RdfUtils.uri(GH_NS + "commentId"); }
+    public static Node descriptionProperty() { return RdfUtils.uri(GH_NS + "description"); }
+    public static Node isRootCommentProperty() { return RdfUtils.uri(GH_NS + "isRootComment"); }
+    public static Node dcommentReplyCountProperty() { return RdfUtils.uri(GH_NS + "commentReplyCount"); }
+    public static Node hasCommentReplyProperty() { return RdfUtils.uri(GH_NS + "hasCommentReply"); }
+    public static Node reviewCommentOfProperty() { return RdfUtils.uri(GH_NS + "commentOf"); }
+    public static Node reviewCommentReplyToProperty() { return RdfUtils.uri(GH_NS + "commentReplyTo"); }
 
 
     public static Triple createReviewCommentRdfTypeProperty(String dcommentUri) {
@@ -42,7 +44,7 @@ public final class RdfGithubIssueCommentUtils {
     }
 
     public static Triple createCommentUserProperty(String CommentUri, String userURI) {
-        return Triple.create(uri(CommentUri), RdfGithubIssueUtils.userProperty(), uri(userURI));
+        return Triple.create(uri(CommentUri), RdfGithubIssueUtils.userProperty(), RdfUtils.uri(userURI));
     }
 
     public static Triple createCommentCreatedAtProperty(String CommentUri, LocalDateTime createdAt) {
@@ -58,15 +60,15 @@ public final class RdfGithubIssueCommentUtils {
     }
 
     public static Triple createHasCommentReplyProperty(String CommentUri, String replyUri) {
-        return Triple.create(uri(CommentUri), hasCommentReplyProperty(), uri(replyUri));
+        return Triple.create(uri(CommentUri), hasCommentReplyProperty(), RdfUtils.uri(replyUri));
     }
 
     public static Triple createReviewCommentOfProperty(String CommentUri, String reviewUri) {
-        return Triple.create(uri(CommentUri), reviewCommentOfProperty(), uri(reviewUri));
+        return Triple.create(uri(CommentUri), reviewCommentOfProperty(), RdfUtils.uri(reviewUri));
     }
 
     public static Triple createReviewCommentReplyToProperty(String CommentUri, String parentUri) {
-        return Triple.create(uri(CommentUri), reviewCommentReplyToProperty(), uri(parentUri));
+        return Triple.create(uri(CommentUri), reviewCommentReplyToProperty(), RdfUtils.uri(parentUri));
     }
 
 

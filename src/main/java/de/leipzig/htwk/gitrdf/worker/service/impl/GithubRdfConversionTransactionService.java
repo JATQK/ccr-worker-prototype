@@ -86,8 +86,8 @@ import de.leipzig.htwk.gitrdf.worker.calculator.CommitBranchCalculator;
 import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
 import de.leipzig.htwk.gitrdf.worker.handler.LockHandler;
 import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.GithubUriUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueCommentUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueDiscussionUtils;
@@ -464,8 +464,8 @@ public class GithubRdfConversionTransactionService {
             // git commits
             // ********************** ** REMOVE ON DEPLOYMENT ** **********************
             // REMOVE ON DEPLOYMENT
-            var computeCommits = false; // Set to false to skip commit processing
-            var maxComputedCommits = 200;  // limit the number of commits to process
+            var computeCommits = true; // Set to false to skip commit processing
+            var maxComputedCommits = 3000000;  // limit the number of commits to process
             // ********************** ** ******************** ** **********************
 
             if (computeCommits) {
@@ -775,11 +775,11 @@ public class GithubRdfConversionTransactionService {
                         //     break;
                         // }
                         //REMOVE ON DEPLOYMENT
-                        if (issueOutsideCounter >= 20) {
-                            log.warn("Skipping issue with number {} because outside counter reached limit",
-                                    issueNumber);
-                            break;
-                        }
+                        // if (issueOutsideCounter >= 20) {
+                        //     log.warn("Skipping issue with number {} because outside counter reached limit",
+                        //             issueNumber);
+                        //     break;
+                        // }
                         // ********************** ** **************** ** **********************
 
                         writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(issueUri));
@@ -916,8 +916,8 @@ public class GithubRdfConversionTransactionService {
                                 int rootCommentCount = 0;
                                 Set<Long> threadIds = new HashSet<>();
                                 Map<Long, List<Long>> repliesByParent = new HashMap<>();
-                                LocalDateTime firstCommentAt = null;
-                                LocalDateTime lastCommentAt = null;
+                                // LocalDateTime firstCommentAt = null;
+                                // LocalDateTime lastCommentAt = null;
 
                                 // Process the discussion of the review
                                 for (GHPullRequestReviewComment c : reviewComments) {
@@ -995,16 +995,16 @@ public class GithubRdfConversionTransactionService {
                                 writer.triple(RdfGithubIssueReviewUtils.createThreadCountProperty(reviewUri,
                                         threadIds.size()));
 
-                                if (firstCommentAt != null) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createFirstCommentAtProperty(reviewUri,
-                                            firstCommentAt));
-                                }
-                                if (lastCommentAt != null) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createLastCommentAtProperty(reviewUri,
-                                            lastCommentAt));
-                                    writer.triple(RdfGithubIssueReviewUtils.createLastActivityProperty(reviewUri,
-                                            lastCommentAt));
-                                }
+                                // if (firstCommentAt != null) {
+                                //     writer.triple(RdfGithubIssueReviewUtils.createFirstCommentAtProperty(reviewUri,
+                                //             firstCommentAt));
+                                // }
+                                // if (lastCommentAt != null) {
+                                //     writer.triple(RdfGithubIssueReviewUtils.createLastCommentAtProperty(reviewUri,
+                                //             lastCommentAt));
+                                //     writer.triple(RdfGithubIssueReviewUtils.createLastActivityProperty(reviewUri,
+                                //             lastCommentAt));
+                                // }
 
                                 // Review Discussion Comments
                                 for (GHPullRequestReviewComment c : reviewComments) {
@@ -1121,7 +1121,7 @@ public class GithubRdfConversionTransactionService {
                 continue;
             }
 
-            String prUri = pr.getHtmlUrl().toString();
+            String prUri = GithubUriUtils.getPullRequestUri(pr.getHtmlUrl().toString());
             LocalDateTime mergedAt = localDateTimeFrom(merged);
 
             PullRequestInfo info = new PullRequestInfo(prUri, pr.getMergeCommitSha(), mergedAt);
@@ -1502,7 +1502,7 @@ public class GithubRdfConversionTransactionService {
     private void writeWorkflowRunData(GHWorkflowRun run, StreamRDF writer, String issueUri, String mergeSha)
             throws IOException, InterruptedException {
 
-        String runUri = RdfGithubWorkflowUtils.createWorkflowUri(run.getHtmlUrl()).toString();
+        String runUri = GithubUriUtils.getWorkflowRunUri(run.getHtmlUrl());
 
         // Write workflow run properties
         writer.triple(RdfGithubWorkflowUtils.createWorkflowRunProperty(issueUri, runUri));
@@ -1572,7 +1572,7 @@ public class GithubRdfConversionTransactionService {
     }
 
     private void writeJobProperties(GHWorkflowJob job, StreamRDF writer, String runUri) {
-        String jobUri = RdfGithubWorkflowJobUtils.createWorkflowJobUri(runUri, job.getId()).toString();
+        String jobUri = GithubUriUtils.getWorkflowJobUri(runUri, job.getId());
 
         writer.triple(RdfGithubWorkflowUtils.createWorkflowJobProperty(runUri, jobUri));
         writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobRdfTypeProperty(jobUri));
