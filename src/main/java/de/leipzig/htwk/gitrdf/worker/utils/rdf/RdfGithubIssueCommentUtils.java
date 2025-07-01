@@ -20,11 +20,11 @@ public final class RdfGithubIssueCommentUtils {
         return RdfUtils.uri("rdf:type");
     }
 
-    public static Node issueApiUriProperty() { return RdfUtils.uri(GH_NS + "issueApiUri"); }
+    public static Node commentHtmlUrl() { return RdfUtils.uri(GH_NS + "commentHtmlUrl"); }
     public static Node identifierProperty() { return RdfUtils.uri(GH_NS + "commentId"); }
     public static Node descriptionProperty() { return RdfUtils.uri(GH_NS + "description"); }
     public static Node isRootCommentProperty() { return RdfUtils.uri(GH_NS + "isRootComment"); }
-    public static Node dcommentReplyCountProperty() { return RdfUtils.uri(GH_NS + "commentReplyCount"); }
+    public static Node commentReplyCountProperty() { return RdfUtils.uri(GH_NS + "commentReplyCount"); }
     public static Node hasCommentReplyProperty() { return RdfUtils.uri(GH_NS + "hasCommentReply"); }
     public static Node reviewCommentOfProperty() { return RdfUtils.uri(GH_NS + "commentOf"); }
     public static Node reviewCommentReplyToProperty() { return RdfUtils.uri(GH_NS + "commentReplyTo"); }
@@ -33,6 +33,10 @@ public final class RdfGithubIssueCommentUtils {
     public static Triple createReviewCommentRdfTypeProperty(String dcommentUri) {
         return Triple.create(RdfUtils.uri(dcommentUri), rdfTypeProperty(),
                 RdfUtils.uri("github:GithubIssueReviewComment"));
+    }
+
+    public static Triple createIssueCommentRdfHtmlUrlProperty(String CommentUri, String commentHtmlUrl) {
+        return Triple.create(uri(CommentUri), commentHtmlUrl(), RdfUtils.uri(commentHtmlUrl));
     }
 
     public static Triple createCommentIdentifierProperty(String CommentUri, long id) {
@@ -56,7 +60,7 @@ public final class RdfGithubIssueCommentUtils {
     }
 
     public static Triple createCommentReplyCountProperty(String CommentUri, long count) {
-        return Triple.create(uri(CommentUri), dcommentReplyCountProperty(), RdfUtils.nonNegativeIntegerLiteral(count));
+        return Triple.create(uri(CommentUri), commentReplyCountProperty(), RdfUtils.nonNegativeIntegerLiteral(count));
     }
 
     public static Triple createHasCommentReplyProperty(String CommentUri, String replyUri) {

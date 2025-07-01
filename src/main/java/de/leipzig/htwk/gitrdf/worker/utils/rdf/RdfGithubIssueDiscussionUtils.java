@@ -36,12 +36,13 @@ public final class RdfGithubIssueDiscussionUtils {
         return Triple.create(uri(discussionUri), discussionUserProperty(), uri(userURI));
     }
 
-    public static Triple createDiscussionCreatedAtProperty(String discussionUri, LocalDateTime createdAt) {
-        return Triple.create(uri(discussionUri), discussionCreatedAtProperty(), RdfUtils.dateTimeLiteral(createdAt));
-    }
     public static Triple createReviewDiscussionRdfTypeProperty(String discussionUri) {
         return Triple.create(RdfUtils.uri(discussionUri), rdfTypeProperty(),
                 RdfUtils.uri("github:GithubIssueReviewDiscussion"));
+    }
+
+    public static Triple createDiscussionCreatedAtProperty(String discussionUri, LocalDateTime createdAt) {
+        return Triple.create(uri(discussionUri), discussionCreatedAtProperty(), RdfUtils.dateTimeLiteral(createdAt));
     }
 
     public static Triple createDiscussionIdentifierProperty(String DiscussionUri, long id) {

@@ -1041,8 +1041,16 @@ public class GithubRdfConversionTransactionService {
                             List<GHIssueComment> issueComments = getIssueCommentsCached(ghIssue);
                             for (GHIssueComment c : issueComments) {
                                 long cid = c.getId();
-                                String commentUri = issueUri + "#issuecomment-" + cid;
+                                String commentUri = c.getUrl().toString();
+                                String commentHtmlUrl = c.getHtmlUrl().toString();
+                            
+                                // Link in Issue to Comment
+                                writer.triple(RdfGithubIssueReviewUtils.createReviewCommentProperty(issueUri,
+                                        commentUri));
 
+                                
+                                writer.triple(RdfGithubIssueCommentUtils.createIssueCommentRdfHtmlUrlProperty(commentUri, 
+                                        commentHtmlUrl));
                                 writer.triple(RdfGithubIssueCommentUtils.createReviewCommentRdfTypeProperty(commentUri));
                                 writer.triple(RdfGithubIssueCommentUtils.createCommentIdentifierProperty(commentUri, cid));
                                 writer.triple(RdfGithubIssueCommentUtils.createReviewCommentOfProperty(commentUri, issueUri));
