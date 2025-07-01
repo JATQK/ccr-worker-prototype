@@ -65,6 +65,7 @@ import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHPullRequestCommitDetail;
 import org.kohsuke.github.GHPullRequestReview;
 import org.kohsuke.github.GHPullRequestReviewComment;
+import org.kohsuke.github.GHReaction;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GHWorkflowJob;
@@ -95,6 +96,7 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowJobUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowStepUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubReactionUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfTurtleTidier;
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
@@ -151,6 +153,8 @@ public class GithubRdfConversionTransactionService {
     private final Map<Integer, List<GHPullRequestReview>> reviewCache = new HashMap<>();
     private final Map<Long, List<GHPullRequestReviewComment>> reviewCommentsCache = new HashMap<>();
     private final Map<Integer, List<GHIssueComment>> issueCommentsCache = new HashMap<>();
+    private final Map<Long, List<GHReaction>> reviewCommentReactionsCache = new HashMap<>();
+    private final Map<Long, List<GHReaction>> issueCommentReactionsCache = new HashMap<>();
     private final Map<Integer, List<GHPullRequestCommitDetail>> commitCache = new HashMap<>();
 
     private static class PullRequestInfo {
@@ -191,6 +195,8 @@ public class GithubRdfConversionTransactionService {
         reviewCache.clear();
         reviewCommentsCache.clear();
         issueCommentsCache.clear();
+        reviewCommentReactionsCache.clear();
+        issueCommentReactionsCache.clear();
         commitCache.clear();
         seenReviewIds.clear();
 
@@ -952,6 +958,70 @@ public class GithubRdfConversionTransactionService {
                                     }
                                 }
 
+
+                                // Static Properties
+                                writer.triple(RdfGithubIssueReviewUtils.createReviewCommentCountProperty(reviewUri,
+                                        reviewCommentCount));
+                                writer.triple(RdfGithubIssueReviewUtils.createRootCommentCountProperty(reviewUri,
+                                        rootCommentCount));
+                                writer.triple(RdfGithubIssueReviewUtils.createThreadCountProperty(reviewUri,
+                                        threadIds.size()));
+
+                                // if (firstCommentAt != null) {
+                                //     writer.triple(RdfGithubIssueReviewUtils.createFirstCommentAtProperty(reviewUri,
+                                //             firstCommentAt));
+                                // }
+                                // if (lastCommentAt != null) {
+                                //     writer.triple(RdfGithubIssueReviewUtils.createLastCommentAtProperty(reviewUri,
+                                //             lastCommentAt));
+                                //     writer.triple(RdfGithubIssueReviewUtils.createLastActivityProperty(reviewUri,
+                                //             lastCommentAt));
+                                // }
+
+                                // Review Discussion Comments
+                                for (GHPullRequestReviewComment c : reviewComments) {
+                                    long cid = c.getId();
+                                    String discussionUri = _discussionUri + cid;
+
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewDiscussionProperty(reviewUri,
+                                            discussionUri));
+
+                                    writer.triple(RdfGithubCommentUtils.createCommentRdfType(discussionUri));
+                                    writer.triple(RdfGithubCommentUtils.createCommentId(discussionUri, cid));
+                                    writer.triple(RdfGithubCommentUtils.createCommentOf(discussionUri, reviewUri));
+                                    if (c.getBody() != null && !c.getBody().isEmpty()) {
+                                        writer.triple(RdfGithubCommentUtils
+                                                .createCommentBody(discussionUri, c.getBody()));
+                                    }
+                                    if (c.getUser() != null) {
+                                        writer.triple(RdfGithubCommentUtils.createCommentUser(
+                                                discussionUri, c.getUser().getHtmlUrl().toString()));
+                                    }
+                                    if (c.getCreatedAt() != null) {
+                                        writer.triple(RdfGithubCommentUtils.createCommentCreatedAt(
+                                                discussionUri, localDateTimeFrom(c.getCreatedAt())));
+                                    }
+
+                                    List<GHReaction> reactions = getReviewCommentReactionsCached(c);
+                                    writer.triple(RdfGithubCommentUtils.createReactionCount(discussionUri, reactions.size()));
+                                    for (GHReaction r : reactions) {
+                                        String reactionUri = discussionUri + "#reaction-" + r.getId();
+                                        writer.triple(RdfGithubCommentUtils.createCommentReaction(discussionUri, reactionUri));
+                                        writer.triple(RdfGithubReactionUtils.createReactionRdfTypeProperty(reactionUri));
+                                        writer.triple(RdfGithubReactionUtils.createReactionIdProperty(reactionUri, r.getId()));
+                                        writer.triple(RdfGithubReactionUtils.createReactionOfProperty(reactionUri, discussionUri));
+                                        if (r.getContent() != null) {
+                                            writer.triple(RdfGithubReactionUtils.createReactionContentProperty(reactionUri, r.getContent().toString()));
+                                        }
+                                        if (r.getUser() != null) {
+                                            writer.triple(RdfGithubReactionUtils.createReactionUserProperty(reactionUri, r.getUser().getHtmlUrl().toString()));
+                                        }
+                                        if (r.getCreatedAt() != null) {
+                                            writer.triple(RdfGithubReactionUtils.createReactionCreatedAtProperty(reactionUri, localDateTimeFrom(r.getCreatedAt())));
+                                        }
+                                    }
+                                }
+
                             }
                         }
 
@@ -987,7 +1057,26 @@ public class GithubRdfConversionTransactionService {
                                             localDateTimeFrom(c.getCreatedAt())));
                                 }
                                 // Issue comments have no threading, treat all as root
-                                writer.triple(RdfGithubCommentUtils.createIsRootComment(issueCommentURI, true));
+                                writer.triple(RdfGithubCommentUtils.createIsRootComment(commentUri, true));
+
+                                List<GHReaction> reactions = getIssueCommentReactionsCached(c);
+                                writer.triple(RdfGithubCommentUtils.createReactionCount(commentUri, reactions.size()));
+                                for (GHReaction r : reactions) {
+                                    String reactionUri = commentUri + "#reaction-" + r.getId();
+                                    writer.triple(RdfGithubCommentUtils.createCommentReaction(commentUri, reactionUri));
+                                    writer.triple(RdfGithubReactionUtils.createReactionRdfTypeProperty(reactionUri));
+                                    writer.triple(RdfGithubReactionUtils.createReactionIdProperty(reactionUri, r.getId()));
+                                    writer.triple(RdfGithubReactionUtils.createReactionOfProperty(reactionUri, commentUri));
+                                    if (r.getContent() != null) {
+                                        writer.triple(RdfGithubReactionUtils.createReactionContentProperty(reactionUri, r.getContent().toString()));
+                                    }
+                                    if (r.getUser() != null) {
+                                        writer.triple(RdfGithubReactionUtils.createReactionUserProperty(reactionUri, r.getUser().getHtmlUrl().toString()));
+                                    }
+                                    if (r.getCreatedAt() != null) {
+                                        writer.triple(RdfGithubReactionUtils.createReactionCreatedAtProperty(reactionUri, localDateTimeFrom(r.getCreatedAt())));
+                                    }
+                                }
                             }
                         }
 
@@ -1580,6 +1669,18 @@ public class GithubRdfConversionTransactionService {
         return comments;
     }
 
+    private List<GHReaction> getReviewCommentReactionsCached(GHPullRequestReviewComment comment)
+            throws IOException, InterruptedException {
+        long id = comment.getId();
+        List<GHReaction> reactions = reviewCommentReactionsCache.get(id);
+        if (reactions == null) {
+            reactions = executeWithRetry(() -> comment.listReactions().toList(),
+                    "listReactions for review comment " + id);
+            reviewCommentReactionsCache.put(id, reactions);
+        }
+        return reactions;
+    }
+
     private List<GHIssueComment> getIssueCommentsCached(GHIssue issue)
             throws IOException, InterruptedException {
         int number = issue.getNumber();
@@ -1590,6 +1691,18 @@ public class GithubRdfConversionTransactionService {
             issueCommentsCache.put(number, comments);
         }
         return comments;
+    }
+
+    private List<GHReaction> getIssueCommentReactionsCached(GHIssueComment comment)
+            throws IOException, InterruptedException {
+        long id = comment.getId();
+        List<GHReaction> reactions = issueCommentReactionsCache.get(id);
+        if (reactions == null) {
+            reactions = executeWithRetry(() -> comment.listReactions().toList(),
+                    "listReactions for issue comment " + id);
+            issueCommentReactionsCache.put(id, reactions);
+        }
+        return reactions;
     }
 
     private List<GHPullRequestCommitDetail> getCommitsCached(GHPullRequest pr)

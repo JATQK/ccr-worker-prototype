@@ -86,6 +86,10 @@ public final class RdfGithubCommentUtils {
     return uri(GH_NS + "reactionCount");
   }
 
+  public static Node reactionProperty() {
+    return uri(GH_NS + "reaction");
+  }
+
   public static Node authorAssociationProperty() {
     return uri(GH_NS + "authorAssociation");
   }
@@ -159,6 +163,10 @@ public final class RdfGithubCommentUtils {
 
   public static Triple createReactionCount(String commentUri, long reactionCount) {
     return Triple.create(uri(commentUri), reactionCountProperty(), RdfUtils.nonNegativeIntegerLiteral(reactionCount));
+  }
+
+  public static Triple createCommentReaction(String commentUri, String reactionUri) {
+    return Triple.create(uri(commentUri), reactionProperty(), uri(reactionUri));
   }
 
   public static Triple createAuthorAssociation(String commentUri, String association) {
