@@ -107,7 +107,7 @@ public class GithubRdfConversionTransactionService {
 
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
-    private static final int PROCESS_ISSUE_LIMIT = 30; // Limit for the number of issues to process
+    private static final int PROCESS_ISSUE_LIMIT = 80; // Limit for the number of issues to process
     private static final String[] PROCESS_ISSUE_ONLY = {}; // Only process these issues // "9946", "9947", "9948",
                                                            // "9949", "9950"
     private static final int PROCESS_COMMIT_LIMIT = 0; // Limit for the number of commits to process
@@ -866,7 +866,8 @@ public class GithubRdfConversionTransactionService {
                                 if (!seenReviewIds.add(reviewId)) {
                                     continue;
                                 }
-                                String reviewURL = review.getUrl().toString();
+                                String reviewURL = GithubUriUtils.getIssueReviewUri(issueUri, String.valueOf(reviewId));
+                                // String reviewURL = review.getUrl().toString();
                                 // String reviewUri = issueUri + "/reviews/" + reviewId;
 
                                 // Static Properties
@@ -910,8 +911,13 @@ public class GithubRdfConversionTransactionService {
                                 // Process the comments of the review
                                 for (GHPullRequestReviewComment c : reviewComments) {
                                     long cid = c.getId();
-                                    String reviewCommentURI = c.getUrl().toString();
-                                    String reviewCommentURL = c.getHtmlUrl().toString();
+                                    String reviewCommentURI = GithubUriUtils.getIssueReviewCommentUri(
+                                        reviewURL, String.valueOf(cid));
+                                    // String reviewCommentURI = c.getUrl().toString();
+                                    // String reviewCommentURL = c.getHtmlUrl().toString();
+                                    String reviewCommentURL = GithubUriUtils.getIssueReviewCommentURL(
+                                            reviewURL, String.valueOf(cid));
+                                
 
                                     // Basic discussion properties
                                     writer.triple(RdfGithubIssueReviewUtils.createReviewCommentProperty(
@@ -956,14 +962,15 @@ public class GithubRdfConversionTransactionService {
                                         writer.triple(RdfGithubCommentUtils.createHasReply(
                                                 parentCommentUri, reviewCommentURI));
                                     }
-
+                                    
                                     List<GHReaction> reactions = getReviewCommentReactionsCached(c);
                                     writer.triple(
                                             RdfGithubCommentUtils.createReactionCount(
                                                     reviewCommentURI, reactions.size()));
                                     for (GHReaction r : reactions) {
-                                        String reactionURI = r.getUrl().toString();
-                                        // String reactionURI = reviewCommentURI + "#reaction-" + r.getId();
+                                        String reactionURI = GithubUriUtils.getIssueReviewCommentReactionUri(
+                                                reviewCommentURI, String.valueOf(r.getId()));
+                    
                                         writer.triple(RdfGithubCommentUtils.createCommentReaction(
                                                 reviewCommentURI,
                                                 reactionURI));
@@ -995,8 +1002,11 @@ public class GithubRdfConversionTransactionService {
                             List<GHIssueComment> issueComments = getIssueCommentsCached(ghIssue);
                             for (GHIssueComment c : issueComments) {
                                 long cid = c.getId();
-                                String issueCommentURI = c.getUrl().toString();
-                                String issueCommentURL = c.getHtmlUrl().toString();
+                                String issueCommentURI = GithubUriUtils.getIssueCommentUri(issueUri,
+                                        String.valueOf(cid));
+                                String issueCommentURL = GithubUriUtils.getIssueCommentURL(issueUri, String.valueOf(cid));
+                                // String issueCommentURI = c.getUrl().toString();
+                                // String issueCommentURL = c.getHtmlUrl().toString();
 
                                 // Link in Issue to Comment
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewCommentProperty(issueUri,
@@ -1027,15 +1037,17 @@ public class GithubRdfConversionTransactionService {
                                 List<GHReaction> reactions = getIssueCommentReactionsCached(c);
                                 writer.triple(RdfGithubCommentUtils.createReactionCount(issueCommentURI, reactions.size()));
                                 for (GHReaction r : reactions) {
+
+                                    String reactionURI = GithubUriUtils.getIssueCommentReactionUri(issueCommentURI,
+                                            String.valueOf(r.getId()));
                                     
-                                    String reactionURI = r.getUrl().toString();
                                     writer.triple(RdfGithubCommentUtils.createCommentReaction(issueCommentURI, 
                                             reactionURI));
                                     writer.triple(RdfGithubReactionUtils.createReactionRdfTypeProperty(reactionURI));
                                     writer.triple(RdfGithubReactionUtils.createReactionIdProperty(
                                             reactionURI, r.getId()));
                                     writer.triple(RdfGithubReactionUtils.createReactionOfProperty(
-                                            reactionURI, reactionURI));
+                                            reactionURI, issueCommentURI));
                                     if (r.getContent() != null) {
                                         writer.triple(RdfGithubReactionUtils.createReactionContentProperty(
                                                 reactionURI, r.getContent().toString()));
@@ -1109,8 +1121,8 @@ public class GithubRdfConversionTransactionService {
             if (merged == null || merged.toInstant().isBefore(oneYearAgo.toInstant())) {
                 continue;
             }
-
-            String prUri = GithubUriUtils.getPullRequestUri(pr.getHtmlUrl().toString());
+            String prUri = GithubUriUtils.getIssueUri(repo.getOwnerName(), repo.getName(), String.valueOf(pr.getNumber()));
+            // String prUri = GithubUriUtils.getPullRequestUri(pr.getHtmlUrl().toString());
             LocalDateTime mergedAt = localDateTimeFrom(merged);
 
             PullRequestInfo info = new PullRequestInfo(prUri, pr.getMergeCommitSha(), mergedAt);
@@ -1491,7 +1503,7 @@ public class GithubRdfConversionTransactionService {
     private void writeWorkflowRunData(GHWorkflowRun run, StreamRDF writer, String issueUri, String mergeSha)
             throws IOException, InterruptedException {
 
-        String runUri = GithubUriUtils.getWorkflowRunUri(run.getHtmlUrl());
+        String runUri = GithubUriUtils.getWorkflowRunUri(String.valueOf(run.getId()));
 
         // Write workflow run properties
         writer.triple(RdfGithubWorkflowUtils.createWorkflowRunProperty(issueUri, runUri));
