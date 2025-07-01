@@ -24,7 +24,11 @@ public final class RdfGithubIssueReviewUtils {
     public static Node identifierProperty() { return uri(GH_NS + "reviewId"); }
     public static Node descriptionProperty() { return uri(GH_NS + "description"); }
     public static Node commitIdProperty() { return uri(GH_NS + "commitId"); }
-    public static Node discussionProperty() { return uri(GH_NS + "discussion"); }
+    
+    public static Node commentProperty() {
+        return uri(GH_NS + "comment");
+    }
+
     public static Node rootCommentsProperty() { return uri(GH_NS + "rootComments"); }
     public static Node reviewCommentCountProperty() { return uri(GH_NS + "reviewCommentCount"); }
     public static Node rootCommentCountProperty() { return uri(GH_NS + "rootCommentCount"); }
@@ -36,8 +40,8 @@ public final class RdfGithubIssueReviewUtils {
         return uri(GH_NS + "lastActivity");
     }
 
-    public static Triple createReviewDiscussionProperty(String reviewUri, String discussionUri) {
-        return Triple.create(uri(reviewUri), discussionProperty(), uri(discussionUri));
+    public static Triple createReviewCommentProperty(String reviewUri, String commentUri) {
+        return Triple.create(uri(reviewUri), commentProperty(), uri(commentUri));
     }
 
     public static Triple createIssueReviewRdfTypeProperty(String issueUri) {

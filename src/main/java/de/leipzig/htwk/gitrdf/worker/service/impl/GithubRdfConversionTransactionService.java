@@ -107,6 +107,11 @@ public class GithubRdfConversionTransactionService {
 
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
+    private static final int PROCESS_ISSUE_LIMIT = 30; // Limit for the number of issues to process
+    private static final String[] PROCESS_ISSUE_ONLY = {}; // Only process these issues // "9946", "9947", "9948",
+                                                           // "9949", "9950"
+    private static final int PROCESS_COMMIT_LIMIT = 0; // Limit for the number of commits to process
+
     // TODO: replace PURL
 
     public static final String GIT_NAMESPACE = "git";
@@ -466,14 +471,10 @@ public class GithubRdfConversionTransactionService {
 
             lockHandler.renewLockOnRenewTimeFulfillment();
 
-            // git commits
-            // ********************** ** REMOVE ON DEPLOYMENT ** **********************
-            // REMOVE ON DEPLOYMENT
-            var computeCommits = true; // Set to false to skip commit processing
-            var maxComputedCommits = 3000000;  // limit the number of commits to process
-            // ********************** ** ******************** ** **********************
+            if (PROCESS_COMMIT_LIMIT > 0) {
+                log.info("Processing commits with limit: {}", PROCESS_COMMIT_LIMIT);
 
-            if (computeCommits) {
+                int commitsProcessed = 0;
 
                 Map<ObjectId, List<String>> commitToTags = getTagsForCommits(gitRepository);
 
@@ -505,8 +506,8 @@ public class GithubRdfConversionTransactionService {
                         log.debug("Starting commit loop");
 
                     for (RevCommit commit : commits) {
-                        maxComputedCommits--;
-                        if (maxComputedCommits < 0) {
+                        commitsProcessed++;
+                        if (commitsProcessed >= PROCESS_COMMIT_LIMIT && PROCESS_COMMIT_LIMIT > 0) {
                             log.info("Max computed commits reached, stopping commit processing.");
                             finished = true;
                             break;
@@ -721,11 +722,11 @@ public class GithubRdfConversionTransactionService {
             // issues
             StopWatch issueWatch = new StopWatch();
             issueWatch.start();
-            int issueOutsideCounter = 0;
+            int issuesProcessed = 0;
 
             if (githubIssueRepositoryFilter.doesContainAtLeastOneEnabledFilterOption()) {
 
-                if (githubRepositoryHandle.hasIssues()) {
+                if (githubRepositoryHandle.hasIssues() && PROCESS_ISSUE_LIMIT > 0) {
 
                     log.info("Start issue processing");
                     int issueCounter = 0;
@@ -738,6 +739,9 @@ public class GithubRdfConversionTransactionService {
                             log.info("Start issue rdf conversion batch");
                             writer.start();
                             doesWriterContainNonWrittenRdfStreamElements = true;
+                        }
+                        if (issuesProcessed >= PROCESS_ISSUE_LIMIT && PROCESS_ISSUE_LIMIT > 0) {
+                            break;
                         }
 
                         int issueNumber = ghIssue.getNumber();
@@ -761,35 +765,23 @@ public class GithubRdfConversionTransactionService {
                         if (dcreatedAt == null || dcreatedAt.toInstant().isBefore(oneYearAgo.toInstant())) {
                             continue;
                         }
-                        // REMOVE ON DEPLOYMENT
-                        // if (!"9956".equals(String.valueOf(issueNumber)) && !"9954".equals(String.valueOf(issueNumber))) {
-                        //     continue;
-                        // }
-                        // REMOVE ON DEPLOYMENT
-                        // if (githubIssueRepositoryFilter.isEnableIssueState()
-                        //         && ghIssue.getState() != GHIssueState.CLOSED) {
-                        //     log.warn("Issue with number {} is not closed, skipping", issueNumber);
-                        //     continue;
-                        // }
-                        // REMOVE ON DEPLOYMENT
-                        // if (issueCounter >= 50) {
-                        // continue;
-                        // }
-                        // REMOVE ON DEPLOYMENT
-                        // if (issueCounter >= 100) {
-                        //     break;
-                        // }
-                        //REMOVE ON DEPLOYMENT
-                        // if (issueOutsideCounter >= 20) {
-                        //     log.warn("Skipping issue with number {} because outside counter reached limit",
-                        //             issueNumber);
-                        //     break;
-                        // }
+
+                        if ( PROCESS_ISSUE_ONLY.length > 0) {
+                            boolean shouldProcessIssue = false;
+                            for (String issueId : PROCESS_ISSUE_ONLY) {
+                                if (issueId.equals(String.valueOf(issueNumber))) {
+                                    shouldProcessIssue = true;
+                                    break;
+                                }
+                            }
+                            if (!shouldProcessIssue) {
+                                continue; // Skip this issue
+                            }
+                        }
                         // ********************** ** **************** ** **********************
 
                         writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(issueUri));
-                        writer.triple(RdfGithubIssueUtils.createIssueRepositoryProperty(
-                                issueUri,
+                        writer.triple(RdfGithubIssueUtils.createIssueRepositoryProperty(issueUri,
                                 GithubUriUtils.getRepositoryUri(owner, repositoryName)));
 
                         if (githubIssueRepositoryFilter.isEnableIssueNumber()) {
@@ -797,18 +789,16 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueTitle() && ghIssue.getTitle() != null) {
-                            writer.triple(
-                                    RdfGithubIssueUtils.createIssueTitleProperty(issueUri, ghIssue.getTitle()));
+                            writer.triple(RdfGithubIssueUtils.createIssueTitleProperty(issueUri, ghIssue.getTitle()));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueBody() && ghIssue.getBody() != null) {
-                            writer.triple(
-                                    RdfGithubIssueUtils.createIssueBodyProperty(issueUri, ghIssue.getBody()));
+                            writer.triple(RdfGithubIssueUtils.createIssueBodyProperty(issueUri, ghIssue.getBody()));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() != null) {
-                            writer.triple(RdfGithubIssueUtils.createIssueStateProperty(issueUri,
-                                    ghIssue.getState().toString()));
+                            writer.triple(RdfGithubIssueUtils.createIssueStateProperty(
+                                    issueUri, ghIssue.getState().toString()));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueUser() && ghIssue.getUser() != null) {
@@ -876,38 +866,39 @@ public class GithubRdfConversionTransactionService {
                                 if (!seenReviewIds.add(reviewId)) {
                                     continue;
                                 }
-                                String reviewUri = issueUri + "/reviews/" + reviewId;
+                                String reviewURL = review.getUrl().toString();
+                                // String reviewUri = issueUri + "/reviews/" + reviewId;
 
                                 // Static Properties
-                                writer.triple(RdfGithubIssueReviewUtils.createIssueReviewProperty(issueUri, reviewUri));
-                                writer.triple(RdfGithubIssueReviewUtils.createIssueReviewRdfTypeProperty(reviewUri));
+                                writer.triple(RdfGithubIssueReviewUtils.createIssueReviewProperty(issueUri, reviewURL));
+                                writer.triple(RdfGithubIssueReviewUtils.createIssueReviewRdfTypeProperty(reviewURL));
                                 writer.triple(
-                                        RdfGithubIssueReviewUtils.createReviewIdentifierProperty(reviewUri, reviewId));
-                                writer.triple(RdfGithubIssueReviewUtils.createReviewOfProperty(reviewUri, issueUri));
+                                        RdfGithubIssueReviewUtils.createReviewIdentifierProperty(reviewURL, reviewId));
+                                writer.triple(RdfGithubIssueReviewUtils.createReviewOfProperty(reviewURL, issueUri));
 
                                 // Dynamic Properties 
                                 if (review.getBody() != null && !review.getBody().isEmpty()) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewDescriptionProperty(reviewUri,
-                                            review.getBody()));
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewDescriptionProperty(
+                                            reviewURL, review.getBody()));
                                 }
                                 if (review.getState() != null) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewStateProperty(reviewUri,
-                                            review.getState().toString()));
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewStateProperty(
+                                            reviewURL, review.getState().toString()));
                                 }
                                 if (review.getSubmittedAt() != null) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewSubmittedAtProperty(reviewUri,
-                                            localDateTimeFrom(review.getSubmittedAt())));
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewSubmittedAtProperty(
+                                            reviewURL, localDateTimeFrom(review.getSubmittedAt())));
                                 }
                                 if (review.getUser() != null) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewUserProperty(reviewUri,
-                                            review.getUser().getHtmlUrl().toString()));
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewUserProperty(
+                                            reviewURL, review.getUser().getHtmlUrl().toString()));
                                 }
                                 if (review.getCommitId() != null) {
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewCommitIdProperty(reviewUri,
-                                            review.getCommitId()));
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewCommitIdProperty(
+                                            reviewURL, review.getCommitId()));
                                 }
 
-                                // Review Discussions
+                                // Review Comments
                                 List<GHPullRequestReviewComment> reviewComments = getReviewCommentsCached(review);
                                 int reviewCommentCount = reviewComments.size();
 
@@ -916,37 +907,34 @@ public class GithubRdfConversionTransactionService {
                                     continue;
                                 }
 
-                                String _discussionUri = issueUri + "#discussion_r";
-
-                                int rootCommentCount = 0;
-                                Set<Long> threadIds = new HashSet<>();
-                                Map<Long, List<Long>> repliesByParent = new HashMap<>();
-                                // LocalDateTime firstCommentAt = null;
-                                // LocalDateTime lastCommentAt = null;
-
-                                // Process the discussion of the review
+                                // Process the comments of the review
                                 for (GHPullRequestReviewComment c : reviewComments) {
                                     long cid = c.getId();
-                                    String discussionUri = _discussionUri + cid;
+                                    String reviewCommentURI = c.getUrl().toString();
+                                    String reviewCommentURL = c.getHtmlUrl().toString();
 
                                     // Basic discussion properties
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewDiscussionProperty(reviewUri,
-                                            discussionUri));
-                                    writer.triple(RdfGithubCommentUtils.createCommentRdfType(discussionUri));
-                                    writer.triple(RdfGithubCommentUtils.createCommentId(discussionUri, cid));
-                                    writer.triple(RdfGithubCommentUtils.createCommentOf(discussionUri, reviewUri));
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewCommentProperty(
+                                            reviewURL,
+                                            reviewCommentURI));
+                                    writer.triple(
+                                            RdfGithubCommentUtils.createCommentHtmlUrl(reviewCommentURI, reviewCommentURL));
+                                    writer.triple(RdfGithubCommentUtils.createCommentRdfType(reviewCommentURI));
+                                    writer.triple(RdfGithubCommentUtils.createCommentId(reviewCommentURI, cid));
+                                    writer.triple(RdfGithubCommentUtils.createCommentOf(reviewCommentURI, reviewURL));
 
                                     // Content and user
                                     if (c.getBody() != null && !c.getBody().isEmpty()) {
-                                        writer.triple(RdfGithubCommentUtils.createCommentBody(discussionUri, c.getBody()));
+                                        writer.triple(
+                                                RdfGithubCommentUtils.createCommentBody(reviewCommentURI, c.getBody()));
                                     }
                                     if (c.getUser() != null) {
                                         writer.triple(RdfGithubCommentUtils.createCommentUser(
-                                                discussionUri, c.getUser().getHtmlUrl().toString()));
+                                                reviewCommentURI, c.getUser().getHtmlUrl().toString()));
                                     }
                                     if (c.getCreatedAt() != null) {
                                         writer.triple(RdfGithubCommentUtils.createCommentCreatedAt(
-                                                discussionUri, localDateTimeFrom(c.getCreatedAt())));
+                                                reviewCommentURI, localDateTimeFrom(c.getCreatedAt())));
                                     }
 
                                     // HIERARCHY HANDLING - This was missing!
@@ -954,38 +942,22 @@ public class GithubRdfConversionTransactionService {
                                     boolean isRoot = (parentId == null || parentId.equals(cid));
 
                                     // Mark if this is a root discussion
-                                    writer.triple(RdfGithubCommentUtils.createIsRootComment(discussionUri, isRoot));
+                                    writer.triple(RdfGithubCommentUtils.createIsRootComment(reviewCommentURI, isRoot));
 
                                     // If this is a reply, link to parent
                                     if (!isRoot && parentId != null) {
-                                        String parentDiscussionUri = _discussionUri + parentId;
-                                        writer.triple(
-                                                RdfGithubCommentUtils.createParentComment(
-                                                        discussionUri, parentDiscussionUri));
+                                        String parentCommentUri = GithubUriUtils.getIssueCommentUri(
+                                                issueUri, String.valueOf(parentId));
+
+                                        writer.triple(RdfGithubCommentUtils.createParentComment(
+                                                reviewCommentURI, parentCommentUri));
 
                                         // Also create the reverse relationship - parent has this as a reply
-                                        writer.triple(RdfGithubCommentUtils
-                                                .createHasReply(parentDiscussionUri, discussionUri));
+                                        writer.triple(RdfGithubCommentUtils.createHasReply(
+                                                parentCommentUri, reviewCommentURI));
                                     }
                                 }
 
-                                // REPLY COUNT CALCULATION - This was completely missing!
-                                // After processing all comments, calculate and write reply counts
-                                for (GHPullRequestReviewComment c : reviewComments) {
-                                    long cid = c.getId();
-                                    String discussionUri = _discussionUri + cid;
-
-                                    // Count direct replies to this comment
-                                    List<Long> directReplies = repliesByParent.getOrDefault(cid, new ArrayList<>());
-                                    if (!directReplies.isEmpty()) {
-                                        writer.triple(RdfGithubCommentUtils.createReplyCount(
-                                                discussionUri, directReplies.size()));
-                                    } else {
-                                        // Even root comments with no replies should have a count of 0
-                                        writer.triple(RdfGithubCommentUtils
-                                                .createReplyCount(discussionUri, 0));
-                                    }
-                                }
 
                                 // Static Properties
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewCommentCountProperty(reviewUri,
@@ -1049,6 +1021,7 @@ public class GithubRdfConversionTransactionService {
                                         }
                                     }
                                 }
+
                             }
                         }
 
@@ -1057,29 +1030,30 @@ public class GithubRdfConversionTransactionService {
                             List<GHIssueComment> issueComments = getIssueCommentsCached(ghIssue);
                             for (GHIssueComment c : issueComments) {
                                 long cid = c.getId();
-                                String commentUri = c.getUrl().toString();
-                                String commentHtmlUrl = c.getHtmlUrl().toString();
-                            
+                                String issueCommentURI = c.getUrl().toString();
+                                String issueCommentURL = c.getHtmlUrl().toString();
+
                                 // Link in Issue to Comment
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewCommentProperty(issueUri,
-                                        commentUri));
-
-                                
-                                writer.triple(RdfGithubCommentUtils.createCommentHtmlUrl(commentUri,
-                                        commentHtmlUrl));
-                                writer.triple(RdfGithubCommentUtils.createCommentRdfType(commentUri));
-                                writer.triple(RdfGithubCommentUtils.createCommentId(commentUri, cid));
-                                writer.triple(RdfGithubCommentUtils.createCommentOf(commentUri, issueUri));
+                                        issueCommentURI));
+                                writer.triple(
+                                        RdfGithubCommentUtils.createCommentHtmlUrl(issueCommentURI, issueCommentURL));
+                                writer.triple(RdfGithubCommentUtils.createCommentRdfType(issueCommentURI));
+                                writer.triple(RdfGithubCommentUtils.createCommentId(issueCommentURI, cid));
+                                writer.triple(RdfGithubCommentUtils.createCommentOf(issueCommentURI, issueUri));
 
                                 if (c.getBody() != null && !c.getBody().isEmpty()) {
-                                    writer.triple(RdfGithubCommentUtils.createCommentBody(commentUri, c.getBody()));
+                                    writer.triple(RdfGithubCommentUtils.createCommentBody(
+                                            issueCommentURI, c.getBody()));
                                 }
                                 if (c.getUser() != null) {
-                                    writer.triple(RdfGithubCommentUtils.createCommentUser(commentUri,
+                                    writer.triple(RdfGithubCommentUtils.createCommentUser(
+                                            issueCommentURI,
                                             c.getUser().getHtmlUrl().toString()));
                                 }
                                 if (c.getCreatedAt() != null) {
-                                    writer.triple(RdfGithubCommentUtils.createCommentCreatedAt(commentUri,
+                                    writer.triple(RdfGithubCommentUtils.createCommentCreatedAt(
+                                            issueCommentURI,
                                             localDateTimeFrom(c.getCreatedAt())));
                                 }
                                 // Issue comments have no threading, treat all as root
@@ -1109,7 +1083,7 @@ public class GithubRdfConversionTransactionService {
                         // Count the iteration of issues
                         issueCounter++;
                         // Count the outside of limit the number of issues to process
-                        issueOutsideCounter++;
+                        issuesProcessed++;
 
                         if (issueCounter > 100) {
                             log.info("Finish issue rdf conversion batch");
