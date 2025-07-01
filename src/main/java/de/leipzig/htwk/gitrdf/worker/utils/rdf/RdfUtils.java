@@ -67,7 +67,7 @@ public final class RdfUtils {
     }
 
     public static Node integerLiteral(int value) {
-        return NodeFactory.createLiteralByValue(value, XSDDatatype.XSDint);
+        return NodeFactory.createLiteralByValue(value, XSDDatatype.XSDinteger);
     }
 
     public static Node uri(String value) {
