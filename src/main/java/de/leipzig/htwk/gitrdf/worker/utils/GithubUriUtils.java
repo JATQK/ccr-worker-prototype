@@ -46,7 +46,18 @@ public final class GithubUriUtils {
     }
 
     public static String getIssueCommentUri(String issueUri, String commentId) {
+        // https://api.github.com/repos/dotnet/core/issues/comments/2978560992
+        return issueUri + "/comments/" + commentId;
+    }
+
+    public static String getIssueCommentHTMLUri(String issueUri, String commentId) {
+        // https://github.com/dotnet/core/issues/9938#issuecomment-2978560992
         return issueUri + "#issuecomment-" + commentId;
+    }
+
+    public static String getIssueCommentDiscussionUri(String issueUri, String commentId) {
+        // https://github.com/dotnet/core/pull/9821#discussion_r2019076550
+        return issueUri + "\"#discussion_r" + commentId;
     }
 
     public static String getUserUri(String userName) {
