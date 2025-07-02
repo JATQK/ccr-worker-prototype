@@ -128,11 +128,6 @@ public final class RdfCommitUtils {
         return uri(GH_NS + "issue");
     }
 
-    // New predicates
-    public static Node commitReferencesIssueProperty() {
-        return uri(GH_NS + "referencesIssue");
-    }
-
     public static Node partOfIssueProperty() {
         return uri(GH_NS + "partOfIssue");
     }
@@ -392,11 +387,6 @@ public final class RdfCommitUtils {
 
     public static Triple createCommitTagProperty(String commitUri, String tagName) {
         return Triple.create(uri(commitUri), commitTagNameProperty(), stringLiteral(tagName));
-    }
-
-    // Additional relations
-    public static Triple createCommitReferencesIssueProperty(String commitUri, String issueUri) {
-        return Triple.create(uri(commitUri), commitReferencesIssueProperty(), uri(issueUri));
     }
 
     public static Triple createCommitPartOfIssueProperty(String commitUri, String issueUri) {

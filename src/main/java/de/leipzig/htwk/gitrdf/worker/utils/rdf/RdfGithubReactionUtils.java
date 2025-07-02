@@ -24,6 +24,7 @@ public final class RdfGithubReactionUtils {
     public static Node userProperty() { return uri(GH_NS + "user"); }
     public static Node createdAtProperty() { return uri(GH_NS + "reactionCreatedAt"); }
     public static Node reactionOfProperty() { return uri(GH_NS + "reactionOf"); }
+    
 
     public static Triple createReactionRdfTypeProperty(String reactionUri) {
         return Triple.create(uri(reactionUri), rdfTypeProperty(), uri("github:GithubReaction"));

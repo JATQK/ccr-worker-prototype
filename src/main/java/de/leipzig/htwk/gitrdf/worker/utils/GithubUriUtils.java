@@ -11,13 +11,10 @@ public final class GithubUriUtils {
 
     private static final String GITHUB_BASE = "https://github.com/";
 
-    public static String getWorkflowJobUri(String runUri, Long jobId) {
-        return runUri + "/job/" + jobId;
-    }
+    private static final String GITHUB_API_BASE = "https://api.github.com/";
 
-    public static String getWorkflowRunUri(String runUri) {
-        // Example: https://github.com/dotnet/core/actions/runs/15571576096
-        return runUri;
+    public static String getUserUri(String userName) {
+        return GITHUB_BASE + userName;
     }
 
     public static String getRepositoryUri(String owner, String repository) {
@@ -44,31 +41,50 @@ public final class GithubUriUtils {
         return getIssueBaseUri(owner, repository) + issueNumber;
     }
 
-    public static String getIssueCommentUri(String issueUri, String commentId) {
+    public static String getIssueCommentUrl(String repoString, String commentId) {
         // https://api.github.com/repos/dotnet/core/issues/comments/2978560992
-        return issueUri.replace("github.com/", "api.github.com/repos/") + "/comments/" + commentId;
+
+        repoString = repoString.replace(GITHUB_BASE, GITHUB_API_BASE + "repos/");
+        // Build the correct API URL for pull request comments
+        return repoString + "issues/comments/" + commentId;
     }
 
-    public static String getIssueCommentURL(String issueUri, String commentId) {
+    public static String getIssueCommentUri(String issueUri, String commentId) {
         // https://github.com/dotnet/core/issues/9938#issuecomment-2978560992
         return issueUri + "#issuecomment-" + commentId;
     }
 
+    // Issue Review
+
+    public static String getIssueReviewUrl(String repoString, String reviewId) {
+        //https://api.github.com/repos/dotnet/core/pulls/9935/reviews/2922636653
+        repoString = repoString.replace(GITHUB_BASE, GITHUB_API_BASE + "repos/").replace("/pull/", "/pulls/");
+        return repoString + "/reviews/" + reviewId;
+    }
+
+    public static String getIssueReviewUri(String repoString, String pullId,  String reviewId) {
+        // https://github.com/dotnet/core/pull/9935#pullrequestreview-2922636653
+        return repoString + "pull/" + pullId + "#pullrequestreview-" + reviewId;
+
+    }
+
+    // Issue Review Comments
+
+    public static String getIssueReviewCommentUrl(String repoString, String commentId) {
+        repoString = repoString.replace(GITHUB_BASE, GITHUB_API_BASE + "repos/");
+        // Build the correct API URL for pull request comments
+        return repoString + "pulls/comments/" + commentId;
+    }
+
+    public static String getIssueReviewCommentUri(String issueUri, String commentId) {
+        // https://github.com/dotnet/core/pull/9821#discussion_r2019076550
+        return issueUri + "#discussion_r" + commentId;
+    }
+
+    // Reaction
     public static String getIssueCommentReactionUri(String commentUri, String reactionId) {
         // https://api.github.com/repos/dotnet/core/issues/comments/2978560992/reactions/1234567890
-        return commentUri + "/reactions/" + reactionId;
-    }
-
-    public static String getIssueReviewUri(String issueUri, String reviewId) {
-        //https://api.github.com/repos/dotnet/core/pulls/9935/reviews/2922636653
-        return issueUri.replace("github.com/", "api.github.com/repos/").replace("/pull/", "/pulls/") + "/reviews/"
-                + reviewId;
-    }
-
-    public static String getIssueReviewCommentUri(String issueUri, String reviewId) {
-        // https://api.github.com/repos/{owner}/{repo}/pulls/comments/{comment_id}
-        return issueUri.replace("github.com/", "api.github.com/repos/").replace("pull", "pulls") + "/comments/"
-                + reviewId;
+        return commentUri + "/reactions#" + reactionId;
     }
     
     public static String getIssueReviewCommentReactionUri(String commentUri, String reactionId) {
@@ -76,14 +92,27 @@ public final class GithubUriUtils {
         return commentUri + "/reactions/" + reactionId;
     }
 
-    public static String getIssueReviewCommentURL(String issueUri, String commentId) {
-        // https://github.com/dotnet/core/pull/9821#discussion_r2019076550
-        return issueUri + "#discussion_r" + commentId;
+    // Workflow
+    public static String getWorkflowJobUri(String runUri, Long jobId) {
+        // https://api.github.com/repos/dotnet/core/actions/jobs/42158567819
+        return runUri + "/job/" + jobId;
+    }
+
+    public static String getWorkflowJobUrl(String repoString, Long jobId) {
+        // https://api.github.com/repos/dotnet/core/actions/jobs/38982110516
+        repoString = repoString.replace(GITHUB_BASE, GITHUB_API_BASE + "repos/");
+        return repoString + "actions/jobs/" + jobId;
+    }
+
+    public static String getWorkflowRunUri(String repoString, String runUri) {
+        // Example: https://github.com/dotnet/core/actions/runs/15571576096
+        return repoString + "actions/runs/" + runUri;
+    }
+
+    public static String getWorkflowRunUrl(String repoString, String runUri) {
+        // Example: https://github.com/dotnet/core/actions/runs/15571576096
+        return repoString + "actions/runs/" + runUri;
     }
 
 
-    
-    public static String getUserUri(String userName) {
-        return GITHUB_BASE + userName;
-    }
 }

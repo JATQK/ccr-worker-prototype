@@ -48,6 +48,10 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "assignee");
     }
 
+    public static Node requestedReviewerProperty() {
+        return RdfUtils.uri(GH_NS + "requestedReviewer");
+    }
+
     public static Node milestoneProperty() {
         return RdfUtils.uri(GH_NS + "milestone");
     }
@@ -62,10 +66,6 @@ public final class RdfGithubIssueUtils {
 
     public static Node closedAtProperty() {
         return RdfUtils.uri(GH_NS + "closedAt");
-    }
-
-    public static Node repositoryProperty() {
-        return RdfUtils.uri(GH_NS + "repository");
     }
 
     // Merge information
@@ -90,8 +90,8 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "containsCommit");
     }
 
-    public static Node referencedByCommitProperty() {
-        return RdfUtils.uri(GH_NS + "referencedByCommit");
+    public static Node referencedByProperty() {
+        return RdfUtils.uri(GH_NS + "referencedBy");
     }
 
 
@@ -139,10 +139,6 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(issueUri), closedAtProperty(), RdfUtils.dateTimeLiteral(closedAtDateTime));
     }
 
-    public static Triple createIssueRepositoryProperty(String issueUri, String repoUri) {
-        return Triple.create(RdfUtils.uri(issueUri), repositoryProperty(), RdfUtils.uri(repoUri));
-    }
-
     // Merge information triples
     public static Triple createIssueMergedProperty(String issueUri, boolean merged) {
         return Triple.create(RdfUtils.uri(issueUri), mergedProperty(), RdfUtils.booleanLiteral(merged));
@@ -164,8 +160,12 @@ public final class RdfGithubIssueUtils {
         return Triple.create(RdfUtils.uri(issueUri), containsCommitProperty(), RdfUtils.uri(commitUri));
     }
 
-    public static Triple createIssueReferencedByCommitProperty(String issueUri, String commitUri) {
-        return Triple.create(RdfUtils.uri(issueUri), referencedByCommitProperty(), RdfUtils.uri(commitUri));
+    public static Triple createIssueReferencedByProperty(String issueUri, String commitUri) {
+        return Triple.create(RdfUtils.uri(issueUri), referencedByProperty(), RdfUtils.uri(commitUri));
+    }
+
+    public static Triple createIssueRequestedReviewerProperty(String issueUri, String reviewerUri) {
+        return Triple.create(RdfUtils.uri(issueUri), requestedReviewerProperty(), RdfUtils.uri(reviewerUri));
     }
 
 }
