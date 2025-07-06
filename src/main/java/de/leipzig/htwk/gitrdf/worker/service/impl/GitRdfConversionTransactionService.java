@@ -1,11 +1,19 @@
 package de.leipzig.htwk.gitrdf.worker.service.impl;
 
-import de.leipzig.htwk.gitrdf.database.common.entity.GitRepositoryOrderEntity;
-import de.leipzig.htwk.gitrdf.database.common.entity.enums.GitRepositoryOrderStatus;
-import de.leipzig.htwk.gitrdf.database.common.entity.lob.GitRepositoryOrderEntityLobs;
-import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
-import jakarta.persistence.EntityManager;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.sql.SQLException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
@@ -18,20 +26,17 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.hibernate.engine.jdbc.BlobProxy;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfTurtleTidier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.sql.Blob;
-import java.sql.SQLException;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import de.leipzig.htwk.gitrdf.database.common.entity.GitRepositoryOrderEntity;
+import de.leipzig.htwk.gitrdf.database.common.entity.enums.GitRepositoryOrderStatus;
+import de.leipzig.htwk.gitrdf.database.common.entity.lob.GitRepositoryOrderEntityLobs;
+import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfTurtleTidier;
+import jakarta.persistence.EntityManager;
 
 @Service
 public class GitRdfConversionTransactionService {

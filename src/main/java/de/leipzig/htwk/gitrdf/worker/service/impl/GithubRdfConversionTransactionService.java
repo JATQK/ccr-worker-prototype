@@ -107,10 +107,10 @@ public class GithubRdfConversionTransactionService {
 
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
-    private static final int PROCESS_ISSUE_LIMIT = 100; // Limit for the number of issues to process
+    private static final int PROCESS_ISSUE_LIMIT = 10; // Limit for the number of issues to process
     private static final String[] PROCESS_ISSUE_ONLY = {}; // Only process these issues // "9946", "9947", "9948",
                                                            // "9949", "9950"
-    private static final int PROCESS_COMMIT_LIMIT = 2000; // Limit for the number of commits to process
+    private static final int PROCESS_COMMIT_LIMIT = 50; // Limit for the number of commits to process
 
     // TODO: replace PURL
 
@@ -848,8 +848,8 @@ public class GithubRdfConversionTransactionService {
                                         RdfGithubIssueUtils.createIssueClosedAtProperty(issueUri, closedAt));
                             }
                         }
-
-                        if (githubIssueRepositoryFilter.isEnableIssueMergedInfo()) {
+                        // SHIT
+                        if (githubIssueRepositoryFilter.isEnableIssueMergedBy()) {
                             if (ghIssue.isPullRequest()) {
                                 GHPullRequest pullRequest = getPullRequestCached(
                                         githubRepositoryHandle, issueNumber);
@@ -1550,7 +1550,7 @@ public class GithubRdfConversionTransactionService {
             writer.triple(RdfGithubWorkflowUtils.createWorkflowConclusionProperty(runUri, run.getConclusion()));
         }
         if (run.getEvent() != null) {
-            writer.triple(RdfGithubWorkflowUtils.createWorkflowEventProperty(runUri, run.getEvent()));
+            writer.triple(RdfGithubWorkflowUtils.createWorkflowEventProperty(runUri, run.getEvent().toString()));
         }
 
         writer.triple(RdfGithubWorkflowUtils.createWorkflowRunNumberProperty(runUri, run.getRunNumber()));
@@ -1627,7 +1627,8 @@ public class GithubRdfConversionTransactionService {
                     .forEachOrdered(s -> {
                         // build an IRI that is unique inside the job
                         // use the step number if the API provides it; fall back to the stream index
-                        String stepUri = RdfGithubWorkflowStepUtils.createWorkflowStepUri(repositoryUri, job.getId(), s.getNumber()).toString();
+                        String stepUri = RdfGithubWorkflowStepUtils
+                                .createWorkflowStepUri(jobUri, s.getNumber()).toString();
                         writer.triple(
                                 RdfGithubWorkflowJobUtils.createWorkflowJobStepProperty(jobUri, stepUri));
                     });
@@ -1644,8 +1645,8 @@ public class GithubRdfConversionTransactionService {
 
         if (steps != null) {
             for (Step step : steps) {
-                String stepUri = RdfGithubWorkflowStepUtils.createWorkflowStepUri(repositoryUri, job.getId(), step.getNumber()).toString();
-                String stepUrl = RdfGithubWorkflowStepUtils.createWorkflowStepUrl(jobUri, step.getNumber()).toString();
+                String stepUrl = RdfGithubWorkflowStepUtils.createWorkflowStepUrl(repositoryUri, job.getId(), step.getNumber()).toString();
+                String stepUri = RdfGithubWorkflowStepUtils.createWorkflowStepUri(jobUri, step.getNumber()).toString();
 
                 writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepJobUrlProperty(stepUri, stepUrl));
                 writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepRdfTypeProperty(stepUri));

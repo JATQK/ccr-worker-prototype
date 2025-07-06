@@ -1,14 +1,14 @@
 spring:
   jpa:
     hibernate:
-      ddl-auto: none # validate
+      ddl-auto: none # validate  HERE none
     #defer-datasource-initialization: true
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/gitrdfdb}
     username: root
     password: ${SPRING_DATASOURCE_PASSWORD:example} # temporary for prototyping
   flyway:
-    baseline-on-migrate: true
+    baseline-on-migrate: true # HERE true
     locations: 'classpath:db/migration'
     #locations: 'classpath:org/springframework/integration/jdbc'
     validate-migration-naming: true
@@ -53,6 +53,7 @@ server:
 
 logging:
   level:
+    org.hibernate.SQL: DEBUG 
     root: info
     de:
       leipzig:

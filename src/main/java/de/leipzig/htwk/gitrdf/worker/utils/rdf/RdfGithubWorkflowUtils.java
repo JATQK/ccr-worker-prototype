@@ -6,7 +6,6 @@ import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
-import org.kohsuke.github.GHEvent;
 import org.kohsuke.github.GHWorkflowRun;
 
 import lombok.AccessLevel;
@@ -58,7 +57,7 @@ public final class RdfGithubWorkflowUtils {
         return Triple.create(RdfUtils.uri(runUri), conclusionProperty(), RdfUtils.uri(GH_NS + conclusion));
     }
 
-    public static Triple createWorkflowEventProperty(String runUri, GHEvent event) {
+    public static Triple createWorkflowEventProperty(String runUri, String event) {
         return Triple.create(RdfUtils.uri(runUri), eventProperty(), RdfUtils.uri(GH_NS + event));
     }
 

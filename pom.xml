@@ -13,7 +13,7 @@
 
 	<groupId>de.leipzig.htwk.gitrdf</groupId>
 	<artifactId>worker</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0-SNAPSHOT</version>
 
 	<name>worker</name>
 
@@ -29,7 +29,7 @@
 		<jjwt.version>0.12.5</jjwt.version>
 		<bouncycastle.bcpkix-jdk18on.version>1.77</bouncycastle.bcpkix-jdk18on.version>
 
-		<de.leipzig.htwk.gitrdf.database.common.version>1.0.7-SNAPSHOT</de.leipzig.htwk.gitrdf.database.common.version>
+		<de.leipzig.htwk.gitrdf.database.common.version>1.0.8-SNAPSHOT</de.leipzig.htwk.gitrdf.database.common.version>
 	</properties>
 
 	<dependencies>

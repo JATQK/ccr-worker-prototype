@@ -21,13 +21,13 @@ public final class RdfGithubWorkflowStepUtils {
         return RdfUtils.uri("rdf:type");
     }
 
-    public static Node createWorkflowStepUri(String repoString, Long jobNumber, Integer stepNumber) {
+    public static Node createWorkflowStepUrl(String repoString, Long jobNumber, Integer stepNumber) {
         // https://api.github.com/repos/dotnet/core/actions/jobs/42157363512#step-2
         String baseUri = repoString.replace(GITHUB_BASE, GITHUB_API_BASE + "repos/");
         return RdfUtils.uri(baseUri + "actions/jobs/" + jobNumber + "#step-" + stepNumber);
     }
     
-    public static Node createWorkflowStepUrl(String jobUri, Integer stepNumber) {
+    public static Node createWorkflowStepUri(String jobUri, Integer stepNumber) {
         // https://github.com/dotnet/core/actions/runs/15620640086/job/44004361815#step:1:1
         return RdfUtils.uri(jobUri + "#step:" + stepNumber + ":1");
     }
