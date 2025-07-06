@@ -64,7 +64,7 @@ public final class GithubUriUtils {
 
     public static String getIssueReviewUri(String repoString, String pullId,  String reviewId) {
         // https://github.com/dotnet/core/pull/9935#pullrequestreview-2922636653
-        return repoString + "pull/" + pullId + "#pullrequestreview-" + reviewId;
+        return repoString + pullId + "#pullrequestreview-" + reviewId;
 
     }
 

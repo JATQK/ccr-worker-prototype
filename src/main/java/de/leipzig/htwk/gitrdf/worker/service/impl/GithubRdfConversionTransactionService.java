@@ -107,10 +107,10 @@ public class GithubRdfConversionTransactionService {
 
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
-    private static final int PROCESS_ISSUE_LIMIT = 10; // Limit for the number of issues to process
+    private static final int PROCESS_ISSUE_LIMIT = 15; // Limit for the number of issues to process
     private static final String[] PROCESS_ISSUE_ONLY = {}; // Only process these issues // "9946", "9947", "9948",
                                                            // "9949", "9950"
-    private static final int PROCESS_COMMIT_LIMIT = 50; // Limit for the number of commits to process
+    private static final int PROCESS_COMMIT_LIMIT = 0; // Limit for the number of commits to process
 
     // TODO: replace PURL
 
