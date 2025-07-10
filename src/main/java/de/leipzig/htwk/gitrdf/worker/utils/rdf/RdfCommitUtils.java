@@ -50,7 +50,7 @@ public final class RdfCommitUtils {
     }
 
     public static Node repositoryEncodingProperty() {
-        return uri(NS + "repositoryEncoding");
+        return uri(NS + "encoding");
     }
 
     private static Node rdfSubmoduleProperty() { return uri(NS + "submodule"); }
@@ -60,7 +60,7 @@ public final class RdfCommitUtils {
     }
 
     public static Node rdfSubmoduleCommitProperty() {
-        return uri(NS + "submoduleCommitHash");
+        return uri(NS + "submoduleHash");
     }
 
     public static Node rdfSubmoduleCommitEntryProperty() {
@@ -71,7 +71,7 @@ public final class RdfCommitUtils {
         return uri(NS + "submoduleRepositoryUri");
     }
 
-    public static Node commitHashProperty() { return uri(NS + "commitHash"); }
+    public static Node commitHashProperty() { return uri(NS + "hash"); }
     
     public static Node authorNameProperty() {
        return uri(NS + "authorName");
@@ -98,7 +98,7 @@ public final class RdfCommitUtils {
     }
 
     public static Node commitMessageProperty() {
-        return uri(NS + "commitMessage");
+        return uri(NS + "message");
     }
 
     public static Node commitBranchNameProperty() {
@@ -160,7 +160,7 @@ public final class RdfCommitUtils {
     }
 
     public static Node commitDiffEntryResource() {
-        return uri(NS + "diffEntry");
+        return uri(NS + "hasDiffEntry");
     }
 
     public static Node commitDiffEntryOldFileNameProperty() {
@@ -172,7 +172,7 @@ public final class RdfCommitUtils {
     }
 
     public static Node commitDiffEditResource() {
-        return uri(NS + "diffEdit");
+        return uri(NS + "hasEdit");
     }
 
     public static Node commitDiffEditTypeProperty() {
@@ -180,19 +180,19 @@ public final class RdfCommitUtils {
     }
 
     public static Node editOldLinenumberBeginProperty() {
-        return uri(NS + "oldLinenumberBegin");
+        return uri(NS + "oldLineStart");
     }
 
     public static Node editNewLinenumberBeginProperty() {
-        return uri(NS + "newLinenumberBegin");
+        return uri(NS + "newLineStart");
     }
 
     public static Node editOldLinenumberEndProperty() {
-        return uri(NS + "oldLinenumberEnd");
+        return uri(NS + "oldLineEnd");
     }
 
     public static Node editNewLinenumberEndProperty() {
-        return uri(NS + "newLinenumberEnd");
+        return uri(NS + "newLineEnd");
     }
 
     public static Node branchSnapshotProperty() {
@@ -200,15 +200,15 @@ public final class RdfCommitUtils {
     }
 
     public static Node branchSnapshotLineEntryProperty() {
-        return uri(NS + "branchSnapshotLineEntry");
+        return uri(NS + "hasLineEntry");
     }
 
     public static Node branchSnapshotFileEntryProperty() {
-        return uri(NS + "branchSnapshotFileEntry");
+        return uri(NS + "hasFileEntry");
     }
 
     public static Node branchSnapshotLineProperty() {
-        return uri(NS + "branchSnapshotLine");
+        return uri(NS + "lineNumber");
     }
 
     public static Node branchSnapshotLinenumberBeginProperty() {
@@ -220,15 +220,15 @@ public final class RdfCommitUtils {
     }
 
     public static Node branchSnapshotFilenameProperty() {
-        return uri(NS + "branchSnapshotFilename");
+        return uri(NS + "fileName");
     }
 
     public static Node branchSnapshotCommitHashProperty() {
-        return uri(NS + "branchSnapshotCommitHash");
+        return uri(NS + "lineCommitHash");
     }
 
     public static Node branchSnapshotDateProperty() {
-        return uri(NS + "branchSnapshotDate");
+        return uri(NS + "snapshotDate");
     }
 
     public static Node commitTagNameProperty() {
