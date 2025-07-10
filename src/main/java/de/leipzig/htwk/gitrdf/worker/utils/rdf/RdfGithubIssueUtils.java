@@ -104,7 +104,7 @@ public final class RdfGithubIssueUtils {
     }
 
     public static Triple createIssueStateProperty(String issueUri, String state) {
-        return Triple.create(RdfUtils.uri(issueUri), stateProperty(), RdfUtils.uri(GH_NS + state.toLowerCase()));
+        return Triple.create(RdfUtils.uri(issueUri), stateProperty(), RdfUtils.uri(PLATFORM_NS + state.toLowerCase()));
     }
 
     public static Triple createIssueTitleProperty(String issueUri, String title) {
