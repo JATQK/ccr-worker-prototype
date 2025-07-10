@@ -1,0 +1,24 @@
+@prefix git: <https://git2rdf.example.com/git/v2/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+# Classes
+
+git:GitRepository a rdfs:Class ;
+    rdfs:label "Git repository" .
+
+git:GitSubmodule a rdfs:Class ;
+    rdfs:label "Git submodule" .
+
+# Properties
+
+git:hasSubmodule a rdf:Property ;
+    rdfs:label "has submodule" ;
+    rdfs:domain git:GitRepository ;
+    rdfs:range git:GitSubmodule .
+
+# Old property kept for compatibility
+
+git:submodule a rdf:Property ;
+    owl:equivalentProperty git:hasSubmodule .
