@@ -7,6 +7,7 @@ import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
 
 import de.leipzig.htwk.gitrdf.worker.utils.GithubUriUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.GithubUserInfo;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,8 +21,9 @@ public class RdfGitCommitUserUtils {
         this.gitHubUser = gitHubUser;
     }
 
-    // Method to retrieve GitHub user from commit hash
-    public static String getGitHubUserFromCommit(GHRepository repo, String commitHash) {
+
+    // Method to retrieve GitHub user information from a commit hash
+    public static GithubUserInfo getGitHubUserInfoFromCommit(GHRepository repo, String commitHash) {
         try {
             GHCommit commit = repo.getCommit(commitHash);
             GHUser author = commit.getAuthor();
@@ -30,17 +32,25 @@ public class RdfGitCommitUserUtils {
                 return null;
             }
 
-            // Check if this is a valid GitHub user account
             String login = author.getLogin();
             if (login == null || login.isEmpty() || isAutomatedAccount(login)) {
                 return null;
             }
 
-            return GithubUriUtils.getUserUri(login);
+            String uri = GithubUriUtils.getUserUri(login);
+            long id = author.getId();
+            String name = author.getName();
+            return new GithubUserInfo(uri, login, id, name);
         } catch (IOException e) {
             log.info("Could not retrieve github-user from commit hash '{}'", commitHash, e);
             return null;
         }
+    }
+
+    // Legacy method kept for compatibility
+    public static String getGitHubUserFromCommit(GHRepository repo, String commitHash) {
+        GithubUserInfo info = getGitHubUserInfoFromCommit(repo, commitHash);
+        return info == null ? null : info.uri;
     }
 
     private static boolean isAutomatedAccount(String login) {

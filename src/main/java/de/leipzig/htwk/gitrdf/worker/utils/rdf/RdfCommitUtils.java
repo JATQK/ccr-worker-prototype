@@ -105,6 +105,18 @@ public final class RdfCommitUtils {
         return uri(NS + "branchName");
     }
 
+    public static Node inBranchProperty() { return uri(NS + "inBranch"); }
+
+    public static Node hasTagProperty() { return uri(NS + "hasTag"); }
+
+    public static Node repositoryHasCommitProperty() { return uri(NS + "hasCommit"); }
+
+    public static Node repositoryHasBranchProperty() { return uri(NS + "hasBranch"); }
+
+    public static Node branchHeadCommitProperty() { return uri(NS + "headCommit"); }
+
+    public static Node tagPointsToProperty() { return uri(NS + "pointsTo"); }
+
     public static Node commitDiffEntryEditTypeProperty() {
         return uri(NS + "changeType");
     }
@@ -234,6 +246,9 @@ public final class RdfCommitUtils {
     public static Node commitTagNameProperty() {
         return uri(NS + "tagName");
     }
+
+    public static Node branchNameProperty() { return commitBranchNameProperty(); }
+
 
 
     // Branch Snapshot
@@ -387,6 +402,47 @@ public final class RdfCommitUtils {
 
     public static Triple createCommitTagProperty(String commitUri, String tagName) {
         return Triple.create(uri(commitUri), commitTagNameProperty(), stringLiteral(tagName));
+    }
+
+    // New relationships using v2 schema
+    public static Triple createCommitInBranchProperty(String commitUri, String branchUri) {
+        return Triple.create(uri(commitUri), inBranchProperty(), uri(branchUri));
+    }
+
+    public static Triple createCommitHasTagProperty(String commitUri, String tagUri) {
+        return Triple.create(uri(commitUri), hasTagProperty(), uri(tagUri));
+    }
+
+    public static Triple createRepositoryHasCommitProperty(String repoUri, String commitUri) {
+        return Triple.create(uri(repoUri), repositoryHasCommitProperty(), uri(commitUri));
+    }
+
+    public static Triple createRepositoryHasBranchProperty(String repoUri, String branchUri) {
+        return Triple.create(uri(repoUri), repositoryHasBranchProperty(), uri(branchUri));
+    }
+
+    public static Triple createBranchRdfTypeProperty(String branchUri) {
+        return Triple.create(uri(branchUri), rdfTypeProperty(), uri(NS + "GitBranch"));
+    }
+
+    public static Triple createBranchNameProperty(String branchUri, String name) {
+        return Triple.create(uri(branchUri), branchNameProperty(), stringLiteral(name));
+    }
+
+    public static Triple createBranchHeadCommitProperty(String branchUri, String commitUri) {
+        return Triple.create(uri(branchUri), branchHeadCommitProperty(), uri(commitUri));
+    }
+
+    public static Triple createTagRdfTypeProperty(String tagUri) {
+        return Triple.create(uri(tagUri), rdfTypeProperty(), uri(NS + "GitTag"));
+    }
+
+    public static Triple createTagNameProperty(String tagUri, String tagName) {
+        return Triple.create(uri(tagUri), commitTagNameProperty(), stringLiteral(tagName));
+    }
+
+    public static Triple createTagPointsToProperty(String tagUri, String commitUri) {
+        return Triple.create(uri(tagUri), tagPointsToProperty(), uri(commitUri));
     }
 
     public static Triple createCommitPartOfIssueProperty(String commitUri, String issueUri) {

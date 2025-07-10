@@ -29,6 +29,20 @@ public final class GithubUriUtils {
         return getCommitBaseUri(owner, repository) + commitHash;
     }
 
+    /**
+     * Build a URI for a branch within a repository.
+     */
+    public static String getBranchUri(String owner, String repository, String branchName) {
+        return GITHUB_BASE + owner + "/" + repository + "/tree/" + branchName;
+    }
+
+    /**
+     * Build a URI for a tag within a repository.
+     */
+    public static String getTagUri(String owner, String repository, String tagName) {
+        return GITHUB_BASE + owner + "/" + repository + "/tree/" + tagName;
+    }
+
     public static String getPullRequestUri(String prUrl) {
         return prUrl;
     }
