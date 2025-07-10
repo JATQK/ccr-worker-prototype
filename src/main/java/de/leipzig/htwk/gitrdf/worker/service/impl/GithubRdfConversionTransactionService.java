@@ -90,6 +90,7 @@ import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.GithubUriUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.GithubUserInfo;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubCommentUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueReviewUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
@@ -97,6 +98,7 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubReactionUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowJobUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowStepUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfTurtleTidier;
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
@@ -444,6 +446,21 @@ public class GithubRdfConversionTransactionService {
 
             lockHandler.renewLockOnRenewTimeFulfillment();
 
+            // Branches
+            writer.start();
+            for (Ref branchRef : branches) {
+                String branchName = branchRef.getName();
+                String branchUri = GithubUriUtils.getBranchUri(owner, repositoryName, branchName);
+                String headCommitUri = GithubUriUtils.getCommitUri(owner, repositoryName, branchRef.getObjectId().getName());
+                writer.triple(RdfCommitUtils.createRepositoryHasBranchProperty(repositoryUri, branchUri));
+                writer.triple(RdfCommitUtils.createBranchRdfTypeProperty(branchUri));
+                writer.triple(RdfCommitUtils.createBranchNameProperty(branchUri, branchName));
+                writer.triple(RdfCommitUtils.createBranchHeadCommitProperty(branchUri, headCommitUri));
+            }
+            writer.finish();
+
+            lockHandler.renewLockOnRenewTimeFulfillment();
+
             // Submodules
 
             writer.start();
@@ -555,6 +572,7 @@ public class GithubRdfConversionTransactionService {
                             log.debug("Set rdf type property commitUri");
 
                         writer.triple(RdfCommitUtils.createRdfTypeProperty(commitUri));
+                        writer.triple(RdfCommitUtils.createRepositoryHasCommitProperty(repositoryUri, commitUri));
 
                         if (log.isDebugEnabled())
                             log.debug("Set rdf commit hash");
@@ -648,15 +666,18 @@ public class GithubRdfConversionTransactionService {
                         // Branch
                         // TODO: better way to handle merges? (so commit could have multiple branches)
                         if (gitCommitRepositoryFilter.isEnableCommitBranch()) {
-                            calculateCommitBranch(commitBranchCalculator, writer, commit, commitUri);
+                            calculateCommitBranch(commitBranchCalculator, writer, commit, commitUri, owner, repositoryName);
                         }
 
                         List<String> tagNames = commitToTags.get(commitId);
 
                         if (tagNames != null && !tagNames.isEmpty()) {
-
                             for (String tagName : tagNames) {
-                                writer.triple(RdfCommitUtils.createCommitTagProperty(commitUri, tagName));
+                                String tagUri = GithubUriUtils.getTagUri(owner, repositoryName, tagName);
+                                writer.triple(RdfCommitUtils.createCommitHasTagProperty(commitUri, tagUri));
+                                writer.triple(RdfCommitUtils.createTagRdfTypeProperty(tagUri));
+                                writer.triple(RdfCommitUtils.createTagNameProperty(tagUri, tagName));
+                                writer.triple(RdfCommitUtils.createTagPointsToProperty(tagUri, commitUri));
                                 log.debug("Added Tag '{}' to commit #{}", tagName, commitId.getName());
                             }
                         }
@@ -1285,33 +1306,21 @@ public class GithubRdfConversionTransactionService {
         if (log.isDebugEnabled())
             log.debug("Set rdf github user in commit");
 
-        if (uniqueGitCommiterWithHash.containsKey(email)) {
+        GithubUserInfo info = RdfGitCommitUserUtils.getGitHubUserInfoFromCommit(githubRepositoryHandle, gitHash);
 
-            if (log.isDebugEnabled())
-                log.debug("Found github committer email in hash");
+        if (!uniqueGitCommiterWithHash.containsKey(email)) {
+            String uri = info == null ? null : info.uri;
+            uniqueGitCommiterWithHash.put(email, new RdfGitCommitUserUtils(gitHash, uri));
+        }
 
-            RdfGitCommitUserUtils commitInfo = uniqueGitCommiterWithHash.get(email);
-            if (commitInfo.gitHubUser != null && !commitInfo.gitHubUser.isEmpty()) {
-
-                if (log.isDebugEnabled())
-                    log.debug("Set RDF committer github user property after finding github committer email in hash");
-
-                writer.triple(RdfCommitUtils.createCommiterGitHubUserProperty(commitUri, commitInfo.gitHubUser));
-            }
-        } else {
-
-            if (log.isDebugEnabled())
-                log.debug("Did not find github committer email in hash");
-
-            String gitHubUser = RdfGitCommitUserUtils.getGitHubUserFromCommit(githubRepositoryHandle, gitHash);
-            uniqueGitCommiterWithHash.put(email, new RdfGitCommitUserUtils(gitHash, gitHubUser));
-            if (gitHubUser != null && !gitHubUser.isEmpty()) {
-
-                if (log.isDebugEnabled())
-                    log.debug(
-                            "Set RDF committer github user property after not finding it in github committer email in hash");
-
-                writer.triple(RdfCommitUtils.createCommiterGitHubUserProperty(commitUri, gitHubUser));
+        String userUri = info == null ? null : info.uri;
+        if (userUri != null && !userUri.isEmpty()) {
+            writer.triple(RdfCommitUtils.createCommiterGitHubUserProperty(commitUri, userUri));
+            writer.triple(RdfGithubUserUtils.createGitHubUserType(userUri));
+            writer.triple(RdfGithubUserUtils.createLoginProperty(userUri, info.login));
+            writer.triple(RdfGithubUserUtils.createUserIdProperty(userUri, info.userId));
+            if (info.name != null && !info.name.isEmpty()) {
+                writer.triple(RdfGithubUserUtils.createNameProperty(userUri, info.name));
             }
         }
 
@@ -1396,14 +1405,17 @@ public class GithubRdfConversionTransactionService {
             CommitBranchCalculator commitBranchCalculator,
             StreamRDF writer,
             RevCommit currentCommit,
-            String commitUri) {
+            String commitUri,
+            String owner,
+            String repositoryName) {
 
         String commitHash = currentCommit.getName();
 
         List<String> branches = commitBranchCalculator.getBranchesForShaHashOfCommit(commitHash);
 
         for (String branchName : branches) {
-            writer.triple(RdfCommitUtils.createCommitBranchNameProperty(commitUri, branchName));
+            String branchUri = GithubUriUtils.getBranchUri(owner, repositoryName, branchName);
+            writer.triple(RdfCommitUtils.createCommitInBranchProperty(commitUri, branchUri));
         }
 
     }
