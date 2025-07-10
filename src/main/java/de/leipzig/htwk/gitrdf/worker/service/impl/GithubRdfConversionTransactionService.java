@@ -107,10 +107,10 @@ public class GithubRdfConversionTransactionService {
 
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
-    private static final int PROCESS_ISSUE_LIMIT = 15; // Limit for the number of issues to process
+    private static final int PROCESS_ISSUE_LIMIT = 10; // Limit for the number of issues to process
     private static final String[] PROCESS_ISSUE_ONLY = {}; // Only process these issues // "9946", "9947", "9948",
                                                            // "9949", "9950"
-    private static final int PROCESS_COMMIT_LIMIT = 0; // Limit for the number of commits to process
+    private static final int PROCESS_COMMIT_LIMIT = 10; // Limit for the number of commits to process
 
     // TODO: replace PURL
 
@@ -282,45 +282,57 @@ public class GithubRdfConversionTransactionService {
 
     private void writeWorkflowRunInfo(GHPullRequest pr, StreamRDF writer, String issueUri, String repositoryUri)
             throws IOException, InterruptedException {
-    if (pr == null ) {
-        return;
-    }
 
-    try {
-        if (!pr.isMerged()) {
-            log.debug("Pull request {} is not merged, skipping workflow run info.", pr.getHtmlUrl());
+        // Skip workflow processing if we're not processing issues or if limits are very
+        // small
+        if (pr == null || PROCESS_ISSUE_LIMIT <= 0) {
             return;
         }
-        // Approach 1: Get check runs directly from the PR's head commit
-        String headSha = pr.getHead().getSha();
-        GHRepository repo = pr.getRepository();
 
-        // Get check runs for the specific commit
-        List<GHCheckRun> checkRuns = executeWithRetry(
-                () -> repo.getCommit(headSha).getCheckRuns().toList(),
-                "getCheckRuns for " + headSha);
-        
-        for (GHCheckRun checkRun : checkRuns) {
-            // Check runs have details_url that often points to workflow runs
-            if (checkRun.getDetailsUrl() != null && 
-                checkRun.getDetailsUrl().toString().contains("/actions/runs/")) {
-                
-                // Extract workflow run ID from URL
-                String runId = extractRunIdFromUrl(checkRun.getDetailsUrl().toString());
-                if (runId != null) {
-                    GHWorkflowRun run = executeWithRetry(
-                            () -> repo.getWorkflowRun(Long.parseLong(runId)),
-                            "getWorkflowRun " + runId);
-                    writeWorkflowRunData(repositoryUri, run, writer, issueUri, headSha);
+        try {
+            if (!pr.isMerged()) {
+                log.debug("Pull request {} is not merged, skipping workflow run info.", pr.getHtmlUrl());
+                return;
+            }
+
+            // For small limits, skip expensive workflow processing entirely
+            if (PROCESS_ISSUE_LIMIT <= 5) {
+                log.debug("Issue limit is small ({}), skipping workflow processing for performance",
+                        PROCESS_ISSUE_LIMIT);
+                return;
+            }
+
+            String headSha = pr.getHead().getSha();
+            GHRepository repo = pr.getRepository();
+
+            // Limit check runs processing
+            List<GHCheckRun> checkRuns = executeWithRetry(
+                    () -> repo.getCommit(headSha).getCheckRuns().withPageSize(10).toList(),
+                    "getCheckRuns for " + headSha);
+
+            // Process only first few check runs to avoid excessive API calls
+            int maxCheckRuns = Math.min(checkRuns.size(), 5);
+
+            for (int i = 0; i < maxCheckRuns; i++) {
+                GHCheckRun checkRun = checkRuns.get(i);
+
+                if (checkRun.getDetailsUrl() != null &&
+                        checkRun.getDetailsUrl().toString().contains("/actions/runs/")) {
+
+                    String runId = extractRunIdFromUrl(checkRun.getDetailsUrl().toString());
+                    if (runId != null) {
+                        GHWorkflowRun run = executeWithRetry(
+                                () -> repo.getWorkflowRun(Long.parseLong(runId)),
+                                "getWorkflowRun " + runId);
+                        writeWorkflowRunData(repositoryUri, run, writer, issueUri, headSha);
+                    }
                 }
             }
+
+        } catch (IOException e) {
+            log.warn("Error fetching workflow runs via check runs: {}", e.getMessage());
         }
-        
-    } catch (IOException e) {
-        log.warn("Error fetching workflow runs via check runs: {}", e.getMessage());
-        // Fallback to original approach if needed
     }
-}
 
     private String extractRunIdFromUrl(String detailsUrl) {
         // Extract run ID from URL like: https://github.com/owner/repo/actions/runs/12345
@@ -507,7 +519,7 @@ public class GithubRdfConversionTransactionService {
 
                     for (RevCommit commit : commits) {
                         commitsProcessed++;
-                        if (commitsProcessed >= PROCESS_COMMIT_LIMIT && PROCESS_COMMIT_LIMIT > 0) {
+                        if (commitsProcessed > PROCESS_COMMIT_LIMIT && PROCESS_COMMIT_LIMIT > 0) {
                             log.info("Max computed commits reached, stopping commit processing.");
                             finished = true;
                             break;
@@ -728,19 +740,29 @@ public class GithubRdfConversionTransactionService {
 
                 if (githubRepositoryHandle.hasIssues() && PROCESS_ISSUE_LIMIT > 0) {
 
-                    log.info("Start issue processing");
+                    log.info("Start issue processing with limit of {} issues", PROCESS_ISSUE_LIMIT);
                     int issueCounter = 0;
                     boolean doesWriterContainNonWrittenRdfStreamElements = false;
 
-                    for (GHIssue ghIssue : githubRepositoryHandle.queryIssues().state(GHIssueState.ALL).pageSize(100)
-                            .list()) {
+                    // Use smaller page size when processing few items
+                    int pageSize = Math.min(PROCESS_ISSUE_LIMIT * 2, 100);
+
+                    PagedIterable<GHIssue> issues = githubRepositoryHandle.queryIssues()
+                            .state(GHIssueState.ALL)
+                            .pageSize(pageSize)
+                            .list();
+
+                    for (GHIssue ghIssue : issues) {
 
                         if (issueCounter < 1) {
                             log.info("Start issue rdf conversion batch");
                             writer.start();
                             doesWriterContainNonWrittenRdfStreamElements = true;
                         }
-                        if (issuesProcessed >= PROCESS_ISSUE_LIMIT && PROCESS_ISSUE_LIMIT > 0) {
+
+                        // Early exit if we've hit our limit
+                        if (issuesProcessed >= PROCESS_ISSUE_LIMIT) {
+                            log.info("Reached issue processing limit of {}", PROCESS_ISSUE_LIMIT);
                             break;
                         }
 
@@ -1126,37 +1148,89 @@ public class GithubRdfConversionTransactionService {
 
     private Map<String, PullRequestInfo> buildCommitPrMap(GHRepository repo) throws IOException, InterruptedException {
         Map<String, PullRequestInfo> map = new HashMap<>();
-        PagedIterable<GHPullRequest> prs = executeWithRetry(
-                () -> repo.queryPullRequests().state(GHIssueState.CLOSED).list(),
-                "queryPullRequests");
 
-        ZonedDateTime oneYearAgo = ZonedDateTime.now().minusYears(1);
-
-        for (GHPullRequest pr : prs) {
-            if (!pr.isMerged()) {
-                continue;
+        try {
+            // If we're not processing any issues, don't build the map at all
+            if (PROCESS_ISSUE_LIMIT <= 0) {
+                log.info("Issue processing disabled, skipping commit-PR mapping");
+                return map;
             }
 
-            Date merged = pr.getMergedAt();
-            if (merged == null || merged.toInstant().isBefore(oneYearAgo.toInstant())) {
-                continue;
-            }
-            String prUri = GithubUriUtils.getIssueUri(repo.getOwnerName(), repo.getName(), String.valueOf(pr.getNumber()));
-            // String prUri = GithubUriUtils.getPullRequestUri(pr.getHtmlUrl().toString());
-            LocalDateTime mergedAt = localDateTimeFrom(merged);
+            // Limit PR fetching based on issue limits
+            int maxPRsToFetch = Math.min(PROCESS_ISSUE_LIMIT * 2, 100); // Reasonable multiplier
 
-            PullRequestInfo info = new PullRequestInfo(prUri, pr.getMergeCommitSha(), mergedAt);
+            PagedIterable<GHPullRequest> prs = executeWithRetry(
+                    () -> repo.queryPullRequests().state(GHIssueState.CLOSED).list(),
+                    "queryPullRequests");
 
-            if (pr.getMergeCommitSha() != null) {
-                map.put(pr.getMergeCommitSha(), info);
+            ZonedDateTime oneYearAgo = ZonedDateTime.now().minusYears(1);
+            int prsProcessed = 0;
+
+            for (GHPullRequest pr : prs) {
+                if (prsProcessed >= maxPRsToFetch) {
+                    log.info("Reached max PRs limit ({}) for commit mapping", maxPRsToFetch);
+                    break;
+                }
+
+                if (!pr.isMerged()) {
+                    continue;
+                }
+
+                Date merged = pr.getMergedAt();
+                if (merged == null || merged.toInstant().isBefore(oneYearAgo.toInstant())) {
+                    continue;
+                }
+
+                // If we have specific issues to process, only map those PRs
+                if (PROCESS_ISSUE_ONLY.length > 0) {
+                    boolean shouldIncludePR = false;
+                    String prNumber = String.valueOf(pr.getNumber());
+                    for (String issueId : PROCESS_ISSUE_ONLY) {
+                        if (issueId.equals(prNumber)) {
+                            shouldIncludePR = true;
+                            break;
+                        }
+                    }
+                    if (!shouldIncludePR) {
+                        continue;
+                    }
+                }
+
+                String prUri = GithubUriUtils.getIssueUri(repo.getOwnerName(), repo.getName(),
+                        String.valueOf(pr.getNumber()));
+                LocalDateTime mergedAt = localDateTimeFrom(merged);
+
+                PullRequestInfo info = new PullRequestInfo(prUri, pr.getMergeCommitSha(), mergedAt);
+
+                if (pr.getMergeCommitSha() != null) {
+                    map.put(pr.getMergeCommitSha(), info);
+                }
+
+                // Only fetch commits if we're processing commits too
+                if (PROCESS_COMMIT_LIMIT > 0) {
+                    try {
+                        for (GHPullRequestCommitDetail c : getCommitsCached(pr)) {
+                            map.put(c.getSha(), info);
+                        }
+                    } catch (IOException | InterruptedException e) {
+                        log.warn("Error fetching commits for PR {}: {}", pr.getNumber(), e.getMessage());
+                        // Continue processing other PRs
+                    }
+                }
+
+                prsProcessed++;
             }
 
-            for (GHPullRequestCommitDetail c : getCommitsCached(pr)) {
-                map.put(c.getSha(), info);
-            }
+            log.info("Built commit-PR mapping with {} PRs", prsProcessed);
+            return map;
+
+        } catch (IOException e) {
+            log.error("IO error while building commit-PR mapping: {}", e.getMessage());
+            throw e;
+        } catch (InterruptedException e) {
+            log.error("Interrupted while building commit-PR mapping: {}", e.getMessage());
+            throw e;
         }
-
-        return map;
     }
 
     public static Map<ObjectId, List<String>> getTagsForCommits(Repository repository) throws IOException {
@@ -1569,13 +1643,16 @@ public class GithubRdfConversionTransactionService {
         }
     }
 
-    private void writeWorkflowJobData(GHWorkflowRun run, StreamRDF writer, String runUri, String repositoryUri) throws IOException, InterruptedException {
-        // Optimization 3: Limit job fetching with early termination
+    private void writeWorkflowJobData(GHWorkflowRun run, StreamRDF writer, String runUri, String repositoryUri)
+            throws IOException, InterruptedException {
+
+        // Further limit job processing based on issue limits
+        int maxJobsToProcess = Math.min(PROCESS_ISSUE_LIMIT * 5, 50);
+
         PagedIterable<GHWorkflowJob> jobIterable = executeWithRetry(
-                () -> run.listJobs().withPageSize(25),
+                () -> run.listJobs().withPageSize(10), // Smaller page size
                 "listJobs for run " + run.getId());
 
-        int maxJobsToProcess = 200; // Reasonable limit on jobs per run
         int jobsProcessed = 0;
 
         for (GHWorkflowJob job : jobIterable) {
