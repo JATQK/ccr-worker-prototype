@@ -23,29 +23,29 @@ public final class RdfGithubIssueUtils {
     }
 
     public static Node titleProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "ticketTitle");
+        return RdfUtils.uri(PLATFORM_NS + "title");
     }
 
     public static Node bodyProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "ticketBody");
+        return RdfUtils.uri(PLATFORM_NS + "body");
     }
 
     // Platform - GitHub
 
     public static Node numberProperty() {
-        return RdfUtils.uri(GH_NS + "number");
+        return RdfUtils.uri(PLATFORM_NS + "number");
     }
 
     public static Node stateProperty() {
-        return RdfUtils.uri(GH_NS + "state");
+        return RdfUtils.uri(PLATFORM_NS + "state");
     }
 
     public static Node userProperty() {
-        return RdfUtils.uri(GH_NS + "user");
+        return RdfUtils.uri(PLATFORM_NS + "submitter");
     }
 
     public static Node assigneeProperty() {
-        return RdfUtils.uri(GH_NS + "assignee");
+        return RdfUtils.uri(PLATFORM_NS + "assignee");
     }
 
     public static Node requestedReviewerProperty() {
@@ -53,19 +53,19 @@ public final class RdfGithubIssueUtils {
     }
 
     public static Node milestoneProperty() {
-        return RdfUtils.uri(GH_NS + "milestone");
+        return RdfUtils.uri(PLATFORM_NS + "hasMilestone");
     }
 
     public static Node submittedAtProperty() {
-        return RdfUtils.uri(GH_NS + "submittedAt");
+        return RdfUtils.uri(PLATFORM_NS + "createdAt");
     }
 
     public static Node updatedAtProperty() {
-        return RdfUtils.uri(GH_NS + "updatedAt");
+        return RdfUtils.uri(PLATFORM_NS + "updatedAt");
     }
 
     public static Node closedAtProperty() {
-        return RdfUtils.uri(GH_NS + "closedAt");
+        return RdfUtils.uri(PLATFORM_NS + "closedAt");
     }
 
     // Merge information
