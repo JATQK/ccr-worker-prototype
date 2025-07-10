@@ -1,6 +1,7 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.uri;
 
 import java.time.LocalDateTime;
@@ -15,6 +16,7 @@ import lombok.NoArgsConstructor;
 public final class RdfGithubCommentUtils {
 
   private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
+  private static final String PF_NS = PLATFORM_NAMESPACE + ":";
 
   // Core RDF properties
   public static Node rdfTypeProperty() {
@@ -23,23 +25,23 @@ public final class RdfGithubCommentUtils {
 
   // Comment identification and basic properties
   public static Node commentIdProperty() {
-    return uri(GH_NS + "commentId");
+    return uri(PF_NS + "commentId");
   }
 
   public static Node commentHtmlUrlProperty() {
-    return uri(GH_NS + "commentHtmlUrl");
+    return uri(PF_NS + "commentUrl");
   }
 
   public static Node commentBodyProperty() {
-    return uri(GH_NS + "commentBody");
+    return uri(PF_NS + "commentBody");
   }
 
   public static Node commentUserProperty() {
-    return uri(GH_NS + "user");
+    return uri(PF_NS + "commentAuthor");
   }
 
   public static Node commentCreatedAtProperty() {
-    return uri(GH_NS + "submittedAt");
+    return uri(PF_NS + "commentedAt");
   }
 
   public static Node commentUpdatedAtProperty() {
@@ -48,7 +50,7 @@ public final class RdfGithubCommentUtils {
 
   // Threading and hierarchy properties
   public static Node isRootCommentProperty() {
-    return uri(GH_NS + "isRootComment");
+    return uri(PF_NS + "isRootComment");
   }
 
   public static Node parentCommentProperty() {
@@ -83,7 +85,7 @@ public final class RdfGithubCommentUtils {
   }
 
   public static Node reactionCountProperty() {
-    return uri(GH_NS + "reactionCount");
+    return uri(PF_NS + "reactionCount");
   }
 
   public static Node reactionProperty() {

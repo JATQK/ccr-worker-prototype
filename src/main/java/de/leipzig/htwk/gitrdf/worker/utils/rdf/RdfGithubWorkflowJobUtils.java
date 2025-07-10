@@ -1,6 +1,7 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 
 import java.time.LocalDateTime;
 
@@ -15,17 +16,18 @@ import lombok.NoArgsConstructor;
 public final class RdfGithubWorkflowJobUtils {
 
     private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
+    private static final String PF_NS = PLATFORM_NAMESPACE + ":";
 
     public static Node rdfTypeProperty() {
         return RdfUtils.uri("rdf:type");
     }
 
     public static Node identifierProperty() { return RdfUtils.uri(GH_NS + "workflowJobId"); }
-    public static Node nameProperty() { return RdfUtils.uri(GH_NS + "workflowJobName"); }
-    public static Node statusProperty() { return RdfUtils.uri(GH_NS + "workflowJobStatus"); }
-    public static Node conclusionProperty() { return RdfUtils.uri(GH_NS + "workflowJobConclusion"); }
-    public static Node startedAtProperty() { return RdfUtils.uri(GH_NS + "workflowJobStartedAt"); }
-    public static Node completedAtProperty() { return RdfUtils.uri(GH_NS + "workflowJobCompletedAt"); }
+    public static Node nameProperty() { return RdfUtils.uri(PF_NS + "jobName"); }
+    public static Node statusProperty() { return RdfUtils.uri(PF_NS + "jobStatus"); }
+    public static Node conclusionProperty() { return RdfUtils.uri(PF_NS + "jobConclusion"); }
+    public static Node startedAtProperty() { return RdfUtils.uri(PF_NS + "jobStartedAt"); }
+    public static Node completedAtProperty() { return RdfUtils.uri(PF_NS + "jobCompletedAt"); }
     public static Node jobUrlProperty() { return RdfUtils.uri(GH_NS + "workflowJobUrl"); }
     public static Node stepProperty() { return RdfUtils.uri(GH_NS + "workflowStep"); }
     
@@ -44,11 +46,11 @@ public final class RdfGithubWorkflowJobUtils {
     }
 
     public static Triple createWorkflowJobStatusProperty(String jobUri, GHWorkflowRun.Status status) {
-        return Triple.create(RdfUtils.uri(jobUri), statusProperty(), RdfUtils.uri(GH_NS + status));
+        return Triple.create(RdfUtils.uri(jobUri), statusProperty(), RdfUtils.uri(PF_NS + status));
     }
 
     public static Triple createWorkflowJobConclusionProperty(String jobUri, GHWorkflowRun.Conclusion conclusion) {
-        return Triple.create(RdfUtils.uri(jobUri), conclusionProperty(), RdfUtils.uri(GH_NS + conclusion));
+        return Triple.create(RdfUtils.uri(jobUri), conclusionProperty(), RdfUtils.uri(PF_NS + conclusion));
     }
 
     public static Triple createWorkflowJobStartedAtProperty(String jobUri, LocalDateTime started) {
