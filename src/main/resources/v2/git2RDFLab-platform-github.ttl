@@ -1,0 +1,250 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix ns0: <http://purl.org/vocab/vann/> .
+@prefix git: <https://purl.archive.org/git2rdflab/v2/git2RDFLab-git#> .
+@prefix platform: <https://purl.archive.org/git2rdflab/v2/git2RDFLab-platform#> .
+@prefix github: <https://purl.archive.org/git2rdflab/v2/git2RDFLab-platform-github#> .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Metadata                                         │
+# ╰──────────────────────────────────────────────────╯
+#
+
+<https://purl.archive.org/git2rdflab/v2/git2RDFLab-platform-github#>
+  a owl:Ontology ;
+  dc:title "The git2RDFLab GitHub Platform Ontology v2"@en ;
+  dc:description "The git2RDFLab GitHub platform ontology v2 provides GitHub-specific entities including repositories, issues, pull requests, and workflows"@en ;
+  ns0:preferredNamespacePrefix "github" ;
+  ns0:preferredNamespaceUri "https://purl.archive.org/git2rdflab/v2/git2RDFLab-platform-github#" ;
+  owl:versionInfo "Version 2.0 - 2025-07-10"@en ;
+  dc:modified "2025-07-10"^^xsd:date ;
+  dc:contributor "https://github.com/git2RDFLab" ;
+  owl:priorVersion <https://purl.archive.org/git2rdflab/v1/git2RDFLab-platform-github#> ;
+  owl:imports <https://purl.archive.org/git2rdflab/v2/git2RDFLab-git#> ;
+  owl:imports <https://purl.archive.org/git2rdflab/v2/git2RDFLab-platform#> .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: GitRepository (GitHub Extension)          │
+# ╰──────────────────────────────────────────────────╯
+#
+
+github:GitRepository a rdfs:Class ;
+    rdfs:subClassOf git:GitRepository ;
+    rdfs:label "GitHub Git Repository"@en ;
+    rdfs:comment "Represents a Git repository hosted on GitHub with additional GitHub-specific properties."@en .
+
+# GitHub Repository properties
+
+github:repositoryName a rdf:Property ;
+    rdfs:label "Repository Name"@en ;
+    rdfs:comment "The name of this repository on GitHub."@en ;
+    rdfs:domain github:GitRepository ;
+    rdfs:range xsd:string .
+
+github:repositoryOwner a rdf:Property ;
+    rdfs:label "Repository Owner"@en ;
+    rdfs:comment "The owner (user or organization) of this repository."@en ;
+    rdfs:domain github:GitRepository ;
+    rdfs:range github:GitHubUser .
+
+github:repositoryDescription a rdf:Property ;
+    rdfs:label "Repository Description"@en ;
+    rdfs:comment "The description of the repository."@en ;
+    rdfs:domain github:GitRepository ;
+    rdfs:range xsd:string .
+
+github:isPrivate a rdf:Property ;
+    rdfs:label "Is Private"@en ;
+    rdfs:comment "Whether the repository is private."@en ;
+    rdfs:domain github:GitRepository ;
+    rdfs:range xsd:boolean .
+
+github:forksCount a rdf:Property ;
+    rdfs:label "Forks Count"@en ;
+    rdfs:comment "The number of forks of this repository."@en ;
+    rdfs:domain github:GitRepository ;
+    rdfs:range xsd:nonNegativeInteger .
+
+github:starsCount a rdf:Property ;
+    rdfs:label "Stars Count"@en ;
+    rdfs:comment "The number of stars this repository has."@en ;
+    rdfs:domain github:GitRepository ;
+    rdfs:range xsd:nonNegativeInteger .
+
+github:watchersCount a rdf:Property ;
+    rdfs:label "Watchers Count"@en ;
+    rdfs:comment "The number of watchers of this repository."@en ;
+    rdfs:domain github:GitRepository ;
+    rdfs:range xsd:nonNegativeInteger .
+
+github:defaultBranch a rdf:Property ;
+    rdfs:label "Default Branch"@en ;
+    rdfs:comment "The name of the default branch."@en ;
+    rdfs:domain github:GitRepository ;
+    rdfs:range xsd:string .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: GitHubUser                                │
+# ╰──────────────────────────────────────────────────╯
+#
+
+github:GitHubUser a rdfs:Class ;
+    rdfs:subClassOf platform:Person ;
+    rdfs:label "GitHub User"@en ;
+    rdfs:comment "Represents a user on GitHub."@en .
+
+github:login a rdf:Property ;
+    rdfs:label "Login"@en ;
+    rdfs:comment "The GitHub login/username."@en ;
+    rdfs:domain github:GitHubUser ;
+    rdfs:range xsd:string .
+
+github:userId a rdf:Property ;
+    rdfs:label "User ID"@en ;
+    rdfs:comment "The unique GitHub user ID."@en ;
+    rdfs:domain github:GitHubUser ;
+    rdfs:range xsd:nonNegativeInteger .
+
+github:avatarUrl a rdf:Property ;
+    rdfs:label "Avatar URL"@en ;
+    rdfs:comment "The URL to the user's avatar image."@en ;
+    rdfs:domain github:GitHubUser ;
+    rdfs:range xsd:anyURI .
+
+github:userType a rdf:Property ;
+    rdfs:label "User Type"@en ;
+    rdfs:comment "The type of GitHub user (User, Organization, Bot)."@en ;
+    rdfs:domain github:GitHubUser ;
+    rdfs:range github:UserType .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: GitCommit (GitHub Extension)              │
+# ╰──────────────────────────────────────────────────╯
+#
+
+github:GitCommit a rdfs:Class ;
+    rdfs:subClassOf git:GitCommit ;
+    rdfs:label "GitHub Git Commit"@en ;
+    rdfs:comment "Extends a git commit with additional GitHub-specific data."@en .
+
+# GitHub Commit Properties
+
+github:user a rdf:Property ;
+    rdfs:label "GitHub User"@en ;
+    rdfs:comment "The GitHub user associated with this commit."@en ;
+    rdfs:domain github:GitCommit ;
+    rdfs:range github:GitHubUser .
+
+github:commentsUrl a rdf:Property ;
+    rdfs:label "Comments URL"@en ;
+    rdfs:comment "URL to view comments on this commit."@en ;
+    rdfs:domain github:GitCommit ;
+    rdfs:range xsd:anyURI .
+
+github:htmlUrl a rdf:Property ;
+    rdfs:label "HTML URL"@en ;
+    rdfs:comment "The GitHub web URL for this commit."@en ;
+    rdfs:domain github:GitCommit ;
+    rdfs:range xsd:anyURI .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: GitHubIssue                               │
+# ╰──────────────────────────────────────────────────╯
+#
+
+github:GitHubIssue a rdfs:Class ;
+    rdfs:subClassOf platform:Ticket ;
+    rdfs:label "GitHub Issue"@en ;
+    rdfs:comment "Represents a GitHub issue."@en .
+
+# GitHub Issue Properties
+
+github:issueId a rdf:Property ;
+    rdfs:label "Issue ID"@en ;
+    rdfs:comment "The internal GitHub issue ID."@en ;
+    rdfs:domain github:GitHubIssue ;
+    rdfs:range xsd:nonNegativeInteger .
+
+github:htmlUrl a rdf:Property ;
+    rdfs:label "HTML URL"@en ;
+    rdfs:comment "The GitHub web URL for this issue."@en ;
+    rdfs:domain github:GitHubIssue ;
+    rdfs:range xsd:anyURI .
+
+github:nodeId a rdf:Property ;
+    rdfs:label "Node ID"@en ;
+    rdfs:comment "The GitHub GraphQL node ID."@en ;
+    rdfs:domain github:GitHubIssue ;
+    rdfs:range xsd:string .
+
+github:locked a rdf:Property ;
+    rdfs:label "Locked"@en ;
+    rdfs:comment "Whether the issue is locked."@en ;
+    rdfs:domain github:GitHubIssue ;
+    rdfs:range xsd:boolean .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: GitHubPullRequest                         │
+# ╰──────────────────────────────────────────────────╯
+#
+
+github:GitHubPullRequest a rdfs:Class ;
+    rdfs:subClassOf github:GitHubIssue ;
+    rdfs:label "GitHub Pull Request"@en ;
+    rdfs:comment "Represents a GitHub pull request."@en .
+
+# Pull Request specific properties
+
+github:merged a rdf:Property ;
+    rdfs:label "Merged"@en ;
+    rdfs:comment "Whether the pull request has been merged."@en ;
+    rdfs:domain github:GitHubPullRequest ;
+    rdfs:range xsd:boolean .
+
+github:mergeCommitSha a rdf:Property ;
+    rdfs:label "Merge Commit SHA"@en ;
+    rdfs:comment "The SHA of the merge commit."@en ;
+    rdfs:domain github:GitHubPullRequest ;
+    rdfs:range xsd:string .
+
+github:mergedAt a rdf:Property ;
+    rdfs:label "Merged At"@en ;
+    rdfs:comment "When the pull request was merged."@en ;
+    rdfs:domain github:GitHubPullRequest ;
+    rdfs:range xsd:dateTime .
+
+github:mergedBy a rdf:Property ;
+    rdfs:label "Merged By"@en ;
+    rdfs:comment "The user who merged the pull request."@en ;
+    rdfs:domain github:GitHubPullRequest ;
+    rdfs:range github:GitHubUser .
+
+github:headBranch a rdf:Property ;
+    rdfs:label "Head Branch"@en ;
+    rdfs:comment "The head branch of the pull request."@en ;
+    rdfs:domain github:GitHubPullRequest ;
+    rdfs:range xsd:string .
+
+github:baseBranch a rdf:Property ;
+    rdfs:label "Base Branch"@en ;
+    rdfs:comment "The base branch that the pull request targets."@en ;
+    rdfs:domain github:GitHubPullRequest ;
+    rdfs:range xsd:string .
+
+github:draft a rdf:Property ;
+    rdfs:label "Draft"@en ;
+    rdfs:comment "Whether the pull request is a draft."@en ;
+    rdfs:domain github:GitHubPullRequest ;
+    rdfs:range xsd:boolean .
+
+#
+# ╭──────────────────────────────────────────────────

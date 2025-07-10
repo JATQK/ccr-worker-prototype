@@ -1,0 +1,450 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix spdx: <http://spdx.org/rdf/terms#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix ns0: <http://purl.org/vocab/vann/> .
+@prefix git: <https://purl.archive.org/git2rdflab/v2/git2RDFLab-git#> .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Metadata                                         │
+# ╰──────────────────────────────────────────────────╯
+#
+
+<https://purl.archive.org/git2rdflab/v2/git2RDFLab-git#>
+  a owl:Ontology ;
+  dc:title "The git2RDFLab Git Ontology v2"@en ;
+  dc:description "The git2RDFLab ontology v2 provides entities found in a git repository, mainly commits, with improved relationships and structure linked to github issues"@en ;
+  ns0:preferredNamespacePrefix "git" ;
+  ns0:preferredNamespaceUri "https://purl.archive.org/git2rdflab/v2/git2RDFLab-git#" ;
+  owl:versionInfo "Version 2.0 - 2025-07-10"@en ;
+  dc:modified "2025-07-10"^^xsd:date ;
+  dc:contributor "https://github.com/git2RDFLab" ;
+  owl:priorVersion <https://purl.archive.org/git2rdflab/v1/git2RDFLab-git#> .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: GitRepository                             │
+# ╰──────────────────────────────────────────────────╯
+#
+
+git:GitRepository a rdfs:Class ;
+    rdfs:label "Git Repository"@en ;
+    rdfs:comment "Represents a Git repository containing commits, branches, and other git objects."@en .
+
+# GitRepository properties
+
+git:encoding a rdf:Property ;
+    rdfs:label "Repository Encoding"@en ;
+    rdfs:comment "The file encoding used in this repository (default UTF-8)."@en ;
+    rdfs:domain git:GitRepository ;
+    rdfs:range xsd:string .
+
+git:hasSubmodule a rdf:Property ;
+    rdfs:label "Has Submodule"@en ;
+    rdfs:comment "Links a repository to its submodules."@en ;
+    rdfs:domain git:GitRepository ;
+    rdfs:range git:GitSubmodule .
+
+git:hasCommit a rdf:Property ;
+    rdfs:label "Has Commit"@en ;
+    rdfs:comment "Links a repository to its commits."@en ;
+    rdfs:domain git:GitRepository ;
+    rdfs:range git:GitCommit .
+
+git:hasBranch a rdf:Property ;
+    rdfs:label "Has Branch"@en ;
+    rdfs:comment "Links a repository to its branches."@en ;
+    rdfs:domain git:GitRepository ;
+    rdfs:range git:GitBranch .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: GitBranch                                 │
+# ╰──────────────────────────────────────────────────╯
+#
+
+git:GitBranch a rdfs:Class ;
+    rdfs:label "Git Branch"@en ;
+    rdfs:comment "Represents a Git branch."@en .
+
+git:branchName a rdf:Property ;
+    rdfs:label "Branch Name"@en ;
+    rdfs:comment "The name of the branch."@en ;
+    rdfs:domain git:GitBranch ;
+    rdfs:range xsd:string .
+
+git:headCommit a rdf:Property ;
+    rdfs:label "Head Commit"@en ;
+    rdfs:comment "The commit that this branch points to."@en ;
+    rdfs:domain git:GitBranch ;
+    rdfs:range git:GitCommit .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: GitSubmodule                              │
+# ╰──────────────────────────────────────────────────╯
+#
+
+git:GitSubmodule a rdfs:Class ;
+    rdfs:label "Git Submodule"@en ;
+    rdfs:comment "Represents a Git submodule reference."@en .
+
+# GitSubmodule properties
+
+git:submodulePath a rdf:Property ;
+    rdfs:label "Submodule Path"@en ;
+    rdfs:comment "The local path of the submodule."@en ;
+    rdfs:domain git:GitSubmodule ;
+    rdfs:range xsd:string .
+
+git:submoduleHash a rdf:Property ;
+    rdfs:label "Submodule Commit Hash"@en ;
+    rdfs:comment "The SHA-1 checksum of the referenced commit."@en ;
+    rdfs:domain git:GitSubmodule ;
+    rdfs:range spdx:CheckSum .
+
+git:submoduleCommitUri a rdf:Property ;
+    rdfs:label "Submodule Commit URI"@en ;
+    rdfs:comment "The URI of the commit in the submodule repository."@en ;
+    rdfs:domain git:GitSubmodule ;
+    rdfs:range xsd:anyURI .
+
+git:submoduleRepositoryUri a rdf:Property ;
+    rdfs:label "Submodule Repository URI"@en ;
+    rdfs:comment "The URI of the submodule repository."@en ;
+    rdfs:domain git:GitSubmodule ;
+    rdfs:range xsd:anyURI .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: GitCommit                                 │
+# ╰──────────────────────────────────────────────────╯
+#
+
+git:GitCommit a rdfs:Class ;
+    rdfs:label "Git Commit"@en ;
+    rdfs:comment "Represents a Git commit."@en .
+
+# GitCommit properties
+
+git:hash a rdf:Property ;
+    rdfs:label "Commit Hash"@en ;
+    rdfs:comment "The SHA-1 checksum of this commit."@en ;
+    rdfs:domain git:GitCommit ;
+    rdfs:range xsd:string .
+
+git:message a rdf:Property ;
+    rdfs:label "Commit Message"@en ;
+    rdfs:comment "The commit message for this commit."@en ;
+    rdfs:domain git:GitCommit ;
+    rdfs:range xsd:string .
+
+git:authorName a rdf:Property ;
+    rdfs:label "Author Name"@en ;
+    rdfs:comment "The name of the author for this commit."@en ;
+    rdfs:domain git:GitCommit ;
+    rdfs:range xsd:string .
+
+git:authorEmail a rdf:Property ;
+    rdfs:label "Author Email"@en ;
+    rdfs:comment "The email of the author for this commit."@en ;
+    rdfs:domain git:GitCommit ;
+    rdfs:range xsd:string .
+
+git:authorDate a rdf:Property ;
+    rdfs:label "Author Date"@en ;
+    rdfs:comment "A timestamp of when the commit was authored."@en ;
+    rdfs:domain git:GitCommit ;
+    rdfs:range xsd:dateTime .
+
+git:commitDate a rdf:Property ;
+    rdfs:label "Commit Date"@en ;
+    rdfs:comment "A timestamp of when the commit was committed."@en ;
+    rdfs:domain git:GitCommit ;
+    rdfs:range xsd:dateTime .
+
+git:committerName a rdf:Property ;
+    rdfs:label "Committer Name"@en ;
+    rdfs:comment "The name of the committer."@en ;
+    rdfs:domain git:GitCommit ;
+    rdfs:range xsd:string .
+
+git:committerEmail a rdf:Property ;
+    rdfs:label "Committer Email"@en ;
+    rdfs:comment "The email of the committer."@en ;
+    rdfs:domain git:GitCommit ;
+    rdfs:range xsd:string .
+
+git:hasParent a rdf:Property ;
+    rdfs:label "Has Parent"@en ;
+    rdfs:comment "Links a commit to its parent commit(s)."@en ;
+    rdfs:domain git:GitCommit ;
+    rdfs:range git:GitCommit .
+
+git:inBranch a rdf:Property ;
+    rdfs:label "In Branch"@en ;
+    rdfs:comment "Indicates which branch(es) contain this commit."@en ;
+    rdfs:domain git:GitCommit ;
+    rdfs:range git:GitBranch .
+
+git:hasTag a rdf:Property ;
+    rdfs:label "Has Tag"@en ;
+    rdfs:comment "Links a commit to tags that point to it."@en ;
+    rdfs:domain git:GitCommit ;
+    rdfs:range git:GitTag .
+
+git:hasDiffEntry a rdf:Property ;
+    rdfs:label "Has Diff Entry"@en ;
+    rdfs:comment "Links a commit to its diff entries compared to parent commit(s)."@en ;
+    rdfs:domain git:GitCommit ;
+    rdfs:range git:CommitDiffEntry .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: GitTag                                    │
+# ╰──────────────────────────────────────────────────╯
+#
+
+git:GitTag a rdfs:Class ;
+    rdfs:label "Git Tag"@en ;
+    rdfs:comment "Represents a Git tag."@en .
+
+git:tagName a rdf:Property ;
+    rdfs:label "Tag Name"@en ;
+    rdfs:comment "The name of the tag."@en ;
+    rdfs:domain git:GitTag ;
+    rdfs:range xsd:string .
+
+git:tagMessage a rdf:Property ;
+    rdfs:label "Tag Message"@en ;
+    rdfs:comment "The message associated with an annotated tag."@en ;
+    rdfs:domain git:GitTag ;
+    rdfs:range xsd:string .
+
+git:pointsTo a rdf:Property ;
+    rdfs:label "Points To"@en ;
+    rdfs:comment "The commit that this tag points to."@en ;
+    rdfs:domain git:GitTag ;
+    rdfs:range git:GitCommit .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: CommitDiffEntry                           │
+# ╰──────────────────────────────────────────────────╯
+#
+
+git:CommitDiffEntry a rdfs:Class ;
+    rdfs:label "Commit Diff Entry"@en ;
+    rdfs:comment "A diff entry representing changes to a single file in a commit compared to its parent."@en .
+
+# CommitDiffEntry properties
+
+git:changeType a rdf:Property ;
+    rdfs:label "Change Type"@en ;
+    rdfs:comment "Specifies the type of change (add, delete, modify, rename, copy)."@en ;
+    rdfs:domain git:CommitDiffEntry ;
+    rdfs:range git:ChangeType .
+
+git:oldFileName a rdf:Property ;
+    rdfs:label "Old File Name"@en ;
+    rdfs:comment "The file path in the parent commit."@en ;
+    rdfs:domain git:CommitDiffEntry ;
+    rdfs:range xsd:string .
+
+git:newFileName a rdf:Property ;
+    rdfs:label "New File Name"@en ;
+    rdfs:comment "The file path in the current commit."@en ;
+    rdfs:domain git:CommitDiffEntry ;
+    rdfs:range xsd:string .
+
+git:hasEdit a rdf:Property ;
+    rdfs:label "Has Edit"@en ;
+    rdfs:comment "Links a diff entry to its individual edits."@en ;
+    rdfs:domain git:CommitDiffEntry ;
+    rdfs:range git:CommitDiffEdit .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: CommitDiffEdit                            │
+# ╰──────────────────────────────────────────────────╯
+#
+
+git:CommitDiffEdit a rdfs:Class ;
+    rdfs:label "Commit Diff Edit"@en ;
+    rdfs:comment "Represents a specific edit (insertion, deletion, or replacement) within a file."@en .
+
+# CommitDiffEdit properties
+
+git:editType a rdf:Property ;
+    rdfs:label "Edit Type"@en ;
+    rdfs:comment "The type of edit (insert, delete, replace)."@en ;
+    rdfs:domain git:CommitDiffEdit ;
+    rdfs:range git:EditType .
+
+git:oldLineStart a rdf:Property ;
+    rdfs:label "Old Line Start"@en ;
+    rdfs:comment "The starting line number in the old file (0-based)."@en ;
+    rdfs:domain git:CommitDiffEdit ;
+    rdfs:range xsd:nonNegativeInteger .
+
+git:newLineStart a rdf:Property ;
+    rdfs:label "New Line Start"@en ;
+    rdfs:comment "The starting line number in the new file (0-based)."@en ;
+    rdfs:domain git:CommitDiffEdit ;
+    rdfs:range xsd:nonNegativeInteger .
+
+git:oldLineEnd a rdf:Property ;
+    rdfs:label "Old Line End"@en ;
+    rdfs:comment "The ending line number in the old file."@en ;
+    rdfs:domain git:CommitDiffEdit ;
+    rdfs:range xsd:nonNegativeInteger .
+
+git:newLineEnd a rdf:Property ;
+    rdfs:label "New Line End"@en ;
+    rdfs:comment "The ending line number in the new file."@en ;
+    rdfs:domain git:CommitDiffEdit ;
+    rdfs:range xsd:nonNegativeInteger .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Enumeration: ChangeType                          │
+# ╰──────────────────────────────────────────────────╯
+#
+
+git:ChangeType a rdfs:Class ;
+    rdfs:label "Change Type"@en ;
+    rdfs:comment "Enumeration of possible change types for file modifications."@en .
+
+git:add a git:ChangeType ;
+    rdfs:label "Add"@en ;
+    rdfs:comment "A file has been added."@en .
+
+git:delete a git:ChangeType ;
+    rdfs:label "Delete"@en ;
+    rdfs:comment "A file has been deleted."@en .
+
+git:modify a git:ChangeType ;
+    rdfs:label "Modify"@en ;
+    rdfs:comment "A file has been modified."@en .
+
+git:rename a git:ChangeType ;
+    rdfs:label "Rename"@en ;
+    rdfs:comment "A file has been renamed."@en .
+
+git:copy a git:ChangeType ;
+    rdfs:label "Copy"@en ;
+    rdfs:comment "A file has been copied."@en .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Enumeration: EditType                            │
+# ╰──────────────────────────────────────────────────╯
+#
+
+git:EditType a rdfs:Class ;
+    rdfs:label "Edit Type"@en ;
+    rdfs:comment "Enumeration of possible edit types within a file."@en .
+
+git:insert a git:EditType ;
+    rdfs:label "Insert"@en ;
+    rdfs:comment "Content has been inserted into a file."@en .
+
+git:del a git:EditType ;
+    rdfs:label "Delete"@en ;
+    rdfs:comment "Content has been deleted from a file."@en .
+
+git:replace a git:EditType ;
+    rdfs:label "Replace"@en ;
+    rdfs:comment "Content has been replaced within a file."@en .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: BranchSnapshot                            │
+# ╰──────────────────────────────────────────────────╯
+#
+
+git:BranchSnapshot a rdfs:Class ;
+    rdfs:label "Branch Snapshot"@en ;
+    rdfs:comment "Represents a snapshot of a branch containing latest commit information for each line (similar to 'git blame')."@en .
+
+git:snapshotDate a rdf:Property ;
+    rdfs:label "Snapshot Date"@en ;
+    rdfs:comment "The date when this snapshot was taken."@en ;
+    rdfs:domain git:BranchSnapshot ;
+    rdfs:range xsd:dateTime .
+
+git:hasFileEntry a rdf:Property ;
+    rdfs:label "Has File Entry"@en ;
+    rdfs:comment "Links a snapshot to its file entries."@en ;
+    rdfs:domain git:BranchSnapshot ;
+    rdfs:range git:BranchSnapshotFileEntry .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: BranchSnapshotFileEntry                   │
+# ╰──────────────────────────────────────────────────╯
+#
+
+git:BranchSnapshotFileEntry a rdfs:Class ;
+    rdfs:label "Branch Snapshot File Entry"@en ;
+    rdfs:comment "Represents a file in a branch snapshot with line-by-line commit information."@en .
+
+git:fileName a rdf:Property ;
+    rdfs:label "File Name"@en ;
+    rdfs:comment "The path and filename."@en ;
+    rdfs:domain git:BranchSnapshotFileEntry ;
+    rdfs:range xsd:string .
+
+git:hasLineEntry a rdf:Property ;
+    rdfs:label "Has Line Entry"@en ;
+    rdfs:comment "Links a file entry to its line entries."@en ;
+    rdfs:domain git:BranchSnapshotFileEntry ;
+    rdfs:range git:BranchSnapshotLineEntry .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: BranchSnapshotLineEntry                   │
+# ╰──────────────────────────────────────────────────╯
+#
+
+git:BranchSnapshotLineEntry a rdfs:Class ;
+    rdfs:label "Branch Snapshot Line Entry"@en ;
+    rdfs:comment "Represents a single line in a file with its latest commit information."@en .
+
+git:lineCommitHash a rdf:Property ;
+    rdfs:label "Line Commit Hash"@en ;
+    rdfs:comment "The SHA-1 checksum of the commit that last modified this line."@en ;
+    rdfs:domain git:BranchSnapshotLineEntry ;
+    rdfs:range spdx:CheckSum .
+
+git:lineNumber a rdf:Property ;
+    rdfs:label "Line Number"@en ;
+    rdfs:comment "The line number in the file (0-based)."@en ;
+    rdfs:domain git:BranchSnapshotLineEntry ;
+    rdfs:range xsd:nonNegativeInteger .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Backwards Compatibility                          │
+# ╰──────────────────────────────────────────────────╯
+#
+
+# Equivalence declarations for v1 compatibility
+git:commitHash owl:equivalentProperty git:hash .
+git:commitMessage owl:equivalentProperty git:message .
+git:repositoryEncoding owl:equivalentProperty git:encoding .
+git:diffEntry owl:equivalentProperty git:hasDiffEntry .
+git:edit owl:equivalentProperty git:hasEdit .
+git:branchSnapshotDate owl:equivalentProperty git:snapshotDate .
+git:branchSnapshotFileEntry owl:equivalentProperty git:hasFileEntry .
+git:branchSnapshotFileName owl:equivalentProperty git:fileName .
+git:branchSnapshotLineEntry owl:equivalentProperty git:hasLineEntry .
+git:branchSnapshotCommitHash owl:equivalentProperty git:lineCommitHash .
+git:branchSnapshotLine owl:equivalentProperty git:lineNumber .
+git:oldLinenumberBegin owl:equivalentProperty git:oldLineStart .
+git:newLinenumberBegin owl:equivalentProperty git:newLineStart .
+git:oldLinenumberEnd owl:equivalentProperty git:oldLineEnd .
+git:newLinenumberEnd owl:equivalentProperty git:newLineEnd .

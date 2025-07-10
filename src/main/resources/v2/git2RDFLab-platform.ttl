@@ -1,0 +1,428 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix ns0: <http://purl.org/vocab/vann/> .
+@prefix platform: <https://purl.archive.org/git2rdflab/v2/git2RDFLab-platform#> .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Metadata                                         │
+# ╰──────────────────────────────────────────────────╯
+#
+
+<https://purl.archive.org/git2rdflab/v2/git2RDFLab-platform#>
+  a owl:Ontology ;
+  dc:title "The git2RDFLab Platform Ontology v2"@en ;
+  dc:description "The git2RDFLab platform ontology v2 provides entities found in external git platform providers, including issues, users, comments, and workflows"@en ;
+  ns0:preferredNamespacePrefix "platform" ;
+  ns0:preferredNamespaceUri "https://purl.archive.org/git2rdflab/v2/git2RDFLab-platform#" ;
+  owl:versionInfo "Version 2.0 - 2025-07-10"@en ;
+  dc:modified "2025-07-10"^^xsd:date ;
+  dc:contributor "https://github.com/git2RDFLab" ;
+  owl:priorVersion <https://purl.archive.org/git2rdflab/v1/git2RDFLab-platform#> .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: Person                                    │
+# ╰──────────────────────────────────────────────────╯
+#
+
+platform:Person a rdfs:Class ;
+    rdfs:label "Person"@en ;
+    rdfs:comment "Represents a person (author, committer, user) in the platform."@en .
+
+platform:name a rdf:Property ;
+    rdfs:label "Name"@en ;
+    rdfs:comment "The display name of the person."@en ;
+    rdfs:domain platform:Person ;
+    rdfs:range xsd:string .
+
+platform:email a rdf:Property ;
+    rdfs:label "Email"@en ;
+    rdfs:comment "The email address of the person."@en ;
+    rdfs:domain platform:Person ;
+    rdfs:range xsd:string .
+
+platform:username a rdf:Property ;
+    rdfs:label "Username"@en ;
+    rdfs:comment "The platform-specific username/handle."@en ;
+    rdfs:domain platform:Person ;
+    rdfs:range xsd:string .
+
+platform:profileUrl a rdf:Property ;
+    rdfs:label "Profile URL"@en ;
+    rdfs:comment "The URL to the person's profile page."@en ;
+    rdfs:domain platform:Person ;
+    rdfs:range xsd:anyURI .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: Ticket                                    │
+# ╰──────────────────────────────────────────────────╯
+#
+
+platform:Ticket a rdfs:Class ;
+    rdfs:label "Ticket"@en ;
+    rdfs:comment "Represents an issue or ticket with common properties across multiple service platforms."@en .
+
+# Ticket properties
+
+platform:title a rdf:Property ;
+    rdfs:label "Title"@en ;
+    rdfs:comment "The title of the issue or ticket."@en ;
+    rdfs:domain platform:Ticket ;
+    rdfs:range xsd:string .
+
+platform:body a rdf:Property ;
+    rdfs:label "Body"@en ;
+    rdfs:comment "The main body text of the issue or ticket."@en ;
+    rdfs:domain platform:Ticket ;
+    rdfs:range xsd:string .
+
+platform:number a rdf:Property ;
+    rdfs:label "Number"@en ;
+    rdfs:comment "The platform-specific number identifier for the ticket."@en ;
+    rdfs:domain platform:Ticket ;
+    rdfs:range xsd:nonNegativeInteger .
+
+platform:state a rdf:Property ;
+    rdfs:label "State"@en ;
+    rdfs:comment "The current state of the ticket."@en ;
+    rdfs:domain platform:Ticket ;
+    rdfs:range platform:TicketState .
+
+platform:submitter a rdf:Property ;
+    rdfs:label "Submitter"@en ;
+    rdfs:comment "The person who submitted/created this ticket."@en ;
+    rdfs:domain platform:Ticket ;
+    rdfs:range platform:Person .
+
+platform:assignee a rdf:Property ;
+    rdfs:label "Assignee"@en ;
+    rdfs:comment "A person assigned to work on this ticket."@en ;
+    rdfs:domain platform:Ticket ;
+    rdfs:range platform:Person .
+
+platform:createdAt a rdf:Property ;
+    rdfs:label "Created At"@en ;
+    rdfs:comment "The date and time when this ticket was created."@en ;
+    rdfs:domain platform:Ticket ;
+    rdfs:range xsd:dateTime .
+
+platform:updatedAt a rdf:Property ;
+    rdfs:label "Updated At"@en ;
+    rdfs:comment "The date and time when this ticket was last updated."@en ;
+    rdfs:domain platform:Ticket ;
+    rdfs:range xsd:dateTime .
+
+platform:closedAt a rdf:Property ;
+    rdfs:label "Closed At"@en ;
+    rdfs:comment "The date and time when this ticket was closed."@en ;
+    rdfs:domain platform:Ticket ;
+    rdfs:range xsd:dateTime .
+
+platform:hasLabel a rdf:Property ;
+    rdfs:label "Has Label"@en ;
+    rdfs:comment "Links a ticket to its labels."@en ;
+    rdfs:domain platform:Ticket ;
+    rdfs:range platform:Label .
+
+platform:hasMilestone a rdf:Property ;
+    rdfs:label "Has Milestone"@en ;
+    rdfs:comment "Links a ticket to its milestone."@en ;
+    rdfs:domain platform:Ticket ;
+    rdfs:range platform:Milestone .
+
+platform:hasComment a rdf:Property ;
+    rdfs:label "Has Comment"@en ;
+    rdfs:comment "Links a ticket to its comments."@en ;
+    rdfs:domain platform:Ticket ;
+    rdfs:range platform:Comment .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: Comment                                   │
+# ╰──────────────────────────────────────────────────╯
+#
+
+platform:Comment a rdfs:Class ;
+    rdfs:label "Comment"@en ;
+    rdfs:comment "Represents a comment on an issue, pull request, or other platform entity."@en .
+
+platform:commentBody a rdf:Property ;
+    rdfs:label "Comment Body"@en ;
+    rdfs:comment "The text content of the comment."@en ;
+    rdfs:domain platform:Comment ;
+    rdfs:range xsd:string .
+
+platform:commentAuthor a rdf:Property ;
+    rdfs:label "Comment Author"@en ;
+    rdfs:comment "The person who authored this comment."@en ;
+    rdfs:domain platform:Comment ;
+    rdfs:range platform:Person .
+
+platform:commentId a rdf:Property ;
+    rdfs:label "Comment ID"@en ;
+    rdfs:comment "The platform-specific identifier for this comment."@en ;
+    rdfs:domain platform:Comment ;
+    rdfs:range xsd:long .
+
+platform:commentUrl a rdf:Property ;
+    rdfs:label "Comment URL"@en ;
+    rdfs:comment "The URL to view this comment."@en ;
+    rdfs:domain platform:Comment ;
+    rdfs:range xsd:anyURI .
+
+platform:commentedAt a rdf:Property ;
+    rdfs:label "Commented At"@en ;
+    rdfs:comment "The date and time when this comment was submitted."@en ;
+    rdfs:domain platform:Comment ;
+    rdfs:range xsd:dateTime .
+
+platform:isRootComment a rdf:Property ;
+    rdfs:label "Is Root Comment"@en ;
+    rdfs:comment "Indicates whether this is a top-level comment (not a reply)."@en ;
+    rdfs:domain platform:Comment ;
+    rdfs:range xsd:boolean .
+
+platform:reactionCount a rdf:Property ;
+    rdfs:label "Reaction Count"@en ;
+    rdfs:comment "The number of reactions this comment has received."@en ;
+    rdfs:domain platform:Comment ;
+    rdfs:range xsd:nonNegativeInteger .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: Label                                     │
+# ╰──────────────────────────────────────────────────╯
+#
+
+platform:Label a rdfs:Class ;
+    rdfs:label "Label"@en ;
+    rdfs:comment "Represents a label that can be applied to tickets and other entities."@en .
+
+platform:labelName a rdf:Property ;
+    rdfs:label "Label Name"@en ;
+    rdfs:comment "The name/text of the label."@en ;
+    rdfs:domain platform:Label ;
+    rdfs:range xsd:string .
+
+platform:labelColor a rdf:Property ;
+    rdfs:label "Label Color"@en ;
+    rdfs:comment "The color code of the label (usually hex format)."@en ;
+    rdfs:domain platform:Label ;
+    rdfs:range xsd:string .
+
+platform:labelDescription a rdf:Property ;
+    rdfs:label "Label Description"@en ;
+    rdfs:comment "A description of what this label represents."@en ;
+    rdfs:domain platform:Label ;
+    rdfs:range xsd:string .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: Milestone                                 │
+# ╰──────────────────────────────────────────────────╯
+#
+
+platform:Milestone a rdfs:Class ;
+    rdfs:label "Milestone"@en ;
+    rdfs:comment "Represents a milestone for organizing and tracking progress on tickets."@en .
+
+platform:milestoneTitle a rdf:Property ;
+    rdfs:label "Milestone Title"@en ;
+    rdfs:comment "The title of the milestone."@en ;
+    rdfs:domain platform:Milestone ;
+    rdfs:range xsd:string .
+
+platform:milestoneDescription a rdf:Property ;
+    rdfs:label "Milestone Description"@en ;
+    rdfs:comment "A description of the milestone."@en ;
+    rdfs:domain platform:Milestone ;
+    rdfs:range xsd:string .
+
+platform:milestoneDueDate a rdf:Property ;
+    rdfs:label "Milestone Due Date"@en ;
+    rdfs:comment "The target due date for this milestone."@en ;
+    rdfs:domain platform:Milestone ;
+    rdfs:range xsd:dateTime .
+
+platform:milestoneState a rdf:Property ;
+    rdfs:label "Milestone State"@en ;
+    rdfs:comment "The current state of the milestone (open/closed)."@en ;
+    rdfs:domain platform:Milestone ;
+    rdfs:range platform:MilestoneState .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: Workflow                                  │
+# ╰──────────────────────────────────────────────────╯
+#
+
+platform:Workflow a rdfs:Class ;
+    rdfs:label "Workflow"@en ;
+    rdfs:comment "Represents a CI/CD workflow or automation pipeline."@en .
+
+platform:workflowName a rdf:Property ;
+    rdfs:label "Workflow Name"@en ;
+    rdfs:comment "The name of the workflow."@en ;
+    rdfs:domain platform:Workflow ;
+    rdfs:range xsd:string .
+
+platform:workflowDescription a rdf:Property ;
+    rdfs:label "Workflow Description"@en ;
+    rdfs:comment "A description of what this workflow does."@en ;
+    rdfs:domain platform:Workflow ;
+    rdfs:range xsd:string .
+
+platform:workflowTrigger a rdf:Property ;
+    rdfs:label "Workflow Trigger"@en ;
+    rdfs:comment "What triggers this workflow to run."@en ;
+    rdfs:domain platform:Workflow ;
+    rdfs:range xsd:string .
+
+platform:hasJob a rdf:Property ;
+    rdfs:label "Has Job"@en ;
+    rdfs:comment "Links a workflow to its jobs."@en ;
+    rdfs:domain platform:Workflow ;
+    rdfs:range platform:WorkflowJob .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: WorkflowJob                               │
+# ╰──────────────────────────────────────────────────╯
+#
+
+platform:WorkflowJob a rdfs:Class ;
+    rdfs:label "Workflow Job"@en ;
+    rdfs:comment "Represents a job within a workflow execution."@en .
+
+platform:jobName a rdf:Property ;
+    rdfs:label "Job Name"@en ;
+    rdfs:comment "The name of the job."@en ;
+    rdfs:domain platform:WorkflowJob ;
+    rdfs:range xsd:string .
+
+platform:jobStatus a rdf:Property ;
+    rdfs:label "Job Status"@en ;
+    rdfs:comment "The current status of the job."@en ;
+    rdfs:domain platform:WorkflowJob ;
+    rdfs:range platform:JobStatus .
+
+platform:jobStartedAt a rdf:Property ;
+    rdfs:label "Job Started At"@en ;
+    rdfs:comment "When the job started execution."@en ;
+    rdfs:domain platform:WorkflowJob ;
+    rdfs:range xsd:dateTime .
+
+platform:jobCompletedAt a rdf:Property ;
+    rdfs:label "Job Completed At"@en ;
+    rdfs:comment "When the job completed execution."@en ;
+    rdfs:domain platform:WorkflowJob ;
+    rdfs:range xsd:dateTime .
+
+platform:jobConclusion a rdf:Property ;
+    rdfs:label "Job Conclusion"@en ;
+    rdfs:comment "The final result of the job (success, failure, etc.)."@en ;
+    rdfs:domain platform:WorkflowJob ;
+    rdfs:range platform:JobConclusion .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Enumeration: TicketState                         │
+# ╰──────────────────────────────────────────────────╯
+#
+
+platform:TicketState a rdfs:Class ;
+    rdfs:label "Ticket State"@en ;
+    rdfs:comment "Enumeration of possible ticket states."@en .
+
+platform:open a platform:TicketState ;
+    rdfs:label "Open"@en ;
+    rdfs:comment "The ticket is open and active."@en .
+
+platform:closed a platform:TicketState ;
+    rdfs:label "Closed"@en ;
+    rdfs:comment "The ticket has been closed."@en .
+
+platform:inProgress a platform:TicketState ;
+    rdfs:label "In Progress"@en ;
+    rdfs:comment "The ticket is currently being worked on."@en .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Enumeration: MilestoneState                      │
+# ╰──────────────────────────────────────────────────╯
+#
+
+platform:MilestoneState a rdfs:Class ;
+    rdfs:label "Milestone State"@en ;
+    rdfs:comment "Enumeration of possible milestone states."@en .
+
+platform:milestoneOpen a platform:MilestoneState ;
+    rdfs:label "Open"@en ;
+    rdfs:comment "The milestone is open and active."@en .
+
+platform:milestoneClosed a platform:MilestoneState ;
+    rdfs:label "Closed"@en ;
+    rdfs:comment "The milestone has been completed."@en .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Enumeration: JobStatus                           │
+# ╰──────────────────────────────────────────────────╯
+#
+
+platform:JobStatus a rdfs:Class ;
+    rdfs:label "Job Status"@en ;
+    rdfs:comment "Enumeration of possible job execution states."@en .
+
+platform:queued a platform:JobStatus ;
+    rdfs:label "Queued"@en ;
+    rdfs:comment "The job is queued for execution."@en .
+
+platform:running a platform:JobStatus ;
+    rdfs:label "Running"@en ;
+    rdfs:comment "The job is currently running."@en .
+
+platform:completed a platform:JobStatus ;
+    rdfs:label "Completed"@en ;
+    rdfs:comment "The job has completed execution."@en .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Enumeration: JobConclusion                       │
+# ╰──────────────────────────────────────────────────╯
+#
+
+platform:JobConclusion a rdfs:Class ;
+    rdfs:label "Job Conclusion"@en ;
+    rdfs:comment "Enumeration of possible job completion results."@en .
+
+platform:success a platform:JobConclusion ;
+    rdfs:label "Success"@en ;
+    rdfs:comment "The job completed successfully."@en .
+
+platform:failure a platform:JobConclusion ;
+    rdfs:label "Failure"@en ;
+    rdfs:comment "The job failed."@en .
+
+platform:cancelled a platform:JobConclusion ;
+    rdfs:label "Cancelled"@en ;
+    rdfs:comment "The job was cancelled."@en .
+
+platform:skipped a platform:JobConclusion ;
+    rdfs:label "Skipped"@en ;
+    rdfs:comment "The job was skipped."@en .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Backwards Compatibility                          │
+# ╰──────────────────────────────────────────────────╯
+#
+
+# Equivalence declarations for v1 compatibility
+platform:ticketTitle owl:equivalentProperty platform:title .
+platform:ticketBody owl:equivalentProperty platform:body .
