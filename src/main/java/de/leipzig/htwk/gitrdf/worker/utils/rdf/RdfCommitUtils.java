@@ -500,8 +500,8 @@ public final class RdfCommitUtils {
         return Triple.create(uri(repoUri), repositoryEncodingProperty(), stringLiteral(encoding));
     }
 
-    public static Triple createRepositoryOwnerProperty(String repoUri, String ownerName) {
-        return Triple.create(uri(repoUri), repositoryOwnerProperty(), stringLiteral(ownerName));
+    public static Triple createRepositoryOwnerProperty(String repoUri, String ownerUri) {
+        return Triple.create(uri(repoUri), repositoryOwnerProperty(), uri(ownerUri));
     }
 
     public static Triple createRepositoryNameProperty(String repoUri, String repositoryName) {
