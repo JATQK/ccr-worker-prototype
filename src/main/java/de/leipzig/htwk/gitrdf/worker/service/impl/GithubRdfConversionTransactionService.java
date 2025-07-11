@@ -429,7 +429,17 @@ public class GithubRdfConversionTransactionService {
 
             writer.start();
             writer.triple(RdfCommitUtils.createRepositoryRdfTypeProperty(repositoryUri));
-            writer.triple(RdfCommitUtils.createRepositoryOwnerProperty(repositoryUri, owner));
+            String ownerUri = GithubUriUtils.getUserUri(owner);
+            writer.triple(RdfCommitUtils.createRepositoryOwnerProperty(repositoryUri, ownerUri));
+            GHUser repoOwner = githubRepositoryHandle.getOwner();
+            if (repoOwner != null) {
+                writer.triple(RdfGithubUserUtils.createGitHubUserType(ownerUri));
+                writer.triple(RdfGithubUserUtils.createLoginProperty(ownerUri, repoOwner.getLogin()));
+                writer.triple(RdfGithubUserUtils.createUserIdProperty(ownerUri, repoOwner.getId()));
+                if (repoOwner.getName() != null && !repoOwner.getName().isEmpty()) {
+                    writer.triple(RdfGithubUserUtils.createNameProperty(ownerUri, repoOwner.getName()));
+                }
+            }
             writer.triple(RdfCommitUtils.createRepositoryNameProperty(repositoryUri, repositoryName));
 
             Config config = gitRepository.getConfig();
