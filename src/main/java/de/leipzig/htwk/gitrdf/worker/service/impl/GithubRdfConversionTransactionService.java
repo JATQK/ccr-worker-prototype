@@ -88,17 +88,17 @@ import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
 import de.leipzig.htwk.gitrdf.worker.handler.LockHandler;
 import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.GithubUriUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.GithubUserInfo;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.GithubUserInfo;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubCommentUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueReviewUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubReactionUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowJobUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowStepUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfTurtleTidier;
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
@@ -122,14 +122,14 @@ public class GithubRdfConversionTransactionService {
     public static final String PLATFORM_NAMESPACE = "platform";
     public static final String PLATFORM_URI = "https://purl.archive.org/git2rdftest/v2/git2RDFLab-platform#";
 
-    public static final String PLATFORM_GITHUB_URI = "https://purl.archive.org/git2rdftest/v2/git2RDFLab-platform-github#";
     public static final String PLATFORM_GITHUB_NAMESPACE = "github";
+    public static final String PLATFORM_GITHUB_URI = "https://purl.archive.org/git2rdftest/v2/git2RDFLab-platform-github#";
 
-    public static final String XSD_SCHEMA_URI = "http://www.w3.org/2001/XMLSchema#";
     public static final String XSD_SCHEMA_NAMESPACE = "xsd";
+    public static final String XSD_SCHEMA_URI = "http://www.w3.org/2001/XMLSchema#";
 
-    public static final String RDF_SCHEMA_URI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
     public static final String RDF_SCHEMA_NAMESPACE = "rdf";
+    public static final String RDF_SCHEMA_URI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 
     private final GithubHandlerService githubHandlerService;
 
