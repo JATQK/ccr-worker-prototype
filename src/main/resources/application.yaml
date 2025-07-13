@@ -66,3 +66,4 @@ logging:
         htwk:
           gitrdf:
             worker: info
+            listener: debug
