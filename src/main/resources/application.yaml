@@ -1,7 +1,13 @@
 spring:
   jpa:
     hibernate:
-      ddl-auto: none # validate  HERE none
+      ddl-auto: update  # Change from 'none' 
+    properties:
+      hibernate:
+        hbm2ddl:
+          auto: update
+    # hibernate:
+    #   ddl-auto: none # validate  HERE none
     #defer-datasource-initialization: true
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/gitrdfdb}

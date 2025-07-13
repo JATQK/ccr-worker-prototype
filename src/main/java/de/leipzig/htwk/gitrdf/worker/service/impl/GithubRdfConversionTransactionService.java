@@ -1327,10 +1327,14 @@ public class GithubRdfConversionTransactionService {
         if (userUri != null && !userUri.isEmpty()) {
             writer.triple(RdfCommitUtils.createCommiterGitHubUserProperty(commitUri, userUri));
             writer.triple(RdfGithubUserUtils.createGitHubUserType(userUri));
-            writer.triple(RdfGithubUserUtils.createLoginProperty(userUri, info.login));
-            writer.triple(RdfGithubUserUtils.createUserIdProperty(userUri, info.userId));
-            if (info.name != null && !info.name.isEmpty()) {
-                writer.triple(RdfGithubUserUtils.createNameProperty(userUri, info.name));
+            if (info != null) {
+                writer.triple(RdfGithubUserUtils.createUserIdProperty(userUri, info.userId));
+                if (info.login != null && !info.login.isEmpty()) {
+                    writer.triple(RdfGithubUserUtils.createLoginProperty(userUri, info.login));
+                }  
+                if (info.name != null && !info.name.isEmpty()) {
+                    writer.triple(RdfGithubUserUtils.createNameProperty(userUri, info.name));
+                }
             }
         }
 
@@ -1733,14 +1737,6 @@ public class GithubRdfConversionTransactionService {
                     });
         }
 
-
-
-
-        // String stepsForWorkflowList = steps != null ? steps.stream()
-        //         .map(Step::getName)
-        //         .filter(Objects::nonNull)
-        //         .collect(Collectors.joining(", ")) : "";
-        // writer.triple(RdfGithubWorkflowJobUtils.createWorkflowJobStepProperty(jobUri, stepsForWorkflowList));
 
         if (steps != null) {
             for (Step step : steps) {

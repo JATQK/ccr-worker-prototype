@@ -1,6 +1,11 @@
 package de.leipzig.htwk.gitrdf.worker.calculator;
 
-import org.eclipse.jgit.api.errors.JGitInternalException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+
 import org.eclipse.jgit.blame.BlameGenerator;
 import org.eclipse.jgit.blame.BlameResult;
 import org.eclipse.jgit.diff.RawText;
@@ -12,8 +17,6 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.treewalk.WorkingTreeOptions;
 import org.eclipse.jgit.util.IO;
 import org.eclipse.jgit.util.io.EolCanonicalizingInputStream;
-
-import java.io.*;
 
 /**
  * The implementation logic of this class closely resembles the logic of

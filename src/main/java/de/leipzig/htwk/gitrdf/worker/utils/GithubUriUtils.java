@@ -29,16 +29,10 @@ public final class GithubUriUtils {
         return getCommitBaseUri(owner, repository) + commitHash;
     }
 
-    /**
-     * Build a URI for a branch within a repository.
-     */
     public static String getBranchUri(String owner, String repository, String branchName) {
         return GITHUB_BASE + owner + "/" + repository + "/tree/" + branchName;
     }
 
-    /**
-     * Build a URI for a tag within a repository.
-     */
     public static String getTagUri(String owner, String repository, String tagName) {
         return GITHUB_BASE + owner + "/" + repository + "/tree/" + tagName;
     }
@@ -57,7 +51,6 @@ public final class GithubUriUtils {
 
     public static String getIssueCommentUrl(String repoString, String commentId) {
         // https://api.github.com/repos/dotnet/core/issues/comments/2978560992
-
         repoString = repoString.replace(GITHUB_BASE, GITHUB_API_BASE + "repos/");
         // Build the correct API URL for pull request comments
         return repoString + "issues/comments/" + commentId;
