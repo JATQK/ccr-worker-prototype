@@ -109,11 +109,12 @@ public class GithubRdfConversionTransactionService {
 
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
-    private static final int PROCESS_ISSUE_LIMIT = 10; // Limit for the number of issues to process
+    private static final int PROCESS_ISSUE_LIMIT = 20; // Limit for the number of issues to process
     private static final String[] PROCESS_ISSUE_ONLY = {}; // Only process these issues // "9946", "9947", "9948",
                                                            // "9949", "9950"
-    private static final int PROCESS_COMMIT_LIMIT = 10; // Limit for the number of commits to process
+    private static final int PROCESS_COMMIT_LIMIT = 20; // Limit for the number of commits to process
 
+    private static final boolean PROCESS_COMMENT_REACTIONS = true;
     // TODO: replace PURL
 
     public static final String GIT_NAMESPACE = "git";
@@ -426,7 +427,6 @@ public class GithubRdfConversionTransactionService {
 
             commitConversionWatch.start();
 
-
             lockHandler.renewLockOnRenewTimeFulfillment();
 
             // Metadata
@@ -463,12 +463,31 @@ public class GithubRdfConversionTransactionService {
             // Branches
             writer.start();
             for (Ref branchRef : branches) {
-                String branchName = branchRef.getName();
-                String branchUri = GithubUriUtils.getBranchUri(owner, repositoryName, branchName);
-                String headCommitUri = GithubUriUtils.getCommitUri(owner, repositoryName, branchRef.getObjectId().getName());
+                String fullBranchName = branchRef.getName();
+                String cleanBranchName = getCleanBranchName(branchRef);
+
+                // Skip remote tracking branches that are duplicates of local branches
+                if (fullBranchName.startsWith("refs/remotes/origin/")) {
+                    // Check if we have a local branch with the same name
+                    boolean hasLocalBranch = false;
+                    for (Ref otherRef : branches) {
+                        if (otherRef.getName().equals("refs/heads/" + cleanBranchName)) {
+                            hasLocalBranch = true;
+                            break;
+                        }
+                    }
+                    if (hasLocalBranch) {
+                        continue; // Skip this remote tracking branch
+                    }
+                }
+
+                String branchUri = GithubUriUtils.getBranchUri(owner, repositoryName, cleanBranchName);
+                String headCommitUri = GithubUriUtils.getCommitUri(owner, repositoryName,
+                        branchRef.getObjectId().getName());
+
                 writer.triple(RdfCommitUtils.createRepositoryHasBranchProperty(repositoryUri, branchUri));
                 writer.triple(RdfCommitUtils.createBranchRdfTypeProperty(branchUri));
-                writer.triple(RdfCommitUtils.createBranchNameProperty(branchUri, branchName));
+                writer.triple(RdfCommitUtils.createBranchNameProperty(branchUri, cleanBranchName));
                 writer.triple(RdfCommitUtils.createBranchHeadCommitProperty(branchUri, headCommitUri));
             }
             writer.finish();
@@ -487,7 +506,8 @@ public class GithubRdfConversionTransactionService {
                     String submodulePath = submoduleWalk.getPath();
                     String submoduleUrl = submoduleWalk.getModulesUrl();
                     String submoduleCommitHash = submoduleWalk.getObjectId().getName();
-                    String submoduleCommitHashUri = GithubUriUtils.getCommitUri(owner, repositoryName, submoduleCommitHash);
+                    String submoduleCommitHashUri = GithubUriUtils.getCommitUri(owner, repositoryName,
+                            submoduleCommitHash);
 
                     Resource submoduleResource = ResourceFactory.createResource();
                     Node submoduleNode = submoduleResource.asNode();
@@ -521,7 +541,7 @@ public class GithubRdfConversionTransactionService {
 
                 Map<ObjectId, List<String>> commitToTags = getTagsForCommits(gitRepository);
 
-                Map<String, PullRequestInfo> commitPrMap = buildCommitPrMap(githubRepositoryHandle);
+                Map<String, PullRequestInfo> commitPrMap = buildCommitPrMap(githubRepositoryHandle, gitRepository);
 
                 for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
@@ -663,24 +683,29 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         PullRequestInfo prInfo = commitPrMap.get(gitHash);
-                        calculateCommitIssues(writer, commitUri, commit.getFullMessage(), owner, repositoryName, prInfo);
+                        calculateCommitIssues(writer, commitUri, commit.getFullMessage(), owner, repositoryName,
+                                prInfo);
                         if (prInfo != null) {
-                            writer.triple(RdfCommitUtils.createCommitPartOfPullRequestProperty(commitUri, prInfo.issueUri));
+                            writer.triple(
+                                    RdfCommitUtils.createCommitPartOfPullRequestProperty(commitUri, prInfo.issueUri));
                             writer.triple(RdfCommitUtils.createCommitPartOfIssueProperty(commitUri, prInfo.issueUri));
-                            writer.triple(RdfGithubIssueUtils.createIssueContainsCommitProperty(prInfo.issueUri, commitUri));
+                            writer.triple(
+                                    RdfGithubIssueUtils.createIssueContainsCommitProperty(prInfo.issueUri, commitUri));
                             writer.triple(RdfCommitUtils.createCommitIsMergedProperty(commitUri, true));
                             if (prInfo.mergedAt != null) {
                                 writer.triple(RdfCommitUtils.createCommitMergedAtProperty(commitUri, prInfo.mergedAt));
                             }
                             if (gitHash.equals(prInfo.mergeCommitSha)) {
-                                writer.triple(RdfCommitUtils.createCommitMergedIntoIssueProperty(commitUri, prInfo.issueUri));
+                                writer.triple(
+                                        RdfCommitUtils.createCommitMergedIntoIssueProperty(commitUri, prInfo.issueUri));
                             }
                         }
 
                         // Branch
                         // TODO: better way to handle merges? (so commit could have multiple branches)
                         if (gitCommitRepositoryFilter.isEnableCommitBranch()) {
-                            calculateCommitBranch(commitBranchCalculator, writer, commit, commitUri, owner, repositoryName);
+                            calculateCommitBranch(commitBranchCalculator, writer, commit, commitUri, owner,
+                                    repositoryName);
                         }
 
                         List<String> tagNames = commitToTags.get(commitId);
@@ -818,14 +843,14 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         // ********************** ** REMOVE ON DEPLOYMENT ** **********************
-                        ZonedDateTime oneYearAgo = ZonedDateTime.now().minusYears(1);
-                        // REMOVE ON DEPLOYMENT
-                        Date dcreatedAt = ghIssue.getCreatedAt();
-                        if (dcreatedAt == null || dcreatedAt.toInstant().isBefore(oneYearAgo.toInstant())) {
-                            continue;
-                        }
+                        // ZonedDateTime oneYearAgo = ZonedDateTime.now().minusYears(1);
+                        // // REMOVE ON DEPLOYMENT
+                        // Date dcreatedAt = ghIssue.getCreatedAt();
+                        // if (dcreatedAt == null || dcreatedAt.toInstant().isBefore(oneYearAgo.toInstant())) {
+                        //     continue;
+                        // }
 
-                        if ( PROCESS_ISSUE_ONLY.length > 0) {
+                        if (PROCESS_ISSUE_ONLY.length > 0) {
                             boolean shouldProcessIssue = false;
                             for (String issueId : PROCESS_ISSUE_ONLY) {
                                 if (issueId.equals(String.valueOf(issueNumber))) {
@@ -864,18 +889,16 @@ public class GithubRdfConversionTransactionService {
                                     RdfGithubIssueUtils.createIssueUserProperty(issueUri, githubIssueUserUri));
                         }
 
-
-
                         if (githubIssueRepositoryFilter.isEnableIssueReviewers() && ghIssue.isPullRequest()) {
                             GHPullRequest pr = getPullRequestCached(
                                     ghIssue.getRepository(), issueNumber);
                             List<GHUser> reviewers = pr.getRequestedReviewers();
                             for (GHUser reviewer : reviewers) {
                                 String reviewerUri = reviewer.getHtmlUrl().toString();
-                                writer.triple(RdfGithubIssueUtils.createIssueRequestedReviewerProperty(issueUri, reviewerUri));
+                                writer.triple(RdfGithubIssueUtils.createIssueRequestedReviewerProperty(issueUri,
+                                        reviewerUri));
                             }
                         }
-
 
                         if (githubIssueRepositoryFilter.isEnableIssueMilestone()) {
                             GHMilestone issueMilestone = ghIssue.getMilestone();
@@ -926,8 +949,6 @@ public class GithubRdfConversionTransactionService {
                             }
                         }
 
-
-
                         // Reviews
                         if (githubIssueRepositoryFilter.isEnableIssueReviewers() && ghIssue.isPullRequest()) {
                             GHPullRequest pr = getPullRequestCached(
@@ -939,7 +960,8 @@ public class GithubRdfConversionTransactionService {
                                 if (!seenReviewIds.add(reviewId)) {
                                     continue;
                                 }
-                                String reviewURI = GithubUriUtils.getIssueReviewUri(issueUri, String.valueOf(pr.getId()), String.valueOf(reviewId));
+                                String reviewURI = GithubUriUtils.getIssueReviewUri(issueUri,
+                                        String.valueOf(pr.getId()), String.valueOf(reviewId));
                                 String reviewUrl = GithubUriUtils.getIssueReviewUrl(issueUri, String.valueOf(reviewId));
                                 // String reviewURL = review.getUrl().toString();
                                 // String reviewUri = issueUri + "/reviews/" + reviewId;
@@ -955,23 +977,23 @@ public class GithubRdfConversionTransactionService {
                                 // Dynamic Properties 
                                 if (review.getBody() != null && !review.getBody().isEmpty()) {
                                     writer.triple(RdfGithubIssueReviewUtils.createReviewDescriptionProperty(
-                                        reviewURI, review.getBody()));
+                                            reviewURI, review.getBody()));
                                 }
                                 if (review.getState() != null) {
                                     writer.triple(RdfGithubIssueReviewUtils.createReviewStateProperty(
-                                        reviewURI, review.getState().toString()));
+                                            reviewURI, review.getState().toString()));
                                 }
                                 if (review.getSubmittedAt() != null) {
                                     writer.triple(RdfGithubIssueReviewUtils.createReviewSubmittedAtProperty(
-                                        reviewURI, localDateTimeFrom(review.getSubmittedAt())));
+                                            reviewURI, localDateTimeFrom(review.getSubmittedAt())));
                                 }
                                 if (review.getUser() != null) {
                                     writer.triple(RdfGithubIssueReviewUtils.createReviewUserProperty(
-                                        reviewURI, review.getUser().getHtmlUrl().toString()));
+                                            reviewURI, review.getUser().getHtmlUrl().toString()));
                                 }
                                 if (review.getCommitId() != null) {
                                     writer.triple(RdfGithubIssueReviewUtils.createReviewCommitIdProperty(
-                                        reviewURI, review.getCommitId()));
+                                            reviewURI, review.getCommitId()));
                                 }
 
                                 // Review Comments
@@ -991,17 +1013,17 @@ public class GithubRdfConversionTransactionService {
                                     String reviewCommentURI = GithubUriUtils.getIssueReviewCommentUri(
                                             issueUri, String.valueOf(cid));
                                     String reviewCommentURL = GithubUriUtils.getIssueReviewCommentUrl(
-                                        repositoryUri, String.valueOf(cid));
-                                
+                                            repositoryUri, String.valueOf(cid));
 
                                     // Link into the Review the Comment
                                     writer.triple(RdfGithubIssueReviewUtils.createReviewCommentProperty(
-                                        reviewURI,
+                                            reviewURI,
                                             reviewCommentURI));
 
                                     // Create the RDF triples for the review comment
                                     writer.triple(
-                                            RdfGithubCommentUtils.createCommentHtmlUrl(reviewCommentURI, reviewCommentURL));
+                                            RdfGithubCommentUtils.createCommentHtmlUrl(reviewCommentURI,
+                                                    reviewCommentURL));
                                     writer.triple(RdfGithubCommentUtils.createCommentRdfType(reviewCommentURI));
                                     writer.triple(RdfGithubCommentUtils.createCommentId(reviewCommentURI, cid));
                                     writer.triple(RdfGithubCommentUtils.createCommentOf(reviewCommentURI, reviewURI));
@@ -1039,37 +1061,40 @@ public class GithubRdfConversionTransactionService {
                                         writer.triple(RdfGithubCommentUtils.createHasReply(
                                                 parentCommentUri, reviewCommentURI));
                                     }
-                                    
+
                                     // Reactions
-                                    List<GHReaction> reactions = getReviewCommentReactionsCached(c);
-                                    writer.triple(
-                                            RdfGithubCommentUtils.createReactionCount(
-                                                    reviewCommentURI, reactions.size()));
-                                    for (GHReaction r : reactions) {
-                                        String reactionURI = GithubUriUtils.getIssueReviewCommentReactionUri(
-                                                reviewCommentURI, String.valueOf(r.getId()));
-                    
-                                        writer.triple(RdfGithubCommentUtils.createCommentReaction(
-                                                reviewCommentURI,
-                                                reactionURI));
+                                    if (PROCESS_COMMENT_REACTIONS) {
+                                        List<GHReaction> reactions = getReviewCommentReactionsCached(c);
                                         writer.triple(
-                                                RdfGithubReactionUtils.createReactionRdfTypeProperty(reactionURI));
-                                        writer.triple(RdfGithubReactionUtils.createReactionIdProperty(reactionURI,
-                                                r.getId()));
-                                        writer.triple(RdfGithubReactionUtils.createReactionOfProperty(reactionURI,
-                                                reviewCommentURI));
-                                        
-                                        if (r.getContent() != null) {
-                                            writer.triple(RdfGithubReactionUtils.createReactionContentProperty(
-                                                    reactionURI, r.getContent().toString()));
-                                        }
-                                        if (r.getUser() != null) {
-                                            writer.triple(RdfGithubReactionUtils.createReactionUserProperty(reactionURI,
-                                                    r.getUser().getHtmlUrl().toString()));
-                                        }
-                                        if (r.getCreatedAt() != null) {
-                                            writer.triple(RdfGithubReactionUtils.createReactionCreatedAtProperty(
-                                                    reactionURI, localDateTimeFrom(r.getCreatedAt())));
+                                                RdfGithubCommentUtils.createReactionCount(
+                                                        reviewCommentURI, reactions.size()));
+                                        for (GHReaction r : reactions) {
+                                            String reactionURI = GithubUriUtils.getIssueReviewCommentReactionUri(
+                                                    reviewCommentURI, String.valueOf(r.getId()));
+
+                                            writer.triple(RdfGithubCommentUtils.createCommentReaction(
+                                                    reviewCommentURI,
+                                                    reactionURI));
+                                            writer.triple(
+                                                    RdfGithubReactionUtils.createReactionRdfTypeProperty(reactionURI));
+                                            writer.triple(RdfGithubReactionUtils.createReactionIdProperty(reactionURI,
+                                                    r.getId()));
+                                            writer.triple(RdfGithubReactionUtils.createReactionOfProperty(reactionURI,
+                                                    reviewCommentURI));
+
+                                            if (r.getContent() != null) {
+                                                writer.triple(RdfGithubReactionUtils.createReactionContentProperty(
+                                                        reactionURI, r.getContent().toString()));
+                                            }
+                                            if (r.getUser() != null) {
+                                                writer.triple(
+                                                        RdfGithubReactionUtils.createReactionUserProperty(reactionURI,
+                                                                r.getUser().getHtmlUrl().toString()));
+                                            }
+                                            if (r.getCreatedAt() != null) {
+                                                writer.triple(RdfGithubReactionUtils.createReactionCreatedAtProperty(
+                                                        reactionURI, localDateTimeFrom(r.getCreatedAt())));
+                                            }
                                         }
                                     }
                                 }
@@ -1083,8 +1108,8 @@ public class GithubRdfConversionTransactionService {
                                 long cid = c.getId();
                                 String issueCommentURI = GithubUriUtils.getIssueCommentUri(repositoryUri,
                                         String.valueOf(cid));
-                                String issueCommentURL = GithubUriUtils.getIssueCommentUrl(issueUri, String.valueOf(cid));
-
+                                String issueCommentURL = GithubUriUtils.getIssueCommentUrl(issueUri,
+                                        String.valueOf(cid));
 
                                 // Link in Issue to Comment
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewCommentProperty(issueUri,
@@ -1114,13 +1139,14 @@ public class GithubRdfConversionTransactionService {
 
                                 // Reactions
                                 List<GHReaction> reactions = getIssueCommentReactionsCached(c);
-                                writer.triple(RdfGithubCommentUtils.createReactionCount(issueCommentURI, reactions.size()));
+                                writer.triple(
+                                        RdfGithubCommentUtils.createReactionCount(issueCommentURI, reactions.size()));
                                 for (GHReaction r : reactions) {
 
                                     String reactionURI = GithubUriUtils.getIssueCommentReactionUri(issueCommentURI,
                                             String.valueOf(r.getId()));
-                                    
-                                    writer.triple(RdfGithubCommentUtils.createCommentReaction(issueCommentURI, 
+
+                                    writer.triple(RdfGithubCommentUtils.createCommentReaction(issueCommentURI,
                                             reactionURI));
                                     writer.triple(RdfGithubReactionUtils.createReactionRdfTypeProperty(reactionURI));
                                     writer.triple(RdfGithubReactionUtils.createReactionIdProperty(
@@ -1182,20 +1208,21 @@ public class GithubRdfConversionTransactionService {
 
         return bufferedInputStream;
     }
+    
 
-    private Map<String, PullRequestInfo> buildCommitPrMap(GHRepository repo) throws IOException, InterruptedException {
+    // Helper and Component Functions
+
+    private Map<String, PullRequestInfo> buildCommitPrMap(GHRepository repo, Repository gitRepository)
+            throws IOException, InterruptedException {
         Map<String, PullRequestInfo> map = new HashMap<>();
 
         try {
-            // If we're not processing any issues, don't build the map at all
             if (PROCESS_ISSUE_LIMIT <= 0) {
                 log.info("Issue processing disabled, skipping commit-PR mapping");
                 return map;
             }
 
-            // Limit PR fetching based on issue limits
-            int maxPRsToFetch = Math.min(PROCESS_ISSUE_LIMIT * 2, 100); // Reasonable multiplier
-
+            int maxPRsToFetch = Math.min(PROCESS_ISSUE_LIMIT * 2, 100);
             PagedIterable<GHPullRequest> prs = executeWithRetry(
                     () -> repo.queryPullRequests().state(GHIssueState.CLOSED).list(),
                     "queryPullRequests");
@@ -1218,40 +1245,46 @@ public class GithubRdfConversionTransactionService {
                     continue;
                 }
 
-                // If we have specific issues to process, only map those PRs
-                if (PROCESS_ISSUE_ONLY.length > 0) {
-                    boolean shouldIncludePR = false;
-                    String prNumber = String.valueOf(pr.getNumber());
-                    for (String issueId : PROCESS_ISSUE_ONLY) {
-                        if (issueId.equals(prNumber)) {
-                            shouldIncludePR = true;
-                            break;
-                        }
-                    }
-                    if (!shouldIncludePR) {
-                        continue;
-                    }
-                }
-
                 String prUri = GithubUriUtils.getIssueUri(repo.getOwnerName(), repo.getName(),
                         String.valueOf(pr.getNumber()));
                 LocalDateTime mergedAt = localDateTimeFrom(merged);
 
                 PullRequestInfo info = new PullRequestInfo(prUri, pr.getMergeCommitSha(), mergedAt);
 
+                // Validate merge commit SHA exists in repository using ObjectReader
                 if (pr.getMergeCommitSha() != null) {
-                    map.put(pr.getMergeCommitSha(), info);
+                    try {
+                        ObjectId commitId = ObjectId.fromString(pr.getMergeCommitSha());
+                        // Simple existence check - if this doesn't throw, the object exists
+                        if (gitRepository.getObjectDatabase().has(commitId)) {
+                            map.put(pr.getMergeCommitSha(), info);
+                        } else {
+                            log.warn("Merge commit SHA {} for PR {} not found in repository",
+                                    pr.getMergeCommitSha(), pr.getNumber());
+                        }
+                    } catch (Exception e) {
+                        log.warn("Invalid merge commit SHA {} for PR {}: {}",
+                                pr.getMergeCommitSha(), pr.getNumber(), e.getMessage());
+                    }
                 }
 
-                // Only fetch commits if we're processing commits too
+                // Process individual commits
                 if (PROCESS_COMMIT_LIMIT > 0) {
                     try {
                         for (GHPullRequestCommitDetail c : getCommitsCached(pr)) {
-                            map.put(c.getSha(), info);
+                            try {
+                                ObjectId commitId = ObjectId.fromString(c.getSha());
+                                // Simple existence check
+                                if (gitRepository.getObjectDatabase().has(commitId)) {
+                                    map.put(c.getSha(), info);
+                                }
+                            } catch (Exception e) {
+                                log.debug("Commit {} from PR {} not accessible in current repository state",
+                                        c.getSha(), pr.getNumber());
+                            }
                         }
                     } catch (IOException | InterruptedException e) {
                         log.warn("Error fetching commits for PR {}: {}", pr.getNumber(), e.getMessage());
-                        // Continue processing other PRs
                     }
                 }
 
@@ -1607,8 +1640,6 @@ public class GithubRdfConversionTransactionService {
         return (int) skips;
     }
 
-
-
     private LocalDateTime localDateTimeFrom(Date utilDate) {
         return localDateTimeFrom(utilDate.getTime());
     }
@@ -1624,7 +1655,6 @@ public class GithubRdfConversionTransactionService {
     }
 
     // Github Workflows
-
     private void writeWorkflowRunData(String repositoryUri, GHWorkflowRun run, StreamRDF writer, String issueUri, String mergeSha)
             throws IOException, InterruptedException {
 
@@ -1853,6 +1883,21 @@ public class GithubRdfConversionTransactionService {
             commitCache.put(number, commits);
         }
         return commits;
+    }
+
+    private String getCleanBranchName(Ref branchRef) {
+        String fullName = branchRef.getName();
+        if (fullName.startsWith("refs/heads/")) {
+            return fullName.substring("refs/heads/".length());
+        } else if (fullName.startsWith("refs/remotes/origin/")) {
+            return fullName.substring("refs/remotes/origin/".length());
+        } else if (fullName.startsWith("refs/remotes/")) {
+            // Handle other remotes by taking everything after the last '/'
+            return fullName.substring(fullName.lastIndexOf('/') + 1);
+        } else if (fullName.startsWith("refs/tags/")) {
+            return fullName.substring("refs/tags/".length());
+        }
+        return fullName;
     }
 
     private <T> T executeWithRetry(java.util.concurrent.Callable<T> callable, String description)
