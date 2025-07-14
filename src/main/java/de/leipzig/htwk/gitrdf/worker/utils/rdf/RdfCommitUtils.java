@@ -4,6 +4,7 @@ import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTran
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.RDF_SCHEMA_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.OWL_SCHEMA_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.dateTimeLiteral;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.stringLiteral;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.uri;
@@ -31,6 +32,7 @@ public final class RdfCommitUtils {
     private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
     private static final String PF_NS = PLATFORM_NAMESPACE + ":";
     private static final String RDF_NS = RDF_SCHEMA_NAMESPACE + ":";
+    private static final String OWL_NS = OWL_SCHEMA_NAMESPACE + ":";
 
 
     // org.apache.jena.datatypes.xsd.XSDDatatype -> static xsd Datatype collection from apache jena
@@ -116,6 +118,8 @@ public final class RdfCommitUtils {
     public static Node branchHeadCommitProperty() { return uri(NS + "headCommit"); }
 
     public static Node tagPointsToProperty() { return uri(NS + "pointsTo"); }
+
+    public static Node owlSameAsProperty() { return uri(OWL_NS + "sameAs"); }
 
     public static Node commitDiffEntryEditTypeProperty() {
         return uri(NS + "changeType");
@@ -443,6 +447,10 @@ public final class RdfCommitUtils {
 
     public static Triple createTagPointsToProperty(String tagUri, String commitUri) {
         return Triple.create(uri(tagUri), tagPointsToProperty(), uri(commitUri));
+    }
+
+    public static Triple createTagSameAsProperty(String tagUri, String tagUrl) {
+        return Triple.create(uri(tagUri), owlSameAsProperty(), uri(tagUrl));
     }
 
     public static Triple createCommitPartOfIssueProperty(String commitUri, String issueUri) {

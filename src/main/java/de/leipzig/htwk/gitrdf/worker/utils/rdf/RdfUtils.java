@@ -10,6 +10,8 @@ import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTran
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.RDF_SCHEMA_URI;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.XSD_SCHEMA_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.XSD_SCHEMA_URI;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.OWL_SCHEMA_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.OWL_SCHEMA_URI;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -32,10 +34,11 @@ public final class RdfUtils {
 
     private static final PrefixMap prefixMap = PrefixMapFactory.create(new HashMap<>(Map.of(// instead of Map.of
             GIT_NAMESPACE, GIT_URI,
-            PLATFORM_NAMESPACE,PLATFORM_URI,
-            PLATFORM_GITHUB_NAMESPACE,PLATFORM_GITHUB_URI,
-            XSD_SCHEMA_NAMESPACE,XSD_SCHEMA_URI,
-            RDF_SCHEMA_NAMESPACE,RDF_SCHEMA_URI
+            PLATFORM_NAMESPACE, PLATFORM_URI,
+            PLATFORM_GITHUB_NAMESPACE, PLATFORM_GITHUB_URI,
+            XSD_SCHEMA_NAMESPACE, XSD_SCHEMA_URI,
+            RDF_SCHEMA_NAMESPACE, RDF_SCHEMA_URI,
+            OWL_SCHEMA_NAMESPACE, OWL_SCHEMA_URI
     )));
 
     private static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");

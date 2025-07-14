@@ -131,6 +131,9 @@ public class GithubRdfConversionTransactionService {
     public static final String RDF_SCHEMA_NAMESPACE = "rdf";
     public static final String RDF_SCHEMA_URI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 
+    public static final String OWL_SCHEMA_NAMESPACE = "owl";
+    public static final String OWL_SCHEMA_URI = "http://www.w3.org/2002/07/owl#";
+
     private final GithubHandlerService githubHandlerService;
 
     private final GithubConfig githubConfig;
@@ -395,6 +398,7 @@ public class GithubRdfConversionTransactionService {
 
             writer.prefix(XSD_SCHEMA_NAMESPACE, XSD_SCHEMA_URI);
             writer.prefix(RDF_SCHEMA_NAMESPACE, RDF_SCHEMA_URI);
+            writer.prefix(OWL_SCHEMA_NAMESPACE, OWL_SCHEMA_URI);
             writer.prefix(GIT_NAMESPACE, GIT_URI);
             writer.prefix(PLATFORM_NAMESPACE, PLATFORM_URI);
             writer.prefix(PLATFORM_GITHUB_NAMESPACE, PLATFORM_GITHUB_URI);
@@ -684,10 +688,12 @@ public class GithubRdfConversionTransactionService {
                         if (tagNames != null && !tagNames.isEmpty()) {
                             for (String tagName : tagNames) {
                                 String tagUri = GithubUriUtils.getTagUri(owner, repositoryName, tagName);
+                                String tagUrl = GithubUriUtils.getTagUrl(owner, repositoryName, tagName);
                                 writer.triple(RdfCommitUtils.createCommitHasTagProperty(commitUri, tagUri));
                                 writer.triple(RdfCommitUtils.createTagRdfTypeProperty(tagUri));
                                 writer.triple(RdfCommitUtils.createTagNameProperty(tagUri, tagName));
                                 writer.triple(RdfCommitUtils.createTagPointsToProperty(tagUri, commitUri));
+                                writer.triple(RdfCommitUtils.createTagSameAsProperty(tagUri, tagUrl));
                                 log.debug("Added Tag '{}' to commit #{}", tagName, commitId.getName());
                             }
                         }
