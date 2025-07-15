@@ -1,0 +1,121 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix vann: <http://purl.org/vocab/vann/> .
+@prefix metrics: <https://purl.archive.org/git2rdf/v2/git2RDFLab-metric#> .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Metadata                                         │
+# ╰──────────────────────────────────────────────────╯
+#
+
+<https://purl.archive.org/git2rdf/v2/git2RDFLab-metric#>
+    a owl:Ontology ;
+    dc:title "The git2RDFLab Metrics Ontology"@en ;
+    dc:description "Schema for capturing computed repository metrics and measurements."@en ;
+    vann:preferredNamespacePrefix "metrics" ;
+    vann:preferredNamespaceUri "https://purl.archive.org/git2rdf/v2/git2RDFLab-metric#" ;
+    owl:versionInfo "Version 1.0 - 2025-07-15"@en ;
+    dc:modified "2025-07-15"^^xsd:date ;
+    dc:contributor "https://github.com/git2RDFLab" .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Core Classes                                     │
+# ╰──────────────────────────────────────────────────╯
+#
+
+metrics:MetricReport a rdfs:Class ;
+    rdfs:label "Metric Report"@en ;
+    rdfs:comment "A collection of computed metrics for a target entity at a specific time."@en .
+
+metrics:Metric a rdfs:Class ;
+    rdfs:label "Metric"@en ;
+    rdfs:comment "A computed measurement or calculated value."@en .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Core Relationships                               │
+# ╰──────────────────────────────────────────────────╯
+#
+
+metrics:hasMetric a rdf:Property ;
+    rdfs:label "has metric"@en ;
+    rdfs:comment "Links a report to its computed metrics."@en ;
+    rdfs:domain metrics:MetricReport ;
+    rdfs:range metrics:Metric .
+
+metrics:measures a rdf:Property ;
+    rdfs:label "measures"@en ;
+    rdfs:comment "Links a metric report to the entity being measured."@en ;
+    rdfs:domain metrics:MetricReport ;
+    rdfs:range rdfs:Resource .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Metric Properties                                │
+# ╰──────────────────────────────────────────────────╯
+#
+
+metrics:name a rdf:Property ;
+    rdfs:label "name"@en ;
+    rdfs:comment "Identifier name for the metric (e.g., 'totalCommits', 'mergedButFailedWorkflow')."@en ;
+    rdfs:domain metrics:Metric ;
+    rdfs:range xsd:string .
+
+metrics:value a rdf:Property ;
+    rdfs:label "value"@en ;
+    rdfs:comment "The computed metric value."@en ;
+    rdfs:domain metrics:Metric ;
+    rdfs:range rdfs:Literal .
+
+metrics:dataType a rdf:Property ;
+    rdfs:label "data type"@en ;
+    rdfs:comment "The data type of the metric value (integer, decimal, boolean, string)."@en ;
+    rdfs:domain metrics:Metric ;
+    rdfs:range xsd:string .
+
+metrics:unit a rdf:Property ;
+    rdfs:label "unit"@en ;
+    rdfs:comment "Unit of measurement (e.g., 'count', 'percentage', 'days')."@en ;
+    rdfs:domain metrics:Metric ;
+    rdfs:range xsd:string .
+
+metrics:description a rdf:Property ;
+    rdfs:label "description"@en ;
+    rdfs:comment "Human-readable description of what this metric measures."@en ;
+    rdfs:domain metrics:Metric ;
+    rdfs:range xsd:string .
+
+metrics:function a rdf:Property ;
+    rdfs:label "function"@en ;
+    rdfs:comment "Identifier of the function that computed this metric."@en ;
+    rdfs:domain metrics:Metric ;
+    rdfs:range xsd:string .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Report Properties                                │
+# ╰──────────────────────────────────────────────────╯
+#
+
+metrics:computedAt a rdf:Property ;
+    rdfs:label "computed at"@en ;
+    rdfs:comment "Timestamp when the metrics were computed."@en ;
+    rdfs:domain metrics:MetricReport ;
+    rdfs:range xsd:dateTime .
+
+metrics:version a rdf:Property ;
+    rdfs:label "version"@en ;
+    rdfs:comment "Version of the metric computation system."@en ;
+    rdfs:domain metrics:MetricReport ;
+    rdfs:range xsd:string .
+
+metrics:scope a rdf:Property ;
+    rdfs:label "scope"@en ;
+    rdfs:comment "Temporal or logical scope of the computation (e.g., 'all-time', 'last-30-days')."@en ;
+    rdfs:domain metrics:MetricReport ;
+    rdfs:range xsd:string .
