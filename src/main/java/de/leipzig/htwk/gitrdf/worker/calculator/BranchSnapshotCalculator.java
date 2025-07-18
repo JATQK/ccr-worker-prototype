@@ -1,8 +1,10 @@
 package de.leipzig.htwk.gitrdf.worker.calculator;
 
-import de.leipzig.htwk.gitrdf.worker.handler.LockHandler;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.jena.graph.Node;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
@@ -15,10 +17,9 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
 
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import de.leipzig.htwk.gitrdf.worker.handler.LockHandler;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class BranchSnapshotCalculator {

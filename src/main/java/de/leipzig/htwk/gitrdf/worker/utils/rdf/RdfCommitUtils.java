@@ -1,10 +1,8 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.GIT_NAMESPACE;
-import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
-import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
-import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.RDF_SCHEMA_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.OWL_SCHEMA_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.RDF_SCHEMA_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.dateTimeLiteral;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.stringLiteral;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.uri;
@@ -26,239 +24,196 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public final class RdfCommitUtils {
+public class RdfCommitUtils {
 
-    private static final String NS = GIT_NAMESPACE + ":";
-    private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
-    private static final String PF_NS = PLATFORM_NAMESPACE + ":";
-    private static final String RDF_NS = RDF_SCHEMA_NAMESPACE + ":";
-    private static final String OWL_NS = OWL_SCHEMA_NAMESPACE + ":";
-
-
-    // org.apache.jena.datatypes.xsd.XSDDatatype -> static xsd Datatype collection from apache jena
-
-    // somewhat of an applicable base uri to the contents of git: https://git-scm.com/docs/gitglossary
+    protected static final String GIT_NS = GIT_NAMESPACE + ":";
+    protected static final String RDF_NS = RDF_SCHEMA_NAMESPACE + ":";
+    protected static final String OWL_NS = OWL_SCHEMA_NAMESPACE + ":";
 
     public static Node rdfTypeProperty() {
         return RdfUtils.uri(RDF_NS + "type");
     }
 
-    public static Node repositoryNameProperty() {
-        return uri(GH_NS + "repositoryName");
-    }
-
-    public static Node repositoryOwnerProperty() {
-        return uri(GH_NS + "repositoryOwner");
-    }
-
     public static Node repositoryEncodingProperty() {
-        return uri(NS + "encoding");
+        return uri(GIT_NS + "encoding");
     }
 
-    private static Node rdfSubmoduleProperty() { return uri(NS + "submodule"); }
+    private static Node rdfSubmoduleProperty() { return uri(GIT_NS + "hasSubmodule"); }
 
     public static Node rdfSubmodulePathProperty() {
-        return uri(NS + "submodulePath");
+        return uri(GIT_NS + "submodulePath");
     }
 
     public static Node rdfSubmoduleCommitProperty() {
-        return uri(NS + "submoduleHash");
+        return uri(GIT_NS + "submoduleHash");
     }
 
     public static Node rdfSubmoduleCommitEntryProperty() {
-        return uri(NS + "submoduleCommitUri");
+        return uri(GIT_NS + "submoduleCommitUri");
     }
 
     public static Node rdfSubmoduleRepositoryEntryProperty() {
-        return uri(NS + "submoduleRepositoryUri");
+        return uri(GIT_NS + "submoduleRepositoryUri");
     }
 
-    public static Node commitHashProperty() { return uri(NS + "hash"); }
+    public static Node commitHashProperty() { return uri(GIT_NS + "hash"); }
     
     public static Node authorNameProperty() {
-       return uri(NS + "authorName");
+       return uri(GIT_NS + "authorName");
     }
 
     public static Node authorEmailProperty() {
-        return uri(NS + "authorEmail");
+        return uri(GIT_NS + "authorEmail");
     }
 
     public static Node authorDateProperty() {
-        return uri(NS + "authorDate");
+        return uri(GIT_NS + "authorDate");
     }
 
     public static Node commitDateProperty() {
-        return uri(NS + "commitDate");
+        return uri(GIT_NS + "commitDate");
     }
 
     public static Node committerNameProperty() {
-        return uri(NS + "committerName");
+        return uri(GIT_NS + "committerName");
     }
 
     public static Node committerEmailProperty() {
-        return uri(NS + "committerEmail");
+        return uri(GIT_NS + "committerEmail");
     }
 
     public static Node commitMessageProperty() {
-        return uri(NS + "message");
+        return uri(GIT_NS + "message");
     }
 
     public static Node commitBranchNameProperty() {
-        return uri(NS + "branchName");
+        return uri(GIT_NS + "commitBranchName");
     }
 
-    public static Node inBranchProperty() { return uri(NS + "inBranch"); }
+    public static Node inBranchProperty() { return uri(GIT_NS + "inBranch"); }
 
-    public static Node hasTagProperty() { return uri(NS + "hasTag"); }
+    public static Node hasTagProperty() {
+        return uri(GIT_NS + "hasTag");
+    }
 
-    public static Node repositoryHasCommitProperty() { return uri(NS + "hasCommit"); }
+    public static Node repositoryHasCommitProperty() { return uri(GIT_NS + "hasCommit"); }
 
-    public static Node repositoryHasBranchProperty() { return uri(NS + "hasBranch"); }
+    public static Node repositoryHasBranchProperty() { return uri(GIT_NS + "hasBranch"); }
 
-    public static Node branchHeadCommitProperty() { return uri(NS + "headCommit"); }
+    public static Node branchHeadCommitProperty() { return uri(GIT_NS + "headCommit"); }
 
-    public static Node tagPointsToProperty() { return uri(NS + "pointsTo"); }
+    public static Node tagPointsToProperty() { return uri(GIT_NS + "pointsTo"); }
 
     public static Node owlSameAsProperty() { return uri(OWL_NS + "sameAs"); }
 
     public static Node commitDiffEntryEditTypeProperty() {
-        return uri(NS + "changeType");
+        return uri(GIT_NS + "changeType");
     }
 
     public static Node commitResource() {
-        return uri(NS + "commit");
+        return uri(GIT_NS + "commit");
     }
 
     public static Node branchResource() {
-        return uri(NS + "branch");
-    }
-
-    public static Node commitGitHubUserProperty() {
-        return uri(GH_NS + "user");
-    }
-
-    /**
-     * Links a commit to a referenced GitHub issue.
-     */
-    public static Node commitIssueProperty() {
-        return uri(GH_NS + "issue");
-    }
-
-    public static Node partOfIssueProperty() {
-        return uri(GH_NS + "partOfIssue");
-    }
-
-    public static Node partOfPullRequestProperty() {
-        return uri(GH_NS + "partOfPullRequest");
-    }
-
-    public static Node isMergedProperty() {
-        return uri(GH_NS + "isMerged");
-    }
-
-    public static Node mergedAtProperty() {
-        return uri(GH_NS + "mergedAt");
-    }
-
-    public static Node mergedIntoIssueProperty() {
-        return uri(GH_NS + "mergedIntoIssue");
+        return uri(GIT_NS + "branch");
     }
 
     public static Node isMergeCommitProperty() {
-        return uri(NS + "isMergeCommit");
+        return uri(GIT_NS + "isMergeCommit");
     }
 
     public static Node hasParentProperty() {
-        return uri(NS + "hasParent");
+        return uri(GIT_NS + "hasParent");
     }
     public static Node tagResource() {
-        return uri(NS + "tag");
+        return uri(GIT_NS + "tag");
     }
 
     public static Node commitDiffEntryResource() {
-        return uri(NS + "hasDiffEntry");
+        return uri(GIT_NS + "hasDiffEntry");
     }
 
     public static Node commitDiffEntryOldFileNameProperty() {
-        return uri(NS + "oldFileName");
+        return uri(GIT_NS + "oldFileName");
     }
 
     public static Node commitDiffEntryNewFileNameProperty() {
-        return uri(NS + "newFileName");
+        return uri(GIT_NS + "newFileName");
     }
 
     public static Node commitDiffEditResource() {
-        return uri(NS + "hasEdit");
+        return uri(GIT_NS + "hasEdit");
     }
 
     public static Node commitDiffEditTypeProperty() {
-        return uri(NS + "editType");
+        return uri(GIT_NS + "editType");
     }
 
     public static Node editOldLinenumberBeginProperty() {
-        return uri(NS + "oldLineStart");
+        return uri(GIT_NS + "oldLineStart");
     }
 
     public static Node editNewLinenumberBeginProperty() {
-        return uri(NS + "newLineStart");
+        return uri(GIT_NS + "newLineStart");
     }
 
     public static Node editOldLinenumberEndProperty() {
-        return uri(NS + "oldLineEnd");
+        return uri(GIT_NS + "oldLineEnd");
     }
 
     public static Node editNewLinenumberEndProperty() {
-        return uri(NS + "newLineEnd");
+        return uri(GIT_NS + "newLineEnd");
     }
 
     public static Node branchSnapshotProperty() {
-        return uri(NS + "branchSnapshot");
+        return uri(GIT_NS + "branchSnapshot");
     }
 
     public static Node branchSnapshotLineEntryProperty() {
-        return uri(NS + "hasLineEntry");
+        return uri(GIT_NS + "hasLineEntry");
     }
 
     public static Node branchSnapshotFileEntryProperty() {
-        return uri(NS + "hasFileEntry");
+        return uri(GIT_NS + "hasFileEntry");
     }
 
     public static Node branchSnapshotLineProperty() {
-        return uri(NS + "lineNumber");
+        return uri(GIT_NS + "lineNumber");
     }
 
     public static Node branchSnapshotLinenumberBeginProperty() {
-        return uri(NS + "branchSnapshotLinenumberBegin");
+        return uri(GIT_NS + "branchSnapshotLinenumberBegin");
     }
 
     public static Node branchSnapshotLinenumberEndProperty() {
-        return uri(NS + "branchSnapshotLinenumberEnd");
+        return uri(GIT_NS + "branchSnapshotLinenumberEnd");
     }
 
+
     public static Node branchSnapshotFilenameProperty() {
-        return uri(NS + "fileName");
+        return uri(GIT_NS + "fileName");
     }
 
     public static Node branchSnapshotCommitHashProperty() {
-        return uri(NS + "lineCommitHash");
+        return uri(GIT_NS + "lineCommitHash");
     }
 
     public static Node branchSnapshotDateProperty() {
-        return uri(NS + "snapshotDate");
+        return uri(GIT_NS + "snapshotDate");
     }
 
     public static Node commitTagNameProperty() {
-        return uri(NS + "tagName");
+        return uri(GIT_NS + "tagName");
     }
 
-    public static Node branchNameProperty() { return commitBranchNameProperty(); }
+    public static Node branchNameProperty() { return uri(GIT_NS + "branchName"); }
 
 
 
     // Branch Snapshot
 
     public static Triple createBranchSnapshotProperty(Node snapshotNode) {
-        return Triple.create(snapshotNode, rdfTypeProperty(), RdfUtils.uri(NS + "BranchSnapshot" ));
+        return Triple.create(snapshotNode, rdfTypeProperty(), RdfUtils.uri(GIT_NS + "BranchSnapshot" ));
     }
 
     public static Triple createBranchSnapshotDateProperty(Node snapshotNode, LocalDateTime dateTimeValue) {
@@ -289,14 +244,15 @@ public final class RdfCommitUtils {
         return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberEndProperty(), stringLiteral(Integer.toString(linenumberEnd)));
     }
 
+
     public static Triple createBranchSnapshotCommitHashProperty(Node snapshotLineEntryNode, String commitHash) {
         return Triple.create(snapshotLineEntryNode, branchSnapshotCommitHashProperty(), stringLiteral(commitHash));
     }
 
     // Commit
 
-    public static Triple createRdfTypeProperty(String issueUri) {
-        return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri( GH_NS + "GitCommit" ));
+    public static Triple createRdfTypeProperty(String commitUri) {
+        return Triple.create(RdfUtils.uri(commitUri), rdfTypeProperty(), RdfUtils.uri( GIT_NS + "GitCommit" ));
     }
 
     public static Triple createCommitHashProperty(String commitUri, String commitHash) {
@@ -332,18 +288,9 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createCommitDiffEntryEditTypeProperty(Node diffEntryNode, DiffEntry.ChangeType changeType) {
-        //return Triple.create(diffEntryNode, commitDiffEntryEditTypeProperty(), changeTypeLiteral(changeType));
-        return Triple.create(diffEntryNode, commitDiffEntryEditTypeProperty(), uri(NS + changeType.toString().toLowerCase()));
+        return Triple.create(diffEntryNode, commitDiffEntryEditTypeProperty(), uri(GIT_NS + changeType.toString().toLowerCase()));
     }
 
-    public static Triple createCommiterGitHubUserProperty(String commitUri, String commiterGitHubUser) {
-        //return Triple.create(uri(commitUri), commitGitHubUserProperty(), stringLiteral(commiterGitHubUser));
-        return Triple.create(uri(commitUri), commitGitHubUserProperty(), uri(commiterGitHubUser));
-    }
-
-    public static Triple createCommitIssueProperty(String commitUri, String issueUri) {
-        return Triple.create(uri(commitUri), commitIssueProperty(), uri(issueUri));
-    }
     public static Triple createCommitResource(String commitUri, Node commitNode) {
         return Triple.create(uri(commitUri), commitResource(), commitNode);
     }
@@ -371,7 +318,7 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createCommitDiffEditTypeProperty(Node editNode, Edit.Type editType) {
-        return Triple.create(editNode, commitDiffEntryEditTypeProperty(), uri(NS + editType.toString().toLowerCase()));
+        return Triple.create(editNode, commitDiffEntryEditTypeProperty(), uri(GIT_NS + editType.toString().toLowerCase()));
     }
 
     public static Triple createEditOldLinenumberBeginProperty(Node editNode, int lineNumberBegin ) {
@@ -426,7 +373,7 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createBranchRdfTypeProperty(String branchUri) {
-        return Triple.create(uri(branchUri), rdfTypeProperty(), uri(NS + "GitBranch"));
+        return Triple.create(uri(branchUri), rdfTypeProperty(), uri(GIT_NS + "GitBranch"));
     }
 
     public static Triple createBranchNameProperty(String branchUri, String name) {
@@ -438,7 +385,7 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createTagRdfTypeProperty(String tagUri) {
-        return Triple.create(uri(tagUri), rdfTypeProperty(), uri(NS + "GitTag"));
+        return Triple.create(uri(tagUri), rdfTypeProperty(), uri(GIT_NS + "GitTag"));
     }
 
     public static Triple createTagNameProperty(String tagUri, String tagName) {
@@ -453,25 +400,6 @@ public final class RdfCommitUtils {
         return Triple.create(uri(tagUri), owlSameAsProperty(), uri(tagUrl));
     }
 
-    public static Triple createCommitPartOfIssueProperty(String commitUri, String issueUri) {
-        return Triple.create(uri(commitUri), partOfIssueProperty(), uri(issueUri));
-    }
-
-    public static Triple createCommitPartOfPullRequestProperty(String commitUri, String prUri) {
-        return Triple.create(uri(commitUri), partOfPullRequestProperty(), uri(prUri));
-    }
-
-    public static Triple createCommitIsMergedProperty(String commitUri, boolean merged) {
-        return Triple.create(uri(commitUri), isMergedProperty(), RdfUtils.booleanLiteral(merged));
-    }
-
-    public static Triple createCommitMergedAtProperty(String commitUri, LocalDateTime mergedAt) {
-        return Triple.create(uri(commitUri), mergedAtProperty(), RdfUtils.dateTimeLiteral(mergedAt));
-    }
-
-    public static Triple createCommitMergedIntoIssueProperty(String commitUri, String issueUri) {
-        return Triple.create(uri(commitUri), mergedIntoIssueProperty(), uri(issueUri));
-    }
 
     public static Triple createCommitIsMergeCommitProperty(String commitUri, boolean isMergeCommit) {
         return Triple.create(uri(commitUri), isMergeCommitProperty(), RdfUtils.booleanLiteral(isMergeCommit));
@@ -500,20 +428,8 @@ public final class RdfCommitUtils {
 
     // Metadata
 
-    public static Triple createRepositoryRdfTypeProperty(String repoUri) {
-        return Triple.create(RdfUtils.uri(repoUri), rdfTypeProperty(), RdfUtils.uri( GH_NS + "GitRepository" ));
-    }
-
     public static Triple createRepositoryEncodingProperty(String repoUri, String encoding) {
         return Triple.create(uri(repoUri), repositoryEncodingProperty(), stringLiteral(encoding));
-    }
-
-    public static Triple createRepositoryOwnerProperty(String repoUri, String ownerUri) {
-        return Triple.create(uri(repoUri), repositoryOwnerProperty(), uri(ownerUri));
-    }
-
-    public static Triple createRepositoryNameProperty(String repoUri, String repositoryName) {
-        return Triple.create(uri(repoUri), repositoryNameProperty(), stringLiteral(repositoryName));
     }
 
     // Submodule
@@ -523,7 +439,7 @@ public final class RdfCommitUtils {
     }
 
     public static Triple createSubmoduleRdfTypeProperty(Node submoduleNode) {
-        return Triple.create(submoduleNode, rdfTypeProperty(), RdfUtils.uri( NS + "Submodule" ));
+        return Triple.create(submoduleNode, rdfTypeProperty(), RdfUtils.uri( GIT_NS + "GitSubmodule" ));
     }
 
     public static Triple createSubmodulePathProperty(Node submoduleNode, String pathName) {

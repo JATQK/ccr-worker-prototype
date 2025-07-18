@@ -18,14 +18,29 @@ public final class RdfGithubUserUtils {
     public static Node rdfTypeProperty() { return RdfUtils.uri("rdf:type"); }
     public static Node loginProperty() { return RdfUtils.uri(GH_NS + "login"); }
     public static Node userIdProperty() { return RdfUtils.uri(GH_NS + "userId"); }
-    public static Node nameProperty() { return RdfUtils.uri(PF_NS + "name"); }
+
+    public static Node userTypeProperty() {
+        return RdfUtils.uri(GH_NS + "userType");
+    }
+    public static Node nameProperty() {
+        return RdfUtils.uri(PF_NS + "name");
+    }
+    
+    public static Node emailProperty() {
+        return RdfUtils.uri(PF_NS + "email");
+    }
+
 
     public static Triple createGitHubUserType(String userUri) {
-        return Triple.create(RdfUtils.uri(userUri), rdfTypeProperty(), RdfUtils.uri("github:GitHubUser"));
+        return Triple.create(RdfUtils.uri(userUri), rdfTypeProperty(), RdfUtils.uri("github:GithubUser"));
     }
 
     public static Triple createLoginProperty(String userUri, String login) {
         return Triple.create(RdfUtils.uri(userUri), loginProperty(), RdfUtils.stringLiteral(login));
+    }
+
+    public static Triple createEmailProperty(String userUri, String email) {
+        return Triple.create(RdfUtils.uri(userUri), emailProperty(), RdfUtils.stringLiteral(email));
     }
 
     public static Triple createUserIdProperty(String userUri, long id) {
@@ -34,5 +49,9 @@ public final class RdfGithubUserUtils {
 
     public static Triple createNameProperty(String userUri, String name) {
         return Triple.create(RdfUtils.uri(userUri), nameProperty(), RdfUtils.stringLiteral(name));
+    }
+
+    public static Triple createUserTypeProperty(String userUri, String userType) {
+        return Triple.create(RdfUtils.uri(userUri), userTypeProperty(), RdfUtils.stringLiteral(userType));
     }
 }

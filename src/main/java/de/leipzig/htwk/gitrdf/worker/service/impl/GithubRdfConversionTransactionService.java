@@ -90,6 +90,7 @@ import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.GithubUriUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.GithubUserInfo;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubCommentUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueReviewUtils;
@@ -109,10 +110,10 @@ public class GithubRdfConversionTransactionService {
 
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
-    private static final int PROCESS_ISSUE_LIMIT = 20; // Limit for the number of issues to process
+    private static final int PROCESS_ISSUE_LIMIT = 30; // Limit for the number of issues to process
     private static final String[] PROCESS_ISSUE_ONLY = {}; // Only process these issues // "9946", "9947", "9948",
                                                            // "9949", "9950"
-    private static final int PROCESS_COMMIT_LIMIT = 20; // Limit for the number of commits to process
+    private static final int PROCESS_COMMIT_LIMIT = 30; // Limit for the number of commits to process
 
     private static final boolean PROCESS_COMMENT_REACTIONS = true;
     // TODO: replace PURL
@@ -432,19 +433,23 @@ public class GithubRdfConversionTransactionService {
             // Metadata
 
             writer.start();
-            writer.triple(RdfCommitUtils.createRepositoryRdfTypeProperty(repositoryUri));
+            writer.triple(RdfGithubCommitUtils.createRepositoryRdfTypeProperty(repositoryUri));
             String ownerUri = GithubUriUtils.getUserUri(owner);
-            writer.triple(RdfCommitUtils.createRepositoryOwnerProperty(repositoryUri, ownerUri));
+            writer.triple(RdfGithubCommitUtils.createRepositoryOwnerProperty(repositoryUri, ownerUri));
             GHUser repoOwner = githubRepositoryHandle.getOwner();
             if (repoOwner != null) {
                 writer.triple(RdfGithubUserUtils.createGitHubUserType(ownerUri));
                 writer.triple(RdfGithubUserUtils.createLoginProperty(ownerUri, repoOwner.getLogin()));
+                writer.triple(RdfGithubUserUtils.createEmailProperty(ownerUri, repoOwner.getEmail()));
                 writer.triple(RdfGithubUserUtils.createUserIdProperty(ownerUri, repoOwner.getId()));
+                if (repoOwner.getType() != null) {
+                    writer.triple(RdfGithubUserUtils.createUserTypeProperty(ownerUri, repoOwner.getType()));
+                }
                 if (repoOwner.getName() != null && !repoOwner.getName().isEmpty()) {
                     writer.triple(RdfGithubUserUtils.createNameProperty(ownerUri, repoOwner.getName()));
                 }
             }
-            writer.triple(RdfCommitUtils.createRepositoryNameProperty(repositoryUri, repositoryName));
+            writer.triple(RdfGithubCommitUtils.createRepositoryNameProperty(repositoryUri, repositoryName));
 
             Config config = gitRepository.getConfig();
 
@@ -687,17 +692,17 @@ public class GithubRdfConversionTransactionService {
                                 prInfo);
                         if (prInfo != null) {
                             writer.triple(
-                                    RdfCommitUtils.createCommitPartOfPullRequestProperty(commitUri, prInfo.issueUri));
-                            writer.triple(RdfCommitUtils.createCommitPartOfIssueProperty(commitUri, prInfo.issueUri));
+                                    RdfGithubCommitUtils.createCommitPartOfPullRequestProperty(commitUri, prInfo.issueUri));
+                            writer.triple(RdfGithubCommitUtils.createCommitPartOfIssueProperty(commitUri, prInfo.issueUri));
                             writer.triple(
                                     RdfGithubIssueUtils.createIssueContainsCommitProperty(prInfo.issueUri, commitUri));
-                            writer.triple(RdfCommitUtils.createCommitIsMergedProperty(commitUri, true));
+                            writer.triple(RdfGithubCommitUtils.createCommitIsMergedProperty(commitUri, true));
                             if (prInfo.mergedAt != null) {
-                                writer.triple(RdfCommitUtils.createCommitMergedAtProperty(commitUri, prInfo.mergedAt));
+                                writer.triple(RdfGithubCommitUtils.createCommitMergedAtProperty(commitUri, prInfo.mergedAt));
                             }
                             if (gitHash.equals(prInfo.mergeCommitSha)) {
                                 writer.triple(
-                                        RdfCommitUtils.createCommitMergedIntoIssueProperty(commitUri, prInfo.issueUri));
+                                        RdfGithubCommitUtils.createCommitMergedIntoIssueProperty(commitUri, prInfo.issueUri));
                             }
                         }
 
@@ -842,33 +847,49 @@ public class GithubRdfConversionTransactionService {
                             continue;
                         }
 
-                        // ********************** ** REMOVE ON DEPLOYMENT ** **********************
-                        // ZonedDateTime oneYearAgo = ZonedDateTime.now().minusYears(1);
-                        // // REMOVE ON DEPLOYMENT
-                        // Date dcreatedAt = ghIssue.getCreatedAt();
-                        // if (dcreatedAt == null || dcreatedAt.toInstant().isBefore(oneYearAgo.toInstant())) {
-                        //     continue;
-                        // }
+                        // // ********************** ** REMOVE ON DEPLOYMENT ** **********************
+                        // // ZonedDateTime oneYearAgo = ZonedDateTime.now().minusYears(1);
+                        // // // REMOVE ON DEPLOYMENT
+                        // // Date dcreatedAt = ghIssue.getCreatedAt();
+                        // // if (dcreatedAt == null || dcreatedAt.toInstant().isBefore(oneYearAgo.toInstant())) {
+                        // //     continue;
+                        // // }
 
-                        if (PROCESS_ISSUE_ONLY.length > 0) {
-                            boolean shouldProcessIssue = false;
-                            for (String issueId : PROCESS_ISSUE_ONLY) {
-                                if (issueId.equals(String.valueOf(issueNumber))) {
-                                    shouldProcessIssue = true;
-                                    break;
-                                }
-                            }
-                            if (!shouldProcessIssue) {
-                                continue; // Skip this issue
-                            }
-                        }
-                        // ********************** ** **************** ** **********************
+                        // if (PROCESS_ISSUE_ONLY.length > 0) {
+                        //     boolean shouldProcessIssue = false;
+                        //     for (String issueId : PROCESS_ISSUE_ONLY) {
+                        //         if (issueId.equals(String.valueOf(issueNumber))) {
+                        //             shouldProcessIssue = true;
+                        //             break;
+                        //         }
+                        //     }
+                        //     if (!shouldProcessIssue) {
+                        //         continue; // Skip this issue
+                        //     }
+                        // }
+                        // // ********************** ** **************** ** **********************
 
                         writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(issueUri));
 
                         if (githubIssueRepositoryFilter.isEnableIssueNumber()) {
                             writer.triple(RdfGithubIssueUtils.createIssueNumberProperty(issueUri, issueNumber));
                         }
+
+                        // Add GitHub issue ID (internal ID)
+                        if (githubIssueRepositoryFilter.isEnableIssueNumber()) {
+                            writer.triple(RdfGithubIssueUtils.createIssueIdProperty(issueUri, ghIssue.getId()));
+                        }
+
+                        // Add GitHub-specific properties
+                        if (ghIssue.getHtmlUrl() != null) {
+                            writer.triple(RdfGithubIssueUtils.createIssueHtmlUrlProperty(issueUri, ghIssue.getHtmlUrl().toString()));
+                        }
+                        
+                        if (ghIssue.getNodeId() != null) {
+                            writer.triple(RdfGithubIssueUtils.createIssueNodeIdProperty(issueUri, ghIssue.getNodeId()));
+                        }
+                        
+                        writer.triple(RdfGithubIssueUtils.createIssueLockedProperty(issueUri, ghIssue.isLocked()));
 
                         if (githubIssueRepositoryFilter.isEnableIssueTitle() && ghIssue.getTitle() != null) {
                             writer.triple(RdfGithubIssueUtils.createIssueTitleProperty(issueUri, ghIssue.getTitle()));
@@ -1364,7 +1385,7 @@ public class GithubRdfConversionTransactionService {
 
         String userUri = info == null ? null : info.uri;
         if (userUri != null && !userUri.isEmpty()) {
-            writer.triple(RdfCommitUtils.createCommiterGitHubUserProperty(commitUri, userUri));
+            writer.triple(RdfGithubCommitUtils.createCommiterGitHubUserProperty(commitUri, userUri));
             writer.triple(RdfGithubUserUtils.createGitHubUserType(userUri));
             if (info != null) {
                 writer.triple(RdfGithubUserUtils.createUserIdProperty(userUri, info.userId));
@@ -1433,7 +1454,7 @@ public class GithubRdfConversionTransactionService {
             String issueUri = GithubUriUtils.getIssueUri(owner, repositoryName, number);
             writer.triple(RdfGithubIssueUtils.createIssueReferencedByProperty(issueUri, commitUri));
             // keep legacy predicate
-            writer.triple(RdfCommitUtils.createCommitIssueProperty(commitUri, issueUri));
+            writer.triple(RdfGithubCommitUtils.createCommitIssueProperty(commitUri, issueUri));
         }
     }
 

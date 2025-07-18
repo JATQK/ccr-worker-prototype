@@ -36,6 +36,22 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(PLATFORM_NS + "number");
     }
 
+    public static Node issueIdProperty() {
+        return RdfUtils.uri(GH_NS + "issueId");
+    }
+
+    public static Node htmlUrlProperty() {
+        return RdfUtils.uri(GH_NS + "htmlUrl");
+    }
+
+    public static Node nodeIdProperty() {
+        return RdfUtils.uri(GH_NS + "nodeId");
+    }
+
+    public static Node lockedProperty() {
+        return RdfUtils.uri(GH_NS + "locked");
+    }
+
     public static Node stateProperty() {
         return RdfUtils.uri(PLATFORM_NS + "state");
     }
@@ -94,13 +110,28 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "referencedBy");
     }
 
-
     public static Triple createRdfTypeProperty(String issueUri) {
         return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri("github:GithubIssue"));
     }
 
     public static Triple createIssueNumberProperty(String issueUri, int number) {
         return Triple.create(RdfUtils.uri(issueUri), numberProperty(), RdfUtils.integerLiteral(number));
+    }
+
+    public static Triple createIssueIdProperty(String issueUri, long issueId) {
+        return Triple.create(RdfUtils.uri(issueUri), issueIdProperty(), RdfUtils.nonNegativeIntegerLiteral(issueId));
+    }
+
+    public static Triple createIssueHtmlUrlProperty(String issueUri, String htmlUrl) {
+        return Triple.create(RdfUtils.uri(issueUri), htmlUrlProperty(), RdfUtils.stringLiteral(htmlUrl));
+    }
+
+    public static Triple createIssueNodeIdProperty(String issueUri, String nodeId) {
+        return Triple.create(RdfUtils.uri(issueUri), nodeIdProperty(), RdfUtils.stringLiteral(nodeId));
+    }
+
+    public static Triple createIssueLockedProperty(String issueUri, boolean locked) {
+        return Triple.create(RdfUtils.uri(issueUri), lockedProperty(), RdfUtils.booleanLiteral(locked));
     }
 
     public static Triple createIssueStateProperty(String issueUri, String state) {

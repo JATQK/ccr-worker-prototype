@@ -204,6 +204,18 @@ git:hasDiffEntry a rdf:Property ;
     rdfs:domain git:GitCommit ;
     rdfs:range git:CommitDiffEntry .
 
+git:isMergeCommit a rdf:Property ;
+    rdfs:label "Is Merge Commit"@en ;
+    rdfs:comment "Indicates whether this commit is a merge commit (has multiple parents)."@en ;
+    rdfs:domain git:GitCommit ;
+    rdfs:range xsd:boolean .
+
+git:commitBranchName a rdf:Property ;
+    rdfs:label "Commit Branch Name"@en ;
+    rdfs:comment "The name of the branch this commit was made on (for backwards compatibility)."@en ;
+    rdfs:domain git:GitCommit ;
+    rdfs:range xsd:string .
+
 #
 # ╭──────────────────────────────────────────────────╮
 # │ Class: GitTag                                    │
@@ -217,12 +229,6 @@ git:GitTag a rdfs:Class ;
 git:tagName a rdf:Property ;
     rdfs:label "Tag Name"@en ;
     rdfs:comment "The name of the tag."@en ;
-    rdfs:domain git:GitTag ;
-    rdfs:range xsd:string .
-
-git:tagMessage a rdf:Property ;
-    rdfs:label "Tag Message"@en ;
-    rdfs:comment "The message associated with an annotated tag."@en ;
     rdfs:domain git:GitTag ;
     rdfs:range xsd:string .
 
@@ -425,6 +431,18 @@ git:lineCommitHash a rdf:Property ;
 git:lineNumber a rdf:Property ;
     rdfs:label "Line Number"@en ;
     rdfs:comment "The line number in the file (0-based)."@en ;
+    rdfs:domain git:BranchSnapshotLineEntry ;
+    rdfs:range xsd:nonNegativeInteger .
+
+git:branchSnapshotLinenumberBegin a rdf:Property ;
+    rdfs:label "Branch Snapshot Line Number Begin"@en ;
+    rdfs:comment "The starting line number for a range of lines in a branch snapshot."@en ;
+    rdfs:domain git:BranchSnapshotLineEntry ;
+    rdfs:range xsd:nonNegativeInteger .
+
+git:branchSnapshotLinenumberEnd a rdf:Property ;
+    rdfs:label "Branch Snapshot Line Number End"@en ;
+    rdfs:comment "The ending line number for a range of lines in a branch snapshot."@en ;
     rdfs:domain git:BranchSnapshotLineEntry ;
     rdfs:range xsd:nonNegativeInteger .
 
