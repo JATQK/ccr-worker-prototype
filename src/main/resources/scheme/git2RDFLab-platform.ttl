@@ -170,12 +170,6 @@ platform:commentId a rdf:Property ;
     rdfs:domain platform:Comment ;
     rdfs:range xsd:long .
 
-platform:commentUrl a rdf:Property ;
-    rdfs:label "Comment URL"@en ;
-    rdfs:comment "The URL to view this comment."@en ;
-    rdfs:domain platform:Comment ;
-    rdfs:range xsd:anyURI .
-
 platform:commentedAt a rdf:Property ;
     rdfs:label "Commented At"@en ;
     rdfs:comment "The date and time when this comment was submitted."@en ;
