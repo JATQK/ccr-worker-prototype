@@ -46,7 +46,7 @@ public final class RdfGithubIssueReviewUtils {
         return Triple.create(uri(reviewUri), commentProperty(), uri(commentUri));
     }
     public static Triple createReviewUrlProperty(String reviewUri, String reviewUrl) {
-        return Triple.create(uri(reviewUri), urlProperty(), RdfUtils.stringLiteral(reviewUrl));
+        return Triple.create(uri(reviewUri), urlProperty(), RdfUtils.uri(reviewUrl));
     }
 
     public static Triple createIssueReviewRdfTypeProperty(String issueUri) {

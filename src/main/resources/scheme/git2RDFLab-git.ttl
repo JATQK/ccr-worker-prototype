@@ -296,25 +296,25 @@ git:oldLineStart a rdf:Property ;
     rdfs:label "Old Line Start"@en ;
     rdfs:comment "The starting line number in the old file (0-based)."@en ;
     rdfs:domain git:CommitDiffEdit ;
-    rdfs:range xsd:nonNegativeInteger .
+    rdfs:range xsd:integer .
 
 git:newLineStart a rdf:Property ;
     rdfs:label "New Line Start"@en ;
     rdfs:comment "The starting line number in the new file (0-based)."@en ;
     rdfs:domain git:CommitDiffEdit ;
-    rdfs:range xsd:nonNegativeInteger .
+    rdfs:range xsd:integer .
 
 git:oldLineEnd a rdf:Property ;
     rdfs:label "Old Line End"@en ;
     rdfs:comment "The ending line number in the old file."@en ;
     rdfs:domain git:CommitDiffEdit ;
-    rdfs:range xsd:nonNegativeInteger .
+    rdfs:range xsd:integer .
 
 git:newLineEnd a rdf:Property ;
     rdfs:label "New Line End"@en ;
     rdfs:comment "The ending line number in the new file."@en ;
     rdfs:domain git:CommitDiffEdit ;
-    rdfs:range xsd:nonNegativeInteger .
+    rdfs:range xsd:integer .
 
 #
 # ╭──────────────────────────────────────────────────╮

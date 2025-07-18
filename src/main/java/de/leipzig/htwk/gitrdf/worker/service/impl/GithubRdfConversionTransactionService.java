@@ -90,9 +90,9 @@ import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.GithubUriUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.GithubUserInfo;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubCommentUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueReviewUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubReactionUtils;
@@ -834,7 +834,7 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         int issueNumber = ghIssue.getNumber();
-                        String issueUri = ghIssue.getHtmlUrl().toString();
+                        String issueUri = GithubUriUtils.getIssueUri(owner, repositoryName, String.valueOf(issueNumber));
 
                         if (issueUri == null || issueUri.isEmpty()) {
                             log.warn(
@@ -880,11 +880,7 @@ public class GithubRdfConversionTransactionService {
                             writer.triple(RdfGithubIssueUtils.createIssueIdProperty(issueUri, ghIssue.getId()));
                         }
 
-                        // Add GitHub-specific properties
-                        if (ghIssue.getHtmlUrl() != null) {
-                            writer.triple(RdfGithubIssueUtils.createIssueHtmlUrlProperty(issueUri, ghIssue.getHtmlUrl().toString()));
-                        }
-                        
+
                         if (ghIssue.getNodeId() != null) {
                             writer.triple(RdfGithubIssueUtils.createIssueNodeIdProperty(issueUri, ghIssue.getNodeId()));
                         }
@@ -1546,6 +1542,7 @@ public class GithubRdfConversionTransactionService {
                         log.debug("Set RDF commit diff entry property");
 
                     writer.triple(RdfCommitUtils.createCommitDiffEntryProperty(commitUri, diffEntryNode));
+                    writer.triple(RdfCommitUtils.createCommitDiffEntryRdfTypeProperty(diffEntryNode));
 
                     DiffEntry.ChangeType changeType = diffEntry.getChangeType(); // ADD,DELETE,MODIFY,RENAME,COPY
 
@@ -1605,6 +1602,7 @@ public class GithubRdfConversionTransactionService {
                             log.debug("Set RDF commit diff edit resource");
 
                         writer.triple(RdfCommitUtils.createCommitDiffEditResource(diffEntryNode, editNode));
+                        writer.triple(RdfCommitUtils.createCommitDiffEditRdfTypeProperty(editNode));
 
                         Edit.Type editType = edit.getType(); // INSERT,DELETE,REPLACE
 

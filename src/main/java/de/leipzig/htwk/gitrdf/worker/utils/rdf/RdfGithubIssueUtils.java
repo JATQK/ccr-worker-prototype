@@ -40,10 +40,6 @@ public final class RdfGithubIssueUtils {
         return RdfUtils.uri(GH_NS + "issueId");
     }
 
-    public static Node htmlUrlProperty() {
-        return RdfUtils.uri(GH_NS + "htmlUrl");
-    }
-
     public static Node nodeIdProperty() {
         return RdfUtils.uri(GH_NS + "nodeId");
     }
@@ -121,11 +117,7 @@ public final class RdfGithubIssueUtils {
     public static Triple createIssueIdProperty(String issueUri, long issueId) {
         return Triple.create(RdfUtils.uri(issueUri), issueIdProperty(), RdfUtils.nonNegativeIntegerLiteral(issueId));
     }
-
-    public static Triple createIssueHtmlUrlProperty(String issueUri, String htmlUrl) {
-        return Triple.create(RdfUtils.uri(issueUri), htmlUrlProperty(), RdfUtils.stringLiteral(htmlUrl));
-    }
-
+    
     public static Triple createIssueNodeIdProperty(String issueUri, String nodeId) {
         return Triple.create(RdfUtils.uri(issueUri), nodeIdProperty(), RdfUtils.stringLiteral(nodeId));
     }

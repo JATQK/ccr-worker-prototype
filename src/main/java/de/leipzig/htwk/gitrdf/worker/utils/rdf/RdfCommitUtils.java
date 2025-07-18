@@ -233,15 +233,15 @@ public class RdfCommitUtils {
     }
 
     public static Triple createBranchSnapshotLineProperty(Node snapshotLineEntryNode, int line) {
-        return Triple.create(snapshotLineEntryNode, branchSnapshotLineProperty(), stringLiteral(Integer.toString(line)));
+        return Triple.create(snapshotLineEntryNode, branchSnapshotLineProperty(), RdfUtils.integerLiteral(line));
     }
 
     public static Triple createBranchSnapshotLinenumberBeginProperty(Node snapshotLineEntryNode, int linenumberBegin) {
-        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberBeginProperty(), stringLiteral(Integer.toString(linenumberBegin)));
+        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberBeginProperty(), RdfUtils.integerLiteral(linenumberBegin));
     }
 
     public static Triple createBranchSnapshotLinenumberEndProperty(Node snapshotLineEntryNode, int linenumberEnd) {
-        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberEndProperty(), stringLiteral(Integer.toString(linenumberEnd)));
+        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberEndProperty(), RdfUtils.integerLiteral(linenumberEnd));
     }
 
 
@@ -305,6 +305,10 @@ public class RdfCommitUtils {
         return Triple.create(uri(commitUri), commitDiffEntryResource(), diffEntryNode);
     }
 
+    public static Triple createCommitDiffEntryRdfTypeProperty(Node diffEntryNode) {
+        return Triple.create(diffEntryNode, rdfTypeProperty(), uri(GIT_NS + "CommitDiffEntry"));
+    }
+
     public static Triple createCommitDiffEntryOldFileNameProperty(Node diffEntryNode, FileHeader fileHeader) {
         return Triple.create(diffEntryNode, commitDiffEntryOldFileNameProperty(), stringLiteral(fileHeader.getOldPath()));
     }
@@ -317,24 +321,28 @@ public class RdfCommitUtils {
         return Triple.create(diffEntryNode, commitDiffEditResource(), diffEditNode);
     }
 
+    public static Triple createCommitDiffEditRdfTypeProperty(Node diffEditNode) {
+        return Triple.create(diffEditNode, rdfTypeProperty(), uri(GIT_NS + "CommitDiffEdit"));
+    }
+
     public static Triple createCommitDiffEditTypeProperty(Node editNode, Edit.Type editType) {
         return Triple.create(editNode, commitDiffEntryEditTypeProperty(), uri(GIT_NS + editType.toString().toLowerCase()));
     }
 
     public static Triple createEditOldLinenumberBeginProperty(Node editNode, int lineNumberBegin ) {
-        return Triple.create(editNode, editOldLinenumberBeginProperty(), stringLiteral(Integer.toString(lineNumberBegin)));
+        return Triple.create(editNode, editOldLinenumberBeginProperty(), RdfUtils.integerLiteral(lineNumberBegin));
     }
 
     public static Triple createEditNewLinenumberBeginProperty(Node editNode, int lineNumberBegin ) {
-        return Triple.create(editNode, editNewLinenumberBeginProperty(), stringLiteral(Integer.toString(lineNumberBegin)));
+        return Triple.create(editNode, editNewLinenumberBeginProperty(), RdfUtils.integerLiteral(lineNumberBegin));
     }
 
     public static Triple createEditOldLinenumberEndProperty(Node editNode, int lineNumberEnd ) {
-        return Triple.create(editNode, editOldLinenumberEndProperty(), stringLiteral(Integer.toString(lineNumberEnd)));
+        return Triple.create(editNode, editOldLinenumberEndProperty(), RdfUtils.integerLiteral(lineNumberEnd));
     }
 
     public static Triple createEditNewLinenumberEndProperty(Node editNode, int lineNumberEnd ) {
-        return Triple.create(editNode, editNewLinenumberEndProperty(), stringLiteral(Integer.toString(lineNumberEnd)));
+        return Triple.create(editNode, editNewLinenumberEndProperty(), RdfUtils.integerLiteral(lineNumberEnd));
     }
 
     public static Triple createCommitBranchNameProperty(String commitUri, String branchName) {
