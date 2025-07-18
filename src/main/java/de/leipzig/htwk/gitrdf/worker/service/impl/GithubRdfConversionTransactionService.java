@@ -110,13 +110,12 @@ public class GithubRdfConversionTransactionService {
 
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
-    private static final int PROCESS_ISSUE_LIMIT = 30; // Limit for the number of issues to process
+    private static final int PROCESS_ISSUE_LIMIT = 20; // Limit for the number of issues to process
     private static final String[] PROCESS_ISSUE_ONLY = {}; // Only process these issues // "9946", "9947", "9948",
                                                            // "9949", "9950"
-    private static final int PROCESS_COMMIT_LIMIT = 30; // Limit for the number of commits to process
+    private static final int PROCESS_COMMIT_LIMIT = 20; // Limit for the number of commits to process
 
     private static final boolean PROCESS_COMMENT_REACTIONS = true;
-    // TODO: replace PURL
 
     public static final String GIT_NAMESPACE = "git";
     public static final String GIT_URI = "https://purl.archive.org/git2rdf/v2/git2RDFLab-git#";
@@ -978,7 +977,7 @@ public class GithubRdfConversionTransactionService {
                                     continue;
                                 }
                                 String reviewURI = GithubUriUtils.getIssueReviewUri(issueUri,
-                                        String.valueOf(pr.getId()), String.valueOf(reviewId));
+                                        String.valueOf(reviewId));
                                 String reviewUrl = GithubUriUtils.getIssueReviewUrl(issueUri, String.valueOf(reviewId));
                                 // String reviewURL = review.getUrl().toString();
                                 // String reviewUri = issueUri + "/reviews/" + reviewId;
@@ -1026,11 +1025,9 @@ public class GithubRdfConversionTransactionService {
                                 for (GHPullRequestReviewComment c : reviewComments) {
                                     long cid = c.getId();
 
-                                    // Setup the URI and URL for a review comment of a pull request
+                                    // Setup the URI for a review comment of a pull request
                                     String reviewCommentURI = GithubUriUtils.getIssueReviewCommentUri(
                                             issueUri, String.valueOf(cid));
-                                    String reviewCommentURL = GithubUriUtils.getIssueReviewCommentUrl(
-                                            repositoryUri, String.valueOf(cid));
 
                                     // Link into the Review the Comment
                                     writer.triple(RdfGithubIssueReviewUtils.createReviewCommentProperty(
@@ -1038,9 +1035,6 @@ public class GithubRdfConversionTransactionService {
                                             reviewCommentURI));
 
                                     // Create the RDF triples for the review comment
-                                    writer.triple(
-                                            RdfGithubCommentUtils.createCommentHtmlUrl(reviewCommentURI,
-                                                    reviewCommentURL));
                                     writer.triple(RdfGithubCommentUtils.createCommentRdfType(reviewCommentURI));
                                     writer.triple(RdfGithubCommentUtils.createCommentId(reviewCommentURI, cid));
                                     writer.triple(RdfGithubCommentUtils.createCommentOf(reviewCommentURI, reviewURI));
@@ -1087,7 +1081,7 @@ public class GithubRdfConversionTransactionService {
                                                         reviewCommentURI, reactions.size()));
                                         for (GHReaction r : reactions) {
                                             String reactionURI = GithubUriUtils.getIssueReviewCommentReactionUri(
-                                                    reviewCommentURI, String.valueOf(r.getId()));
+                                                    issueUri, String.valueOf(cid), String.valueOf(r.getId()));
 
                                             writer.triple(RdfGithubCommentUtils.createCommentReaction(
                                                     reviewCommentURI,
@@ -1123,16 +1117,12 @@ public class GithubRdfConversionTransactionService {
                             List<GHIssueComment> issueComments = getIssueCommentsCached(ghIssue);
                             for (GHIssueComment c : issueComments) {
                                 long cid = c.getId();
-                                String issueCommentURI = GithubUriUtils.getIssueCommentUri(repositoryUri,
-                                        String.valueOf(cid));
-                                String issueCommentURL = GithubUriUtils.getIssueCommentUrl(issueUri,
+                                String issueCommentURI = GithubUriUtils.getIssueCommentUri(issueUri,
                                         String.valueOf(cid));
 
                                 // Link in Issue to Comment
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewCommentProperty(issueUri,
                                         issueCommentURI));
-                                writer.triple(
-                                        RdfGithubCommentUtils.createCommentHtmlUrl(issueCommentURI, issueCommentURL));
                                 writer.triple(RdfGithubCommentUtils.createCommentRdfType(issueCommentURI));
                                 writer.triple(RdfGithubCommentUtils.createCommentId(issueCommentURI, cid));
                                 writer.triple(RdfGithubCommentUtils.createCommentOf(issueCommentURI, issueUri));
@@ -1160,8 +1150,8 @@ public class GithubRdfConversionTransactionService {
                                         RdfGithubCommentUtils.createReactionCount(issueCommentURI, reactions.size()));
                                 for (GHReaction r : reactions) {
 
-                                    String reactionURI = GithubUriUtils.getIssueCommentReactionUri(issueCommentURI,
-                                            String.valueOf(r.getId()));
+                                    String reactionURI = GithubUriUtils.getIssueCommentReactionUri(issueUri,
+                                            String.valueOf(cid), String.valueOf(r.getId()));
 
                                     writer.triple(RdfGithubCommentUtils.createCommentReaction(issueCommentURI,
                                             reactionURI));

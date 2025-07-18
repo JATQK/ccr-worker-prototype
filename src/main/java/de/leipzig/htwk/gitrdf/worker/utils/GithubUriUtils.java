@@ -73,10 +73,9 @@ public final class GithubUriUtils {
         return repoString + "/reviews/" + reviewId;
     }
 
-    public static String getIssueReviewUri(String repoString, String pullId,  String reviewId) {
-        // https://github.com/dotnet/core/pull/9935#pullrequestreview-2922636653
-        return repoString + pullId + "#pullrequestreview-" + reviewId;
-
+    public static String getIssueReviewUri(String issueUri, String reviewId) {
+        // https://github.com/dotnet/core/issues/9935#pullrequestreview-2922636653
+        return issueUri + "#pullrequestreview-" + reviewId;
     }
 
     // Issue Review Comments
@@ -93,14 +92,14 @@ public final class GithubUriUtils {
     }
 
     // Reaction
-    public static String getIssueCommentReactionUri(String commentUri, String reactionId) {
-        // https://api.github.com/repos/dotnet/core/issues/comments/2978560992/reactions/1234567890
-        return commentUri + "/reactions#" + reactionId;
+    public static String getIssueCommentReactionUri(String issueUri, String commentId, String reactionId) {
+        // https://github.com/dotnet/core/issues/9945/comments/3034788473/reactions/295051788
+        return issueUri + "/comments/" + commentId + "/reactions/" + reactionId;
     }
     
-    public static String getIssueReviewCommentReactionUri(String commentUri, String reactionId) {
-        // https://api.github.com/repos/dotnet/core/pulls/comments/2978560992/reactions/1234567890
-        return commentUri + "/reactions/" + reactionId;
+    public static String getIssueReviewCommentReactionUri(String issueUri, String commentId, String reactionId) {
+        // https://github.com/dotnet/core/issues/9945/comments/3034788473/reactions/295051788
+        return issueUri + "/comments/" + commentId + "/reactions/" + reactionId;
     }
 
     // Workflow
