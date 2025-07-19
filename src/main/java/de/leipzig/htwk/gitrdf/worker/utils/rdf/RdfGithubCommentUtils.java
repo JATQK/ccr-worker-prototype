@@ -1,7 +1,6 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
-import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.uri;
 
 import java.time.LocalDateTime;
@@ -12,45 +11,23 @@ import org.apache.jena.graph.Triple;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+/**
+ * GitHub-specific utility class for RDF operations on github:GithubComment entities.
+ * This class extends RdfPlatformCommentUtils and adds GitHub-specific properties
+ * as defined in the git2RDFLab-platform-github ontology.
+ */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public final class RdfGithubCommentUtils {
+public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
 
   private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
-  private static final String PF_NS = PLATFORM_NAMESPACE + ":";
 
-  // Core RDF properties
-  public static Node rdfTypeProperty() {
-    return RdfUtils.uri("rdf:type");
-  }
-
-  // Comment identification and basic properties
-  public static Node commentIdProperty() {
-    return uri(PF_NS + "commentId");
-  }
-
+  // GitHub-specific comment properties
   public static Node commentHtmlUrlProperty() {
-    return uri(PF_NS + "commentUrl");
-  }
-
-  public static Node commentBodyProperty() {
-    return uri(PF_NS + "commentBody");
-  }
-
-  public static Node commentUserProperty() {
-    return uri(PF_NS + "commentAuthor");
-  }
-
-  public static Node commentCreatedAtProperty() {
-    return uri(PF_NS + "commentedAt");
+    return uri(GH_NS + "commentUrl");
   }
 
   public static Node commentUpdatedAtProperty() {
     return uri(GH_NS + "updatedAt");
-  }
-
-  // Threading and hierarchy properties
-  public static Node isRootCommentProperty() {
-    return uri(PF_NS + "isRootComment");
   }
 
   public static Node parentCommentProperty() {
@@ -69,7 +46,7 @@ public final class RdfGithubCommentUtils {
     return uri(GH_NS + "threadDepth");
   }
 
-  // Relationship to parent entities
+  // GitHub-specific relationship to parent entities
   public static Node commentOfProperty() {
     return uri(GH_NS + "commentOf");
   }
@@ -84,10 +61,6 @@ public final class RdfGithubCommentUtils {
     return uri(GH_NS + "isEdited");
   }
 
-  public static Node reactionCountProperty() {
-    return uri(PF_NS + "reactionCount");
-  }
-
   public static Node reactionProperty() {
     return uri(GH_NS + "reaction");
   }
@@ -96,40 +69,41 @@ public final class RdfGithubCommentUtils {
     return uri(GH_NS + "authorAssociation");
   }
 
-  // RDF Type creation method - single unified type
+  // Override platform method to create GitHub Comment type
   public static Triple createCommentRdfType(String commentUri) {
     return Triple.create(uri(commentUri), rdfTypeProperty(),
         uri("github:GithubComment"));
   }
 
-  // Basic property creation methods
+  // Use inherited platform methods for common properties
   public static Triple createCommentId(String commentUri, long id) {
-    return Triple.create(uri(commentUri), commentIdProperty(), RdfUtils.longLiteral(id));
-  }
-
-  public static Triple createCommentHtmlUrl(String commentUri, String htmlUrl) {
-    return Triple.create(uri(commentUri), commentHtmlUrlProperty(), uri(htmlUrl));
+    return createCommentIdProperty(commentUri, id);
   }
 
   public static Triple createCommentBody(String commentUri, String body) {
-    return Triple.create(uri(commentUri), commentBodyProperty(), RdfUtils.stringLiteral(body));
+    return createCommentBodyProperty(commentUri, body);
   }
 
   public static Triple createCommentUser(String commentUri, String userUri) {
-    return Triple.create(uri(commentUri), commentUserProperty(), uri(userUri));
+    return createCommentAuthorProperty(commentUri, userUri);
   }
 
   public static Triple createCommentCreatedAt(String commentUri, LocalDateTime createdAt) {
-    return Triple.create(uri(commentUri), commentCreatedAtProperty(), RdfUtils.dateTimeLiteral(createdAt));
+    return createCommentedAtProperty(commentUri, createdAt);
+  }
+
+  // GitHub-specific property creation methods
+  public static Triple createCommentHtmlUrl(String commentUri, String htmlUrl) {
+    return Triple.create(uri(commentUri), commentHtmlUrlProperty(), uri(htmlUrl));
   }
 
   public static Triple createCommentUpdatedAt(String commentUri, LocalDateTime updatedAt) {
     return Triple.create(uri(commentUri), commentUpdatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
   }
 
-  // Threading and hierarchy methods
+  // Use inherited platform method for root comment
   public static Triple createIsRootComment(String commentUri, boolean isRoot) {
-    return Triple.create(uri(commentUri), isRootCommentProperty(), RdfUtils.booleanLiteral(isRoot));
+    return createIsRootCommentProperty(commentUri, isRoot);
   }
 
   public static Triple createParentComment(String commentUri, String parentUri) {
@@ -142,6 +116,11 @@ public final class RdfGithubCommentUtils {
 
   public static Triple createReplyCount(String commentUri, long count) {
     return Triple.create(uri(commentUri), replyCountProperty(), RdfUtils.nonNegativeIntegerLiteral(count));
+  }
+
+  // Use inherited platform method for reaction count
+  public static Triple createReactionCount(String commentUri, long reactionCount) {
+    return createReactionCountProperty(commentUri, reactionCount);
   }
 
   public static Triple createThreadDepth(String commentUri, int depth) {
@@ -163,9 +142,6 @@ public final class RdfGithubCommentUtils {
     return Triple.create(uri(commentUri), isEditedProperty(), RdfUtils.booleanLiteral(isEdited));
   }
 
-  public static Triple createReactionCount(String commentUri, long reactionCount) {
-    return Triple.create(uri(commentUri), reactionCountProperty(), RdfUtils.nonNegativeIntegerLiteral(reactionCount));
-  }
 
   public static Triple createCommentReaction(String commentUri, String reactionUri) {
     return Triple.create(uri(commentUri), reactionProperty(), uri(reactionUri));

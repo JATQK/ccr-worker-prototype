@@ -12,6 +12,8 @@ import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTran
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.XSD_SCHEMA_URI;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.OWL_SCHEMA_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.OWL_SCHEMA_URI;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.SPDX_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.SPDX_URI;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -38,7 +40,8 @@ public final class RdfUtils {
             PLATFORM_GITHUB_NAMESPACE, PLATFORM_GITHUB_URI,
             XSD_SCHEMA_NAMESPACE, XSD_SCHEMA_URI,
             RDF_SCHEMA_NAMESPACE, RDF_SCHEMA_URI,
-            OWL_SCHEMA_NAMESPACE, OWL_SCHEMA_URI
+            OWL_SCHEMA_NAMESPACE, OWL_SCHEMA_URI,
+            SPDX_NAMESPACE, SPDX_URI
     )));
 
     private static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
@@ -80,6 +83,24 @@ public final class RdfUtils {
             value = expandedValue;
 
         return NodeFactory.createURI(value);
+    }
+
+    /**
+     * Creates an SPDX CheckSum node with the proper structure.
+     * This creates a blank node that represents an spdx:CheckSum object.
+     */
+    public static Node createSpdxCheckSumNode(String hashValue) {
+        // Create a blank node for the CheckSum object
+        // In a complete implementation, this would be part of a more complex structure
+        // that includes the checksumValue and algorithm properties
+        return NodeFactory.createBlankNode("checksum_" + hashValue);
+    }
+
+    /**
+     * Creates a properly typed xsd:anyURI literal.
+     */
+    public static Node anyUriLiteral(String uriValue) {
+        return NodeFactory.createLiteral(uriValue, XSDDatatype.XSDanyURI);
     }
 
 }

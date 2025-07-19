@@ -144,6 +144,10 @@ public class BranchSnapshotCalculator {
 
                         writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
                         writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, prevCommitHash));
+                        // Add SPDX CheckSum triples for branch snapshot
+                        for (org.apache.jena.graph.Triple checksumTriple : RdfCommitUtils.createBranchSnapshotSpdxCheckSumTriples(prevCommitHash)) {
+                            writer.triple(checksumTriple);
+                        }
                         writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, linenumberBegin));
                         writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
 
@@ -151,6 +155,10 @@ public class BranchSnapshotCalculator {
 
                             writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
                             writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, currentCommitHash));
+                            // Add SPDX CheckSum triples for branch snapshot
+                            for (org.apache.jena.graph.Triple checksumTriple : RdfCommitUtils.createBranchSnapshotSpdxCheckSumTriples(currentCommitHash)) {
+                                writer.triple(checksumTriple);
+                            }
                             writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, lineNumberEnd));
                             writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
                         }
@@ -160,6 +168,10 @@ public class BranchSnapshotCalculator {
 
                         writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
                         writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, prevCommitHash));
+                        // Add SPDX CheckSum triples for branch snapshot
+                        for (org.apache.jena.graph.Triple checksumTriple : RdfCommitUtils.createBranchSnapshotSpdxCheckSumTriples(prevCommitHash)) {
+                            writer.triple(checksumTriple);
+                        }
                         writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, linenumberBegin));
                         writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
 

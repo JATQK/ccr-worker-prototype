@@ -29,6 +29,7 @@ public class RdfCommitUtils {
     protected static final String GIT_NS = GIT_NAMESPACE + ":";
     protected static final String RDF_NS = RDF_SCHEMA_NAMESPACE + ":";
     protected static final String OWL_NS = OWL_SCHEMA_NAMESPACE + ":";
+    protected static final String SPDX_NS = "spdx:";
 
     public static Node rdfTypeProperty() {
         return RdfUtils.uri(RDF_NS + "type");
@@ -246,7 +247,16 @@ public class RdfCommitUtils {
 
 
     public static Triple createBranchSnapshotCommitHashProperty(Node snapshotLineEntryNode, String commitHash) {
-        return Triple.create(snapshotLineEntryNode, branchSnapshotCommitHashProperty(), stringLiteral(commitHash));
+        // Create an SPDX CheckSum object instead of a string literal
+        Node checksumNode = createSpdxCheckSum(commitHash);
+        return Triple.create(snapshotLineEntryNode, branchSnapshotCommitHashProperty(), checksumNode);
+    }
+
+    /**
+     * Creates additional triples for branch snapshot commit hash SPDX CheckSum object.
+     */
+    public static Set<Triple> createBranchSnapshotSpdxCheckSumTriples(String commitHash) {
+        return createSpdxCheckSumTriples(commitHash);
     }
 
     // Commit
@@ -455,14 +465,49 @@ public class RdfCommitUtils {
     }
 
     public static Triple createSubmoduleCommitProperty(Node submoduleNode, String commitHash) {
-        return Triple.create(submoduleNode, rdfSubmoduleCommitProperty(), stringLiteral(commitHash));
+        // Create an SPDX CheckSum object instead of a string literal
+        Node checksumNode = createSpdxCheckSum(commitHash);
+        return Triple.create(submoduleNode, rdfSubmoduleCommitProperty(), checksumNode);
+    }
+
+    /**
+     * Creates additional triples for the SPDX CheckSum object.
+     * This should be called after createSubmoduleCommitProperty to complete the CheckSum structure.
+     */
+    public static Set<Triple> createSpdxCheckSumTriples(String commitHash) {
+        Node checksumNode = RdfUtils.createSpdxCheckSumNode(commitHash);
+        Set<Triple> triples = new LinkedHashSet<>();
+        
+        // rdf:type spdx:CheckSum
+        triples.add(Triple.create(checksumNode, rdfTypeProperty(), uri(SPDX_NS + "CheckSum")));
+        
+        // spdx:checksumValue "hash_value"
+        triples.add(Triple.create(checksumNode, uri(SPDX_NS + "checksumValue"), stringLiteral(commitHash)));
+        
+        // spdx:algorithm spdx:checksumAlgorithm_sha1 (Git uses SHA-1)
+        triples.add(Triple.create(checksumNode, uri(SPDX_NS + "algorithm"), uri(SPDX_NS + "checksumAlgorithm_sha1")));
+        
+        return triples;
+    }
+
+    /**
+     * Creates an SPDX CheckSum object for a given hash value.
+     * According to SPDX specification, a CheckSum should have:
+     * - rdf:type spdx:CheckSum
+     * - spdx:checksumValue (the actual hash)
+     * - spdx:algorithm (the algorithm used, typically SHA1 for Git)
+     */
+    private static Node createSpdxCheckSum(String hashValue) {
+        return RdfUtils.createSpdxCheckSumNode(hashValue);
     }
 
     public static Triple createSubmoduleCommitEntryProperty(Node submoduleNode, String commitUrl) {
-        return Triple.create(submoduleNode, rdfSubmoduleCommitEntryProperty(), RdfUtils.uri(commitUrl));
+        // Create a properly typed xsd:anyURI literal instead of a URI node
+        return Triple.create(submoduleNode, rdfSubmoduleCommitEntryProperty(), RdfUtils.anyUriLiteral(commitUrl));
     }
 
     public static Triple createSubmoduleRepositoryEntryProperty(Node submoduleNode, String submoduleUrl) {
-        return Triple.create(submoduleNode, rdfSubmoduleRepositoryEntryProperty(), RdfUtils.uri(submoduleUrl));
+        // Create a properly typed xsd:anyURI literal instead of a URI node
+        return Triple.create(submoduleNode, rdfSubmoduleRepositoryEntryProperty(), RdfUtils.anyUriLiteral(submoduleUrl));
     }
 }

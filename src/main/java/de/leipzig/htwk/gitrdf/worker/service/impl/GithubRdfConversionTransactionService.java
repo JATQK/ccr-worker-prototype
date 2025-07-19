@@ -13,6 +13,7 @@ import java.nio.charset.IllegalCharsetNameException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Date;
@@ -95,6 +96,7 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubCommentUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueReviewUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubPullRequestUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubReactionUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowJobUtils;
@@ -110,10 +112,10 @@ public class GithubRdfConversionTransactionService {
 
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
-    private static final int PROCESS_ISSUE_LIMIT = 20; // Limit for the number of issues to process
+    private static final int PROCESS_ISSUE_LIMIT = 40; // Limit for the number of issues to process
     private static final String[] PROCESS_ISSUE_ONLY = {}; // Only process these issues // "9946", "9947", "9948",
                                                            // "9949", "9950"
-    private static final int PROCESS_COMMIT_LIMIT = 20; // Limit for the number of commits to process
+    private static final int PROCESS_COMMIT_LIMIT = 40; // Limit for the number of commits to process
 
     private static final boolean PROCESS_COMMENT_REACTIONS = true;
 
@@ -134,6 +136,9 @@ public class GithubRdfConversionTransactionService {
 
     public static final String OWL_SCHEMA_NAMESPACE = "owl";
     public static final String OWL_SCHEMA_URI = "http://www.w3.org/2002/07/owl#";
+
+    public static final String SPDX_NAMESPACE = "spdx";
+    public static final String SPDX_URI = "http://spdx.org/rdf/terms#";
 
     private final GithubHandlerService githubHandlerService;
 
@@ -264,21 +269,21 @@ public class GithubRdfConversionTransactionService {
             return;
         }
         try {
-            writer.triple(RdfGithubIssueUtils.createIssueMergedProperty(issueUri, pr.isMerged()));
+            writer.triple(RdfGithubPullRequestUtils.createIssueMergedProperty(issueUri, pr.isMerged()));
 
             Date mergedAt = pr.getMergedAt();
 
             if (mergedAt != null) {
-                writer.triple(RdfGithubIssueUtils.createIssueMergedAtProperty(issueUri, localDateTimeFrom(mergedAt)));
+                writer.triple(RdfGithubPullRequestUtils.createIssueMergedAtProperty(issueUri, localDateTimeFrom(mergedAt)));
             }
 
             if (pr.getMergedBy() != null) {
-                writer.triple(RdfGithubIssueUtils.createIssueMergedByProperty(issueUri,
+                writer.triple(RdfGithubPullRequestUtils.createIssueMergedByProperty(issueUri,
                         pr.getMergedBy().getHtmlUrl().toString()));
             }
 
             if (pr.getMergeCommitSha() != null) {
-                writer.triple(RdfGithubIssueUtils.createIssueMergeCommitShaProperty(issueUri, pr.getMergeCommitSha()));
+                writer.triple(RdfGithubPullRequestUtils.createIssueMergeCommitShaProperty(issueUri, pr.getMergeCommitSha()));
             }
         } catch (IOException e) {
             log.warn("Error while writing merge info for issue {}: {}", issueUri, e.getMessage());
@@ -400,6 +405,7 @@ public class GithubRdfConversionTransactionService {
             writer.prefix(XSD_SCHEMA_NAMESPACE, XSD_SCHEMA_URI);
             writer.prefix(RDF_SCHEMA_NAMESPACE, RDF_SCHEMA_URI);
             writer.prefix(OWL_SCHEMA_NAMESPACE, OWL_SCHEMA_URI);
+            writer.prefix(SPDX_NAMESPACE, SPDX_URI);
             writer.prefix(GIT_NAMESPACE, GIT_URI);
             writer.prefix(PLATFORM_NAMESPACE, PLATFORM_URI);
             writer.prefix(PLATFORM_GITHUB_NAMESPACE, PLATFORM_GITHUB_URI);
@@ -524,6 +530,11 @@ public class GithubRdfConversionTransactionService {
                     writer.triple(
                             RdfCommitUtils.createSubmoduleCommitEntryProperty(submoduleNode, submoduleCommitHashUri));
                     writer.triple(RdfCommitUtils.createSubmoduleCommitProperty(submoduleNode, submoduleCommitHash));
+                    
+                    // Add the SPDX CheckSum triples
+                    for (org.apache.jena.graph.Triple checksumTriple : RdfCommitUtils.createSpdxCheckSumTriples(submoduleCommitHash)) {
+                        writer.triple(checksumTriple);
+                    }
 
                     log.info("Submodule: path: {} url: {} commit-hash: {}", submodulePath, submoduleUrl,
                             submoduleCommitHash);
@@ -1796,11 +1807,11 @@ public class GithubRdfConversionTransactionService {
                 }
                 if (step.getStartedAt() != null) {
                     writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepStartedAtProperty(stepUri,
-                            step.getStartedAt().toString()));
+                            step.getStartedAt().toInstant().atZone(ZoneOffset.UTC).toLocalDateTime()));
                 }
                 if (step.getCompletedAt() != null) {
                     writer.triple(RdfGithubWorkflowStepUtils.createWorkflowStepCompletedAtProperty(stepUri,
-                            step.getCompletedAt().toString()));
+                            step.getCompletedAt().toInstant().atZone(ZoneOffset.UTC).toLocalDateTime()));
                 }
             }
         }

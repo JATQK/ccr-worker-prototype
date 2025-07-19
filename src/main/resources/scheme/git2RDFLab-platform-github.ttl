@@ -176,6 +176,225 @@ github:locked a rdf:Property ;
 
 #
 # ╭──────────────────────────────────────────────────╮
+# │ Class: GithubComment                             │
+# ╰──────────────────────────────────────────────────╯
+#
+
+github:GithubComment a rdfs:Class ;
+    rdfs:subClassOf platform:Comment ;
+    rdfs:label "Github Comment"@en ;
+    rdfs:comment "Represents a comment on Github (issues, pull requests, etc.)."@en .
+
+# GitHub Comment properties
+github:commentUrl a rdf:Property ;
+    rdfs:label "Comment URL"@en ;
+    rdfs:comment "The Github web URL for this comment."@en ;
+    rdfs:domain github:GithubComment ;
+    rdfs:range xsd:anyURI .
+
+github:parentComment a rdf:Property ;
+    rdfs:label "Parent Comment"@en ;
+    rdfs:comment "The parent comment this comment is replying to."@en ;
+    rdfs:domain github:GithubComment ;
+    rdfs:range github:GithubComment .
+
+github:hasReply a rdf:Property ;
+    rdfs:label "Has Reply"@en ;
+    rdfs:comment "Links to a reply comment."@en ;
+    rdfs:domain github:GithubComment ;
+    rdfs:range github:GithubComment .
+
+github:commentOf a rdf:Property ;
+    rdfs:label "Comment Of"@en ;
+    rdfs:comment "Links the comment to the entity it belongs to."@en ;
+    rdfs:domain github:GithubComment ;
+    rdfs:range rdfs:Resource .
+
+github:comment a rdf:Property ;
+    rdfs:label "Comment"@en ;
+    rdfs:comment "Links an issue or review to its comments."@en ;
+    rdfs:domain rdfs:Resource ;
+    rdfs:range github:GithubComment .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: GithubReaction                            │
+# ╰──────────────────────────────────────────────────╯
+#
+
+github:GithubReaction a rdfs:Class ;
+    rdfs:label "Github Reaction"@en ;
+    rdfs:comment "Represents a reaction (emoji) on Github content."@en .
+
+# GitHub Reaction properties
+github:reactionId a rdf:Property ;
+    rdfs:label "Reaction ID"@en ;
+    rdfs:comment "The unique Github reaction ID."@en ;
+    rdfs:domain github:GithubReaction ;
+    rdfs:range xsd:long .
+
+github:reactionContent a rdf:Property ;
+    rdfs:label "Reaction Content"@en ;
+    rdfs:comment "The emoji/reaction type (+1, -1, laugh, etc.)."@en ;
+    rdfs:domain github:GithubReaction ;
+    rdfs:range xsd:string .
+
+github:reactionOf a rdf:Property ;
+    rdfs:label "Reaction Of"@en ;
+    rdfs:comment "The comment or content this reaction is for."@en ;
+    rdfs:domain github:GithubReaction ;
+    rdfs:range github:GithubComment .
+
+github:reactionCreatedAt a rdf:Property ;
+    rdfs:label "Reaction Created At"@en ;
+    rdfs:comment "When the reaction was created."@en ;
+    rdfs:domain github:GithubReaction ;
+    rdfs:range xsd:dateTime .
+
+github:reaction a rdf:Property ;
+    rdfs:label "Reaction"@en ;
+    rdfs:comment "Links a comment to its reactions."@en ;
+    rdfs:domain github:GithubComment ;
+    rdfs:range github:GithubReaction .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: GithubWorkflow                            │
+# ╰──────────────────────────────────────────────────╯
+#
+
+github:GithubWorkflow a rdfs:Class ;
+    rdfs:subClassOf platform:Workflow ;
+    rdfs:label "Github Workflow"@en ;
+    rdfs:comment "Represents a Github Actions workflow."@en .
+
+github:WorkflowRun a rdfs:Class ;
+    rdfs:subClassOf github:GithubWorkflow ;
+    rdfs:label "Github Workflow Run"@en ;
+    rdfs:comment "Represents a specific execution of a Github workflow."@en .
+
+# GitHub Workflow Run properties
+github:workflowRunId a rdf:Property ;
+    rdfs:label "Workflow Run ID"@en ;
+    rdfs:comment "The unique Github workflow run ID."@en ;
+    rdfs:domain github:WorkflowRun ;
+    rdfs:range xsd:long .
+
+github:workflowStatus a rdf:Property ;
+    rdfs:label "Workflow Status"@en ;
+    rdfs:comment "The current status of the workflow run."@en ;
+    rdfs:domain github:WorkflowRun ;
+    rdfs:range xsd:string .
+
+github:workflowConclusion a rdf:Property ;
+    rdfs:label "Workflow Conclusion"@en ;
+    rdfs:comment "The final conclusion of the workflow run."@en ;
+    rdfs:domain github:WorkflowRun ;
+    rdfs:range xsd:string .
+
+github:workflowEvent a rdf:Property ;
+    rdfs:label "Workflow Event"@en ;
+    rdfs:comment "The event that triggered this workflow run."@en ;
+    rdfs:domain github:WorkflowRun ;
+    rdfs:range xsd:string .
+
+github:workflowRunNumber a rdf:Property ;
+    rdfs:label "Workflow Run Number"@en ;
+    rdfs:comment "The sequential run number for this workflow."@en ;
+    rdfs:domain github:WorkflowRun ;
+    rdfs:range xsd:long .
+
+github:workflowCommitSha a rdf:Property ;
+    rdfs:label "Workflow Commit SHA"@en ;
+    rdfs:comment "The commit SHA that triggered this workflow."@en ;
+    rdfs:domain github:WorkflowRun ;
+    rdfs:range xsd:string .
+
+github:workflowCreatedAt a rdf:Property ;
+    rdfs:label "Workflow Created At"@en ;
+    rdfs:comment "When the workflow run was created."@en ;
+    rdfs:domain github:WorkflowRun ;
+    rdfs:range xsd:dateTime .
+
+github:workflowUpdatedAt a rdf:Property ;
+    rdfs:label "Workflow Updated At"@en ;
+    rdfs:comment "When the workflow run was last updated."@en ;
+    rdfs:domain github:WorkflowRun ;
+    rdfs:range xsd:dateTime .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: GithubWorkflowJob                         │
+# ╰──────────────────────────────────────────────────╯
+#
+
+github:GithubWorkflowJob a rdfs:Class ;
+    rdfs:subClassOf platform:WorkflowJob ;
+    rdfs:label "Github Workflow Job"@en ;
+    rdfs:comment "Represents a job within a Github workflow run."@en .
+
+# GitHub Workflow Job properties
+github:workflowJobId a rdf:Property ;
+    rdfs:label "Workflow Job ID"@en ;
+    rdfs:comment "The unique Github workflow job ID."@en ;
+    rdfs:domain github:GithubWorkflowJob ;
+    rdfs:range xsd:long .
+
+github:workflowJobUrl a rdf:Property ;
+    rdfs:label "Workflow Job URL"@en ;
+    rdfs:comment "The Github web URL for this job."@en ;
+    rdfs:domain github:GithubWorkflowJob ;
+    rdfs:range xsd:anyURI .
+
+github:workflowStep a rdf:Property ;
+    rdfs:label "Workflow Step"@en ;
+    rdfs:comment "Links a workflow job to its steps."@en ;
+    rdfs:domain github:GithubWorkflowJob ;
+    rdfs:range github:WorkflowStep .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: WorkflowStep                              │
+# ╰──────────────────────────────────────────────────╯
+#
+
+github:WorkflowStep a rdfs:Class ;
+    rdfs:label "Github Workflow Step"@en ;
+    rdfs:comment "Represents a step within a Github workflow job."@en .
+
+# GitHub Workflow Step properties
+github:name a rdf:Property ;
+    rdfs:label "Step Name"@en ;
+    rdfs:comment "The name of the workflow step."@en ;
+    rdfs:domain github:WorkflowStep ;
+    rdfs:range xsd:string .
+
+github:number a rdf:Property ;
+    rdfs:label "Step Number"@en ;
+    rdfs:comment "The sequential number of the step."@en ;
+    rdfs:domain github:WorkflowStep ;
+    rdfs:range xsd:integer .
+
+github:startedAt a rdf:Property ;
+    rdfs:label "Started At"@en ;
+    rdfs:comment "When the workflow step started."@en ;
+    rdfs:domain github:WorkflowStep ;
+    rdfs:range xsd:dateTime .
+
+github:completedAt a rdf:Property ;
+    rdfs:label "Completed At"@en ;
+    rdfs:comment "When the workflow step completed."@en ;
+    rdfs:domain github:WorkflowStep ;
+    rdfs:range xsd:dateTime .
+
+github:url a rdf:Property ;
+    rdfs:label "Step URL"@en ;
+    rdfs:comment "The URL for the workflow step."@en ;
+    rdfs:domain github:WorkflowStep ;
+    rdfs:range xsd:anyURI .
+
+#
+# ╭──────────────────────────────────────────────────╮
 # │ Class: GithubPullRequest                         │
 # ╰──────────────────────────────────────────────────╯
 #
@@ -210,6 +429,99 @@ github:mergedBy a rdf:Property ;
     rdfs:comment "The user who merged the pull request."@en ;
     rdfs:domain github:GithubPullRequest ;
     rdfs:range github:GithubUser .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Class: GithubIssueReview                         │
+# ╰──────────────────────────────────────────────────╯
+#
+
+github:GithubIssueReview a rdfs:Class ;
+    rdfs:label "Github Issue Review"@en ;
+    rdfs:comment "Represents a code review on a Github pull request."@en .
+
+# GitHub Issue Review properties
+github:id a rdf:Property ;
+    rdfs:label "Review ID"@en ;
+    rdfs:comment "The unique identifier for the review."@en ;
+    rdfs:domain github:GithubIssueReview ;
+    rdfs:range xsd:long .
+
+github:description a rdf:Property ;
+    rdfs:label "Review Description"@en ;
+    rdfs:comment "The description/body text of the review."@en ;
+    rdfs:domain github:GithubIssueReview ;
+    rdfs:range xsd:string .
+
+github:commitId a rdf:Property ;
+    rdfs:label "Review Commit ID"@en ;
+    rdfs:comment "The commit SHA that was reviewed."@en ;
+    rdfs:domain github:GithubIssueReview ;
+    rdfs:range xsd:string .
+
+github:review a rdf:Property ;
+    rdfs:label "Review"@en ;
+    rdfs:comment "Links an issue to its reviews."@en ;
+    rdfs:domain github:GithubIssue ;
+    rdfs:range github:GithubIssueReview .
+
+github:reviewOf a rdf:Property ;
+    rdfs:label "Review Of"@en ;
+    rdfs:comment "Links a review to the issue it belongs to."@en ;
+    rdfs:domain github:GithubIssueReview ;
+    rdfs:range github:GithubIssue .
+
+github:requestedReviewer a rdf:Property ;
+    rdfs:label "Requested Reviewer"@en ;
+    rdfs:comment "Links an issue to its requested reviewers."@en ;
+    rdfs:domain github:GithubIssue ;
+    rdfs:range github:GithubUser .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Additional Issue and Commit Properties           │
+# ╰──────────────────────────────────────────────────╯
+#
+
+github:workflowRun a rdf:Property ;
+    rdfs:label "Workflow Run"@en ;
+    rdfs:comment "Links an issue to its workflow runs."@en ;
+    rdfs:domain github:GithubIssue ;
+    rdfs:range github:WorkflowRun .
+
+github:containsCommit a rdf:Property ;
+    rdfs:label "Contains Commit"@en ;
+    rdfs:comment "Links an issue to commits it contains."@en ;
+    rdfs:domain github:GithubIssue ;
+    rdfs:range git:GitCommit .
+
+github:referencedBy a rdf:Property ;
+    rdfs:label "Referenced By"@en ;
+    rdfs:comment "Links an issue to commits that reference it."@en ;
+    rdfs:domain github:GithubIssue ;
+    rdfs:range git:GitCommit .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Review State Enumeration                         │
+# ╰──────────────────────────────────────────────────╯
+#
+
+github:ReviewState a rdfs:Class ;
+    rdfs:label "Review State"@en ;
+    rdfs:comment "Enumeration of possible review states."@en .
+
+github:approved a github:ReviewState ;
+    rdfs:label "Approved"@en ;
+    rdfs:comment "The review approves the changes."@en .
+
+github:commented a github:ReviewState ;
+    rdfs:label "Commented"@en ;
+    rdfs:comment "The review provides comments without approval."@en .
+
+github:changesRequested a github:ReviewState ;
+    rdfs:label "Changes Requested"@en ;
+    rdfs:comment "The review requests changes."@en .
 
 #
 # ╭──────────────────────────────────────────────────╮

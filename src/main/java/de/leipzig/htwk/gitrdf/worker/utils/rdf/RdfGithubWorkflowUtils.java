@@ -1,7 +1,6 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
-import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 
 import java.time.LocalDateTime;
 
@@ -12,23 +11,18 @@ import org.kohsuke.github.GHWorkflowRun;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+/**
+ * GitHub-specific utility class for RDF operations on github:WorkflowRun entities.
+ * This class extends RdfPlatformWorkflowUtils and adds GitHub-specific properties
+ * as defined in the git2RDFLab-platform-github ontology.
+ */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public final class RdfGithubWorkflowUtils {
+public final class RdfGithubWorkflowUtils extends RdfPlatformWorkflowUtils {
 
     private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
-    private static final String PF_NS = PLATFORM_NAMESPACE + ":";
 
-    public static Node rdfTypeProperty() {
-        return RdfUtils.uri("rdf:type");
-    }
+    // GitHub-specific workflow run properties
 
-    // Platform based properties
-    public static Node nameProperty() { return RdfUtils.uri(PF_NS + "workflowName"); }
-    public static Node descriptionProperty() { return RdfUtils.uri(PF_NS + "workflowDescription"); }
-    public static Node triggerProperty() { return RdfUtils.uri(PF_NS + "workflowTrigger"); }
-    public static Node jobProperty() { return RdfUtils.uri(PF_NS + "hasJob"); }
-
-    // GitHub specific run related properties
     public static Node workflowRunProperty() { return RdfUtils.uri(GH_NS + "workflowRun"); }
     public static Node identifierProperty() { return RdfUtils.uri(GH_NS + "workflowRunId"); }
     public static Node statusProperty() { return RdfUtils.uri(GH_NS + "workflowStatus"); }
@@ -44,6 +38,7 @@ public final class RdfGithubWorkflowUtils {
         return Triple.create(RdfUtils.uri(issueUri), workflowRunProperty(), RdfUtils.uri(runUri));
     }
 
+    // Override to create GitHub WorkflowRun type
     public static Triple createWorkflowRunRdfTypeProperty(String runUri) {
         return Triple.create(RdfUtils.uri(runUri), rdfTypeProperty(), RdfUtils.uri("github:WorkflowRun"));
     }
@@ -52,16 +47,17 @@ public final class RdfGithubWorkflowUtils {
         return Triple.create(RdfUtils.uri(runUri), identifierProperty(), RdfUtils.longLiteral(id));
     }
 
+    // Use inherited platform method for workflow name
     public static Triple createWorkflowNameProperty(String runUri, String name) {
-        return Triple.create(RdfUtils.uri(runUri), nameProperty(), RdfUtils.stringLiteral(name));
+        return RdfPlatformWorkflowUtils.createWorkflowNameProperty(runUri, name);
     }
 
     public static Triple createWorkflowDescriptionProperty(String runUri, String description) {
-        return Triple.create(RdfUtils.uri(runUri), descriptionProperty(), RdfUtils.stringLiteral(description));
+        return RdfPlatformWorkflowUtils.createWorkflowDescriptionProperty(runUri, description);
     }
 
     public static Triple createWorkflowTriggerProperty(String runUri, String trigger) {
-        return Triple.create(RdfUtils.uri(runUri), triggerProperty(), RdfUtils.stringLiteral(trigger));
+        return RdfPlatformWorkflowUtils.createWorkflowTriggerProperty(runUri, trigger);
     }
 
     public static Triple createWorkflowStatusProperty(String runUri, GHWorkflowRun.Status status) {
@@ -93,6 +89,6 @@ public final class RdfGithubWorkflowUtils {
     }
 
     public static Triple createWorkflowJobProperty(String runUri, String jobUri) {
-        return Triple.create(RdfUtils.uri(runUri), jobProperty(), RdfUtils.uri(jobUri));
+        return RdfPlatformWorkflowUtils.createHasJobProperty(runUri, jobUri);
     }
 }

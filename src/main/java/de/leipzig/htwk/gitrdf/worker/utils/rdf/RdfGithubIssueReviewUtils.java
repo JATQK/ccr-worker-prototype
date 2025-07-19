@@ -1,6 +1,7 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.uri;
 
 import java.time.LocalDateTime;
@@ -14,6 +15,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfGithubIssueReviewUtils {
     private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
+    private static final String PLATFORM_NS = PLATFORM_NAMESPACE + ":";
 
     public static Node rdfTypeProperty() {
         return RdfUtils.uri("rdf:type");
@@ -72,19 +74,19 @@ public final class RdfGithubIssueReviewUtils {
     }
 
     public static Triple createReviewStateProperty(String reviewUri, String state) {
-        return Triple.create(uri(reviewUri), RdfGithubIssueUtils.stateProperty(), RdfUtils.uri(GH_NS + state.toLowerCase()));
+        return Triple.create(uri(reviewUri), RdfPlatformTicketUtils.stateProperty(), RdfUtils.uri(PLATFORM_NS + state.toLowerCase()));
     }
 
     public static Triple createReviewSubmittedAtProperty(String reviewUri, LocalDateTime submittedAt) {
-        return Triple.create(uri(reviewUri), RdfGithubIssueUtils.submittedAtProperty(), RdfUtils.dateTimeLiteral(submittedAt));
+        return Triple.create(uri(reviewUri), RdfPlatformTicketUtils.createdAtProperty(), RdfUtils.dateTimeLiteral(submittedAt));
     }
 
     public static Triple createReviewUpdatedAtProperty(String reviewUri, LocalDateTime updatedAt) {
-        return Triple.create(uri(reviewUri), RdfGithubIssueUtils.updatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
+        return Triple.create(uri(reviewUri), RdfPlatformTicketUtils.updatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
     }
 
     public static Triple createReviewUserProperty(String reviewUri, String creatorUri) {
-        return Triple.create(uri(reviewUri), RdfGithubIssueUtils.userProperty(), uri(creatorUri));
+        return Triple.create(uri(reviewUri), RdfPlatformTicketUtils.submitterProperty(), uri(creatorUri));
     }
 
     public static Triple createReviewCommitIdProperty(String reviewUri, String commitId) {

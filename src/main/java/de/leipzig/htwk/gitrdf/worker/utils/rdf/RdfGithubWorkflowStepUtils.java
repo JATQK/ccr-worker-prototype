@@ -2,6 +2,8 @@ package de.leipzig.htwk.gitrdf.worker.utils.rdf;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
 
+import java.time.LocalDateTime;
+
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 
@@ -66,12 +68,12 @@ public final class RdfGithubWorkflowStepUtils {
         return Triple.create(RdfUtils.uri(stepUri), numberProperty(), RdfUtils.integerLiteral(number));
     }
 
-    public static Triple createWorkflowStepStartedAtProperty(String stepUri, String startedAt) {
-        return Triple.create(RdfUtils.uri(stepUri), startedAtProperty(), RdfUtils.stringLiteral(startedAt));
+    public static Triple createWorkflowStepStartedAtProperty(String stepUri, LocalDateTime startedAt) {
+        return Triple.create(RdfUtils.uri(stepUri), startedAtProperty(), RdfUtils.dateTimeLiteral(startedAt));
     }
 
-    public static Triple createWorkflowStepCompletedAtProperty(String stepUri, String completedAt) {
-        return Triple.create(RdfUtils.uri(stepUri), completedAtProperty(), RdfUtils.stringLiteral(completedAt));
+    public static Triple createWorkflowStepCompletedAtProperty(String stepUri, LocalDateTime completedAt) {
+        return Triple.create(RdfUtils.uri(stepUri), completedAtProperty(), RdfUtils.dateTimeLiteral(completedAt));
     }
 
     public static Triple createWorkflowStepJobUrlProperty(String stepUri, String jobUri) {
