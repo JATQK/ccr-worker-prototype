@@ -82,6 +82,12 @@ github:userType a rdf:Property ;
     rdfs:domain github:GithubUser ;
     rdfs:range github:UserType .
 
+github:gitAuthorEmail a rdf:Property ;
+    rdfs:label "Git Author Email"@en ;
+    rdfs:comment "Links a GitHub user to their git commit author email address."@en ;
+    rdfs:domain github:GithubUser ;
+    rdfs:range xsd:string .
+
 #
 # ╭──────────────────────────────────────────────────╮
 # │ Class: GitCommit (Github Extension)              │
@@ -562,10 +568,11 @@ github:hasRating a rdf:Property ;
     rdfs:range rating:Rating ;
     owl:inverseOf rating:evaluates .
 
-@prefix rating: <https://purl.archive.org/git2rdf/v2/git2RDFLab-metric#> .
+@prefix statistic: <https://purl.archive.org/git2rdf/v2/git2RDFLab-statistic#> .
 
-github:hasMetrics a rdf:Property ;
-    rdfs:label "Has Metrics"@en ;
-    rdfs:comment "Links a Github entity to its computed metrics report."@en ;
+github:hasStatistic a rdf:Property ;
+    rdfs:label "Has Statistic"@en ;
+    rdfs:comment "Links a Github entity (like an Issue, PR, or Commit) to a statistic about it."@en ;
     rdfs:domain rdfs:Resource ;
-    rdfs:range metrics:MetricReport .
+    rdfs:range statistic:Statistic ;
+    owl:inverseOf statistic:measuredEntity .

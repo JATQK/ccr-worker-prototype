@@ -112,10 +112,10 @@ public class GithubRdfConversionTransactionService {
 
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
-    private static final int PROCESS_ISSUE_LIMIT = 40; // Limit for the number of issues to process
+    private static final int PROCESS_ISSUE_LIMIT = 400; // Limit for the number of issues to process
     private static final String[] PROCESS_ISSUE_ONLY = {}; // Only process these issues // "9946", "9947", "9948",
                                                            // "9949", "9950"
-    private static final int PROCESS_COMMIT_LIMIT = 40; // Limit for the number of commits to process
+    private static final int PROCESS_COMMIT_LIMIT = 400; // Limit for the number of commits to process
 
     private static final boolean PROCESS_COMMENT_REACTIONS = true;
 
@@ -1391,6 +1391,9 @@ public class GithubRdfConversionTransactionService {
                 }  
                 if (info.name != null && !info.name.isEmpty()) {
                     writer.triple(RdfGithubUserUtils.createNameProperty(userUri, info.name));
+                }
+                if (info.gitAuthorEmail != null && !info.gitAuthorEmail.isEmpty()) {
+                    writer.triple(RdfGithubUserUtils.createGitAuthorEmailProperty(userUri, info.gitAuthorEmail));
                 }
             }
         }

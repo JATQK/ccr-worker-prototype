@@ -29,6 +29,10 @@ public final class RdfGithubUserUtils {
     public static Node emailProperty() {
         return RdfUtils.uri(PF_NS + "email");
     }
+    
+    public static Node gitAuthorEmailProperty() {
+        return RdfUtils.uri(GH_NS + "gitAuthorEmail");
+    }
 
 
     public static Triple createGitHubUserType(String userUri) {
@@ -53,5 +57,9 @@ public final class RdfGithubUserUtils {
 
     public static Triple createUserTypeProperty(String userUri, String userType) {
         return Triple.create(RdfUtils.uri(userUri), userTypeProperty(), RdfUtils.stringLiteral(userType));
+    }
+
+    public static Triple createGitAuthorEmailProperty(String userUri, String gitAuthorEmail) {
+        return Triple.create(RdfUtils.uri(userUri), gitAuthorEmailProperty(), RdfUtils.stringLiteral(gitAuthorEmail));
     }
 }

@@ -40,7 +40,8 @@ public class RdfGitCommitUserUtils {
             String uri = GithubUriUtils.getUserUri(login);
             long id = author.getId();
             String name = author.getName();
-            return new GithubUserInfo(uri, login, id, name);
+            String gitAuthorEmail = commit.getCommitShortInfo().getAuthor().getEmail();
+            return new GithubUserInfo(uri, login, id, name, gitAuthorEmail);
         } catch (IOException e) {
             log.info("Could not retrieve github-user from commit hash '{}'", commitHash, e);
             return null;
