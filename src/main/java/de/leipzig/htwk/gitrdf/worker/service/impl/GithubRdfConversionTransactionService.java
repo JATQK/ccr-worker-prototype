@@ -12,7 +12,6 @@ import java.net.URISyntaxException;
 import java.nio.charset.IllegalCharsetNameException;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -112,10 +111,10 @@ public class GithubRdfConversionTransactionService {
 
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
-    private static final int PROCESS_ISSUE_LIMIT = 400; // Limit for the number of issues to process
+    private static final int PROCESS_ISSUE_LIMIT = 4000; // Limit for the number of issues to process
     private static final String[] PROCESS_ISSUE_ONLY = {}; // Only process these issues // "9946", "9947", "9948",
                                                            // "9949", "9950"
-    private static final int PROCESS_COMMIT_LIMIT = 400; // Limit for the number of commits to process
+    private static final int PROCESS_COMMIT_LIMIT = 40000; // Limit for the number of commits to process
 
     private static final boolean PROCESS_COMMENT_REACTIONS = true;
 
@@ -1240,12 +1239,11 @@ public class GithubRdfConversionTransactionService {
                 return map;
             }
 
-            int maxPRsToFetch = Math.min(PROCESS_ISSUE_LIMIT * 2, 100);
+            int maxPRsToFetch = PROCESS_ISSUE_LIMIT;
             PagedIterable<GHPullRequest> prs = executeWithRetry(
-                    () -> repo.queryPullRequests().state(GHIssueState.CLOSED).list(),
+                    () -> repo.queryPullRequests().state(GHIssueState.ALL).list(),
                     "queryPullRequests");
 
-            ZonedDateTime oneYearAgo = ZonedDateTime.now().minusYears(1);
             int prsProcessed = 0;
 
             for (GHPullRequest pr : prs) {
@@ -1259,9 +1257,6 @@ public class GithubRdfConversionTransactionService {
                 }
 
                 Date merged = pr.getMergedAt();
-                if (merged == null || merged.toInstant().isBefore(oneYearAgo.toInstant())) {
-                    continue;
-                }
 
                 String prUri = GithubUriUtils.getIssueUri(repo.getOwnerName(), repo.getName(),
                         String.valueOf(pr.getNumber()));
@@ -1669,12 +1664,12 @@ public class GithubRdfConversionTransactionService {
 
     private LocalDateTime localDateTimeFrom(int secondsSinceEpoch) {
         Instant instant = Instant.ofEpochSecond(secondsSinceEpoch);
-        return instant.atZone(ZoneId.of("Europe/Berlin")).toLocalDateTime();
+        return instant.atZone(ZoneOffset.UTC).toLocalDateTime();
     }
 
     private LocalDateTime localDateTimeFrom(long milliSecondsSinceEpoch) {
         Instant instant = Instant.ofEpochMilli(milliSecondsSinceEpoch);
-        return instant.atZone(ZoneId.of("Europe/Berlin")).toLocalDateTime();
+        return instant.atZone(ZoneOffset.UTC).toLocalDateTime();
     }
 
     // Github Workflows

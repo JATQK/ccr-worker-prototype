@@ -61,15 +61,15 @@ public final class RdfGithubWorkflowUtils extends RdfPlatformWorkflowUtils {
     }
 
     public static Triple createWorkflowStatusProperty(String runUri, GHWorkflowRun.Status status) {
-        return Triple.create(RdfUtils.uri(runUri), statusProperty(), RdfUtils.uri(GH_NS + status));
+        return Triple.create(RdfUtils.uri(runUri), statusProperty(), RdfUtils.stringLiteral(status.toString()));
     }
 
     public static Triple createWorkflowConclusionProperty(String runUri, GHWorkflowRun.Conclusion conclusion) {
-        return Triple.create(RdfUtils.uri(runUri), conclusionProperty(), RdfUtils.uri(GH_NS + conclusion));
+        return Triple.create(RdfUtils.uri(runUri), conclusionProperty(), RdfUtils.stringLiteral(conclusion.toString()));
     }
 
     public static Triple createWorkflowEventProperty(String runUri, String event) {
-        return Triple.create(RdfUtils.uri(runUri), eventProperty(), RdfUtils.uri(GH_NS + event));
+        return Triple.create(RdfUtils.uri(runUri), eventProperty(), RdfUtils.stringLiteral(event));
     }
 
     public static Triple createWorkflowRunNumberProperty(String runUri, long runNumber) {
