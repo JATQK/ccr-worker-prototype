@@ -23,8 +23,8 @@
 		<java.version>21</java.version>
 
 		<org.ecplise.jgit.version>3.5.0.201409260305-r</org.ecplise.jgit.version>
-		<org.apache.commons.commons-rdf-api.version>0.5.0</org.apache.commons.commons-rdf-api.version>
-		<org.apache.commons.commons-rdf-jena.version>0.5.0</org.apache.commons.commons-rdf-jena.version>
+		<jena.version>5.5.0</jena.version>
+		<xerces.version>2.12.2</xerces.version>
 		<kohsuke.github-api.version>1.318</kohsuke.github-api.version>
 		<jjwt.version>0.12.5</jjwt.version>
 		<bouncycastle.bcpkix-jdk18on.version>1.77</bouncycastle.bcpkix-jdk18on.version>
@@ -126,16 +126,28 @@
 			<version>${org.ecplise.jgit.version}</version>
 		</dependency>
 
+		<!-- Direct Jena dependencies for latest version -->
 		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-rdf-api</artifactId>
-			<version>${org.apache.commons.commons-rdf-api.version}</version>
+			<groupId>org.apache.jena</groupId>
+			<artifactId>jena-core</artifactId>
+			<version>${jena.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.jena</groupId>
+			<artifactId>jena-arq</artifactId>
+			<version>${jena.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.jena</groupId>
+			<artifactId>jena-base</artifactId>
+			<version>${jena.version}</version>
 		</dependency>
 
+		<!-- Xerces dependency for XML processing -->
 		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-rdf-jena</artifactId>
-			<version>${org.apache.commons.commons-rdf-jena.version}</version>
+			<groupId>xerces</groupId>
+			<artifactId>xercesImpl</artifactId>
+			<version>${xerces.version}</version>
 		</dependency>
 
 		<!-- Github -->
