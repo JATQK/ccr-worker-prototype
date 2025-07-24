@@ -1,4 +1,4 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.platform;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 
@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
+
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -74,6 +76,32 @@ public class RdfPlatformTicketUtils {
         return RdfUtils.uri(PLATFORM_NS + "hasComment");
     }
 
+    // Merge properties (pull request foundation - lines 158-181 in ontology)
+    public static Node mergedProperty() {
+        return RdfUtils.uri(PLATFORM_NS + "merged");
+    }
+
+    public static Node mergedAtProperty() {
+        return RdfUtils.uri(PLATFORM_NS + "mergedAt");
+    }
+
+    public static Node mergeCommitShaProperty() {
+        return RdfUtils.uri(PLATFORM_NS + "mergeCommitSha");
+    }
+
+    public static Node mergedByProperty() {
+        return RdfUtils.uri(PLATFORM_NS + "mergedBy");
+    }
+
+    // Additional ticket properties
+    public static Node urlProperty() {
+        return RdfUtils.uri(PLATFORM_NS + "url");
+    }
+
+    public static Node lockedProperty() {
+        return RdfUtils.uri(PLATFORM_NS + "locked");
+    }
+
     // Triple creation methods for platform properties
     public static Triple createRdfTypeProperty(String ticketUri) {
         return Triple.create(RdfUtils.uri(ticketUri), rdfTypeProperty(), RdfUtils.uri("platform:Ticket"));
@@ -125,5 +153,30 @@ public class RdfPlatformTicketUtils {
 
     public static Triple createHasCommentProperty(String ticketUri, String commentUri) {
         return Triple.create(RdfUtils.uri(ticketUri), hasCommentProperty(), RdfUtils.uri(commentUri));
+    }
+
+    // Merge property creation methods (platform ticket foundation)
+    public static Triple createMergedProperty(String ticketUri, boolean merged) {
+        return Triple.create(RdfUtils.uri(ticketUri), mergedProperty(), RdfUtils.booleanLiteral(merged));
+    }
+
+    public static Triple createMergedAtProperty(String ticketUri, LocalDateTime mergedAt) {
+        return Triple.create(RdfUtils.uri(ticketUri), mergedAtProperty(), RdfUtils.dateTimeLiteral(mergedAt));
+    }
+
+    public static Triple createMergeCommitShaProperty(String ticketUri, String sha) {
+        return Triple.create(RdfUtils.uri(ticketUri), mergeCommitShaProperty(), RdfUtils.stringLiteral(sha));
+    }
+
+    public static Triple createMergedByProperty(String ticketUri, String userUri) {
+        return Triple.create(RdfUtils.uri(ticketUri), mergedByProperty(), RdfUtils.uri(userUri));
+    }
+
+    public static Triple createUrlProperty(String ticketUri, String url) {
+        return Triple.create(RdfUtils.uri(ticketUri), urlProperty(), RdfUtils.anyUriLiteral(url));
+    }
+
+    public static Triple createLockedProperty(String ticketUri, boolean locked) {
+        return Triple.create(RdfUtils.uri(ticketUri), lockedProperty(), RdfUtils.booleanLiteral(locked));
     }
 }

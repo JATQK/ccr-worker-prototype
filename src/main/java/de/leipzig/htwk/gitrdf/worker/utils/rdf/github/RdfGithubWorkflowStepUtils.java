@@ -1,4 +1,4 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.github;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
 
@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -34,26 +35,26 @@ public final class RdfGithubWorkflowStepUtils {
         return RdfUtils.uri(jobUri + "#step:" + stepNumber + ":1");
     }
     public static Node identifierProperty() { return RdfUtils.uri(GH_NS + "id"); }
-    public static Node nameProperty() { return RdfUtils.uri(GH_NS + "name"); }
+    public static Node stepNameProperty() { return RdfUtils.uri(GH_NS + "stepName"); }
 
-    public static Node numberProperty() {
-        return RdfUtils.uri(GH_NS + "number");
+    public static Node stepNumberProperty() {
+        return RdfUtils.uri(GH_NS + "stepNumber");
     }
     
-    public static Node startedAtProperty() {
-        return RdfUtils.uri(GH_NS + "startedAt");
+    public static Node stepStartedAtProperty() {
+        return RdfUtils.uri(GH_NS + "stepStartedAt");
     }
 
-    public static Node completedAtProperty() {
-        return RdfUtils.uri(GH_NS + "completedAt");
+    public static Node stepCompletedAtProperty() {
+        return RdfUtils.uri(GH_NS + "stepCompletedAt");
     }
 
-    public static Node urlProperty() {
-        return RdfUtils.uri(GH_NS + "url");
+    public static Node stepUrlProperty() {
+        return RdfUtils.uri(GH_NS + "stepUrl");
     }
 
     public static Triple createWorkflowStepRdfTypeProperty(String stepUri) {
-        return Triple.create(RdfUtils.uri(stepUri), rdfTypeProperty(), RdfUtils.uri("github:WorkflowStep"));
+        return Triple.create(RdfUtils.uri(stepUri), rdfTypeProperty(), RdfUtils.uri("github:GithubWorkflowStep"));
     }
 
     public static Triple createWorkflowStepIdProperty(String stepUri, long id) {
@@ -61,23 +62,23 @@ public final class RdfGithubWorkflowStepUtils {
     }
 
     public static Triple createWorkflowStepNameProperty(String stepUri, String name) {
-        return Triple.create(RdfUtils.uri(stepUri), nameProperty(), RdfUtils.stringLiteral(name));
+        return Triple.create(RdfUtils.uri(stepUri), stepNameProperty(), RdfUtils.stringLiteral(name));
     }
 
     public static Triple createWorkflowStepNumberProperty(String stepUri, int number) {
-        return Triple.create(RdfUtils.uri(stepUri), numberProperty(), RdfUtils.integerLiteral(number));
+        return Triple.create(RdfUtils.uri(stepUri), stepNumberProperty(), RdfUtils.integerLiteral(number));
     }
 
     public static Triple createWorkflowStepStartedAtProperty(String stepUri, LocalDateTime startedAt) {
-        return Triple.create(RdfUtils.uri(stepUri), startedAtProperty(), RdfUtils.dateTimeLiteral(startedAt));
+        return Triple.create(RdfUtils.uri(stepUri), stepStartedAtProperty(), RdfUtils.dateTimeLiteral(startedAt));
     }
 
     public static Triple createWorkflowStepCompletedAtProperty(String stepUri, LocalDateTime completedAt) {
-        return Triple.create(RdfUtils.uri(stepUri), completedAtProperty(), RdfUtils.dateTimeLiteral(completedAt));
+        return Triple.create(RdfUtils.uri(stepUri), stepCompletedAtProperty(), RdfUtils.dateTimeLiteral(completedAt));
     }
 
     public static Triple createWorkflowStepJobUrlProperty(String stepUri, String jobUri) {
-        return Triple.create(RdfUtils.uri(stepUri), urlProperty(), RdfUtils.uri(jobUri));
+        return Triple.create(RdfUtils.uri(stepUri), stepUrlProperty(), RdfUtils.uri(jobUri));
     }
 
 }

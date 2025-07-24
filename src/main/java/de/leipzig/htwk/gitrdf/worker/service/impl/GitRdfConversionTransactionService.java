@@ -35,7 +35,7 @@ import de.leipzig.htwk.gitrdf.database.common.entity.enums.GitRepositoryOrderSta
 import de.leipzig.htwk.gitrdf.database.common.entity.lob.GitRepositoryOrderEntityLobs;
 import de.leipzig.htwk.gitrdf.worker.utils.GitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.ZipUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfTurtleTidier;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfTurtleTidier;
 import jakarta.persistence.EntityManager;
 
 @Service
@@ -86,7 +86,7 @@ public class GitRdfConversionTransactionService {
 
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
 
-            StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE_BLOCKS);
+            StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE);
             writer.prefix(GIT_NAMESPACE, GIT_URI);
 
             Repository gitRepository = new FileRepositoryBuilder().setGitDir(gitFile).build();

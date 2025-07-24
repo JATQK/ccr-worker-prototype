@@ -1,4 +1,4 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.core;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.GIT_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.GIT_URI;
@@ -12,8 +12,7 @@ import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTran
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.XSD_SCHEMA_URI;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.OWL_SCHEMA_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.OWL_SCHEMA_URI;
-import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.SPDX_NAMESPACE;
-import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.SPDX_URI;
+// REMOVED: SPDX imports no longer needed in v2.1
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -27,7 +26,7 @@ import org.apache.jena.riot.system.PrefixMap;
 import org.apache.jena.riot.system.PrefixMapFactory;
 import org.eclipse.jgit.diff.DiffEntry;
 
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.gitdatatypes.RdfGitDataType;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.git.gitdatatypes.RdfGitDataType;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -40,8 +39,8 @@ public final class RdfUtils {
             PLATFORM_GITHUB_NAMESPACE, PLATFORM_GITHUB_URI,
             XSD_SCHEMA_NAMESPACE, XSD_SCHEMA_URI,
             RDF_SCHEMA_NAMESPACE, RDF_SCHEMA_URI,
-            OWL_SCHEMA_NAMESPACE, OWL_SCHEMA_URI,
-            SPDX_NAMESPACE, SPDX_URI
+            OWL_SCHEMA_NAMESPACE, OWL_SCHEMA_URI
+            // REMOVED: SPDX_NAMESPACE, SPDX_URI - no longer needed in v2.1
     )));
 
     private static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
@@ -51,7 +50,7 @@ public final class RdfUtils {
     }
 
     public static Node longLiteral(long value) {
-        //return NodeFactory.createLiteral(String.valueOf(value), XSDDatatype.XSDlong);
+        // Use createLiteralByValue to avoid unnecessary quotes in serialization
         return NodeFactory.createLiteralByValue(value, XSDDatatype.XSDlong);
     }
 
@@ -85,22 +84,23 @@ public final class RdfUtils {
         return NodeFactory.createURI(value);
     }
 
-    /**
-     * Creates an SPDX CheckSum node with the proper structure.
-     * This creates a blank node that represents an spdx:CheckSum object.
-     */
-    public static Node createSpdxCheckSumNode(String hashValue) {
-        // Create a blank node for the CheckSum object
-        // In a complete implementation, this would be part of a more complex structure
-        // that includes the checksumValue and algorithm properties
-        return NodeFactory.createBlankNode("checksum_" + hashValue);
-    }
+    // REMOVED: createSpdxCheckSumNode - no longer needed in v2.1
 
     /**
      * Creates a properly typed xsd:anyURI literal.
      */
     public static Node anyUriLiteral(String uriValue) {
         return NodeFactory.createLiteral(uriValue, XSDDatatype.XSDanyURI);
+    }
+
+    /**
+     * Creates a properly typed xsd:duration literal from milliseconds.
+     */
+    public static Node durationLiteral(long durationMillis) {
+        // Convert milliseconds to ISO 8601 duration format (PT{seconds}S)
+        double seconds = durationMillis / 1000.0;
+        String durationString = String.format("PT%.3fS", seconds);
+        return NodeFactory.createLiteral(durationString, XSDDatatype.XSDduration);
     }
 
 }

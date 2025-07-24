@@ -1,4 +1,4 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.github;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
 
@@ -8,6 +8,8 @@ import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.kohsuke.github.GHWorkflowRun;
 
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformWorkflowJobUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -24,7 +26,7 @@ public final class RdfGithubWorkflowJobUtils extends RdfPlatformWorkflowJobUtils
     // GitHub-specific workflow job properties
     public static Node identifierProperty() { return RdfUtils.uri(GH_NS + "workflowJobId"); }
     public static Node jobUrlProperty() { return RdfUtils.uri(GH_NS + "workflowJobUrl"); }
-    public static Node stepProperty() { return RdfUtils.uri(GH_NS + "workflowStep"); }
+    public static Node hasStepProperty() { return RdfUtils.uri(GH_NS + "hasStep"); }
     
 
     // Override to create GitHub WorkflowJob type
@@ -58,7 +60,7 @@ public final class RdfGithubWorkflowJobUtils extends RdfPlatformWorkflowJobUtils
     }
 
     public static Triple createWorkflowJobStepProperty(String jobUri, String stepUri) {
-        return Triple.create(RdfUtils.uri(jobUri), stepProperty(), RdfUtils.uri(stepUri));
+        return Triple.create(RdfUtils.uri(jobUri), hasStepProperty(), RdfUtils.uri(stepUri));
     }
     public static Triple createWorkflowJobUrlProperty(String jobUri, String jobUrl) {
         return Triple.create(RdfUtils.uri(jobUri), jobUrlProperty(), RdfUtils.uri(jobUrl));

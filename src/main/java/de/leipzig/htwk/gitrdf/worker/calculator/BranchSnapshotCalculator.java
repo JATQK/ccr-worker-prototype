@@ -17,8 +17,9 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
 
+import de.leipzig.htwk.gitrdf.worker.calculator.BlameResultCalculator;
 import de.leipzig.htwk.gitrdf.worker.handler.LockHandler;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.git.RdfCommitUtils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -144,23 +145,17 @@ public class BranchSnapshotCalculator {
 
                         writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
                         writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, prevCommitHash));
-                        // Add SPDX CheckSum triples for branch snapshot
-                        for (org.apache.jena.graph.Triple checksumTriple : RdfCommitUtils.createBranchSnapshotSpdxCheckSumTriples(prevCommitHash)) {
-                            writer.triple(checksumTriple);
-                        }
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, linenumberBegin));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
+                        // v2.1: No longer need SPDX CheckSum triples - hash is now a plain string
+                        writer.triple(RdfCommitUtils.createLineBeginProperty(branchSnapshotLineEntryNode, linenumberBegin));
+                        writer.triple(RdfCommitUtils.createLineEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
 
                         if (isNewCommit) {
 
                             writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
                             writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, currentCommitHash));
-                            // Add SPDX CheckSum triples for branch snapshot
-                            for (org.apache.jena.graph.Triple checksumTriple : RdfCommitUtils.createBranchSnapshotSpdxCheckSumTriples(currentCommitHash)) {
-                                writer.triple(checksumTriple);
-                            }
-                            writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, lineNumberEnd));
-                            writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
+                            // v2.1: No longer need SPDX CheckSum triples - hash is now a plain string
+                            writer.triple(RdfCommitUtils.createLineBeginProperty(branchSnapshotLineEntryNode, lineNumberEnd));
+                            writer.triple(RdfCommitUtils.createLineEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
                         }
                     }
 
@@ -168,13 +163,9 @@ public class BranchSnapshotCalculator {
 
                         writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
                         writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, prevCommitHash));
-                        // Add SPDX CheckSum triples for branch snapshot
-                        for (org.apache.jena.graph.Triple checksumTriple : RdfCommitUtils.createBranchSnapshotSpdxCheckSumTriples(prevCommitHash)) {
-                            writer.triple(checksumTriple);
-                        }
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberBeginProperty(branchSnapshotLineEntryNode, linenumberBegin));
-                        writer.triple(RdfCommitUtils.createBranchSnapshotLinenumberEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
-
+                        // v2.1: No longer need SPDX CheckSum triples - hash is now a plain string
+                        writer.triple(RdfCommitUtils.createLineBeginProperty(branchSnapshotLineEntryNode, linenumberBegin));
+                        writer.triple(RdfCommitUtils.createLineEndProperty(branchSnapshotLineEntryNode, lineNumberEnd));
                         prevCommitHash = currentCommitHash;
                     }
 

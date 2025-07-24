@@ -1,4 +1,4 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.platform;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 
@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
+
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -60,6 +62,20 @@ public class RdfPlatformMilestoneUtils {
     }
 
     public static Triple createMilestoneStateProperty(String milestoneUri, String state) {
-        return Triple.create(RdfUtils.uri(milestoneUri), milestoneStateProperty(), RdfUtils.uri(PLATFORM_NS + state.toLowerCase()));
+        // v2.1: Map to prefixed milestone state instances for disambiguation
+        String prefixedState = mapToMilestoneState(state);
+        return Triple.create(RdfUtils.uri(milestoneUri), milestoneStateProperty(), RdfUtils.uri(PLATFORM_NS + prefixedState));
+    }
+
+    private static String mapToMilestoneState(String state) {
+        // v2.1: Map milestone states to prefixed instances
+        switch (state.toLowerCase()) {
+            case "open":
+                return "milestone_open";
+            case "closed":
+                return "milestone_closed";
+            default:
+                return "milestone_" + state.toLowerCase();
+        }
     }
 }

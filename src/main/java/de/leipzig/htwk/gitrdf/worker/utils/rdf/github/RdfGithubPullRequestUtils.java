@@ -1,12 +1,12 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.github;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
 
 import java.time.LocalDateTime;
 
-import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -20,59 +20,44 @@ public final class RdfGithubPullRequestUtils extends RdfGithubIssueUtils {
 
     private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
 
-    // Pull Request specific merge properties (from github ontology)
-    public static Node mergedProperty() {
-        return RdfUtils.uri(GH_NS + "merged");
-    }
-
-    public static Node mergeCommitShaProperty() {
-        return RdfUtils.uri(GH_NS + "mergeCommitSha");
-    }
-
-    public static Node mergedAtProperty() {
-        return RdfUtils.uri(GH_NS + "mergedAt");
-    }
-
-    public static Node mergedByProperty() {
-        return RdfUtils.uri(GH_NS + "mergedBy");
-    }
+    // Merge properties are now inherited from RdfPlatformTicketUtils via RdfGithubIssueUtils
 
     // Override to create GitHub Pull Request type
     public static Triple createRdfTypeProperty(String pullRequestUri) {
         return Triple.create(RdfUtils.uri(pullRequestUri), rdfTypeProperty(), RdfUtils.uri("github:GithubPullRequest"));
     }
 
-    // Pull Request specific property creation methods
+    // Pull Request specific property creation methods (delegate to platform base class)
     public static Triple createPullRequestMergedProperty(String pullRequestUri, boolean merged) {
-        return Triple.create(RdfUtils.uri(pullRequestUri), mergedProperty(), RdfUtils.booleanLiteral(merged));
+        return createMergedProperty(pullRequestUri, merged);
     }
 
     public static Triple createPullRequestMergeCommitShaProperty(String pullRequestUri, String sha) {
-        return Triple.create(RdfUtils.uri(pullRequestUri), mergeCommitShaProperty(), RdfUtils.stringLiteral(sha));
+        return createMergeCommitShaProperty(pullRequestUri, sha);
     }
 
     public static Triple createPullRequestMergedAtProperty(String pullRequestUri, LocalDateTime mergedAt) {
-        return Triple.create(RdfUtils.uri(pullRequestUri), mergedAtProperty(), RdfUtils.dateTimeLiteral(mergedAt));
+        return createMergedAtProperty(pullRequestUri, mergedAt);
     }
 
     public static Triple createPullRequestMergedByProperty(String pullRequestUri, String userUri) {
-        return Triple.create(RdfUtils.uri(pullRequestUri), mergedByProperty(), RdfUtils.uri(userUri));
+        return createMergedByProperty(pullRequestUri, userUri);
     }
 
     // Convenience methods for backward compatibility with existing transaction service
     public static Triple createIssueMergedProperty(String issueUri, boolean merged) {
-        return createPullRequestMergedProperty(issueUri, merged);
+        return createMergedProperty(issueUri, merged);
     }
 
     public static Triple createIssueMergeCommitShaProperty(String issueUri, String sha) {
-        return createPullRequestMergeCommitShaProperty(issueUri, sha);
+        return createMergeCommitShaProperty(issueUri, sha);
     }
 
     public static Triple createIssueMergedAtProperty(String issueUri, LocalDateTime mergedAt) {
-        return createPullRequestMergedAtProperty(issueUri, mergedAt);
+        return createMergedAtProperty(issueUri, mergedAt);
     }
 
     public static Triple createIssueMergedByProperty(String issueUri, String userUri) {
-        return createPullRequestMergedByProperty(issueUri, userUri);
+        return createMergedByProperty(issueUri, userUri);
     }
 }

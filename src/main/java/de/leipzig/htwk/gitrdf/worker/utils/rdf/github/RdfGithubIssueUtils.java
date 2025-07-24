@@ -1,12 +1,15 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.github;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 
 import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformTicketUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -19,6 +22,7 @@ import lombok.NoArgsConstructor;
 public class RdfGithubIssueUtils extends RdfPlatformTicketUtils {
 
     private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
+    private static final String PF_NS = PLATFORM_NAMESPACE + ":";
 
     // GitHub-specific Issue Properties (from github ontology)
 
@@ -31,12 +35,9 @@ public class RdfGithubIssueUtils extends RdfPlatformTicketUtils {
     }
 
     public static Node lockedProperty() {
-        return RdfUtils.uri(GH_NS + "locked");
+        return RdfUtils.uri(PF_NS + "locked");
     }
 
-    public static Node htmlUrlProperty() {
-        return RdfUtils.uri(GH_NS + "htmlUrl");
-    }
 
     public static Node requestedReviewerProperty() {
         return RdfUtils.uri(GH_NS + "requestedReviewer");
@@ -58,14 +59,14 @@ public class RdfGithubIssueUtils extends RdfPlatformTicketUtils {
         return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri("github:GithubIssue"));
     }
 
-    // Use inherited platform method for number
+    // v2.1: Use inherited platform method for number
     public static Triple createIssueNumberProperty(String issueUri, int number) {
-        return createNumberProperty(issueUri, number);
+        return RdfPlatformTicketUtils.createNumberProperty(issueUri, number);
     }
 
     // GitHub-specific property creation methods
     public static Triple createIssueIdProperty(String issueUri, long issueId) {
-        return Triple.create(RdfUtils.uri(issueUri), issueIdProperty(), RdfUtils.nonNegativeIntegerLiteral(issueId));
+        return Triple.create(RdfUtils.uri(issueUri), issueIdProperty(), RdfUtils.longLiteral(issueId));
     }
     
     public static Triple createIssueNodeIdProperty(String issueUri, String nodeId) {
@@ -76,45 +77,42 @@ public class RdfGithubIssueUtils extends RdfPlatformTicketUtils {
         return Triple.create(RdfUtils.uri(issueUri), lockedProperty(), RdfUtils.booleanLiteral(locked));
     }
 
-    public static Triple createIssueHtmlUrlProperty(String issueUri, String htmlUrl) {
-        return Triple.create(RdfUtils.uri(issueUri), htmlUrlProperty(), RdfUtils.uri(htmlUrl));
-    }
 
-    // Use inherited platform methods for common properties
+    // v2.1: Use inherited platform methods for common properties
     public static Triple createIssueStateProperty(String issueUri, String state) {
-        return createStateProperty(issueUri, state);
+        return RdfPlatformTicketUtils.createStateProperty(issueUri, state);
     }
 
     public static Triple createIssueTitleProperty(String issueUri, String title) {
-        return createTitleProperty(issueUri, title);
+        return RdfPlatformTicketUtils.createTitleProperty(issueUri, title);
     }
 
     public static Triple createIssueBodyProperty(String issueUri, String body) {
-        return createBodyProperty(issueUri, body);
+        return RdfPlatformTicketUtils.createBodyProperty(issueUri, body);
     }
 
     public static Triple createIssueUserProperty(String issueUri, String userUri) {
-        return createSubmitterProperty(issueUri, userUri);
+        return RdfPlatformTicketUtils.createSubmitterProperty(issueUri, userUri);
     }
 
     public static Triple createIssueAssigneeProperty(String issueUri, String userUri) {
-        return createAssigneeProperty(issueUri, userUri);
+        return RdfPlatformTicketUtils.createAssigneeProperty(issueUri, userUri);
     }
 
     public static Triple createIssueMilestoneProperty(String issueUri, String milestoneUri) {
-        return createHasMilestoneProperty(issueUri, milestoneUri);
+        return RdfPlatformTicketUtils.createHasMilestoneProperty(issueUri, milestoneUri);
     }
 
     public static Triple createIssueSubmittedAtProperty(String issueUri, LocalDateTime submittedAtDateTime) {
-        return createCreatedAtProperty(issueUri, submittedAtDateTime);
+        return RdfPlatformTicketUtils.createCreatedAtProperty(issueUri, submittedAtDateTime);
     }
 
     public static Triple createIssueUpdatedAtProperty(String issueUri, LocalDateTime updatedAtDateTime) {
-        return createUpdatedAtProperty(issueUri, updatedAtDateTime);
+        return RdfPlatformTicketUtils.createUpdatedAtProperty(issueUri, updatedAtDateTime);
     }
 
     public static Triple createIssueClosedAtProperty(String issueUri, LocalDateTime closedAtDateTime) {
-        return createClosedAtProperty(issueUri, closedAtDateTime);
+        return RdfPlatformTicketUtils.createClosedAtProperty(issueUri, closedAtDateTime);
     }
 
 

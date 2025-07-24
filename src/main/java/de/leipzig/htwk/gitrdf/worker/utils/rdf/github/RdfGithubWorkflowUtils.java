@@ -1,4 +1,4 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.github;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
 
@@ -8,6 +8,8 @@ import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.kohsuke.github.GHWorkflowRun;
 
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformWorkflowUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -28,7 +30,6 @@ public final class RdfGithubWorkflowUtils extends RdfPlatformWorkflowUtils {
     public static Node statusProperty() { return RdfUtils.uri(GH_NS + "workflowStatus"); }
     public static Node conclusionProperty() { return RdfUtils.uri(GH_NS + "workflowConclusion"); }
     public static Node eventProperty() { return RdfUtils.uri(GH_NS + "workflowEvent"); }
-    public static Node runNumberProperty() { return RdfUtils.uri(GH_NS + "workflowRunNumber"); }
     public static Node commitShaProperty() { return RdfUtils.uri(GH_NS + "workflowCommitSha"); }
     public static Node createdAtProperty() { return RdfUtils.uri(GH_NS + "workflowCreatedAt"); }
     public static Node updatedAtProperty() { return RdfUtils.uri(GH_NS + "workflowUpdatedAt"); }
@@ -38,9 +39,14 @@ public final class RdfGithubWorkflowUtils extends RdfPlatformWorkflowUtils {
         return Triple.create(RdfUtils.uri(issueUri), workflowRunProperty(), RdfUtils.uri(runUri));
     }
 
-    // Override to create GitHub WorkflowRun type
+    // Override to create GitHub WorkflowRun type with platform inheritance
     public static Triple createWorkflowRunRdfTypeProperty(String runUri) {
         return Triple.create(RdfUtils.uri(runUri), rdfTypeProperty(), RdfUtils.uri("github:WorkflowRun"));
+    }
+
+    // v2.1: Add platform type for cross-platform queries
+    public static Triple createWorkflowRunPlatformTypeProperty(String runUri) {
+        return Triple.create(RdfUtils.uri(runUri), rdfTypeProperty(), RdfUtils.uri("platform:WorkflowExecution"));
     }
 
     public static Triple createWorkflowRunIdProperty(String runUri, long id) {
@@ -61,20 +67,55 @@ public final class RdfGithubWorkflowUtils extends RdfPlatformWorkflowUtils {
     }
 
     public static Triple createWorkflowStatusProperty(String runUri, GHWorkflowRun.Status status) {
-        return Triple.create(RdfUtils.uri(runUri), statusProperty(), RdfUtils.stringLiteral(status.toString()));
+        // v2.1: Map GitHub workflow status to platform execution status with sameAs relationships
+        String mappedStatus = mapGitHubStatusToPlatform(status.toString());
+        return Triple.create(RdfUtils.uri(runUri), statusProperty(), RdfUtils.uri(GH_NS + mappedStatus));
     }
 
     public static Triple createWorkflowConclusionProperty(String runUri, GHWorkflowRun.Conclusion conclusion) {
-        return Triple.create(RdfUtils.uri(runUri), conclusionProperty(), RdfUtils.stringLiteral(conclusion.toString()));
+        // v2.1: Map GitHub workflow conclusion to platform execution conclusion with sameAs relationships
+        String mappedConclusion = mapGitHubConclusionToPlatform(conclusion.toString());
+        return Triple.create(RdfUtils.uri(runUri), conclusionProperty(), RdfUtils.uri(GH_NS + mappedConclusion));
+    }
+
+    private static String mapGitHubStatusToPlatform(String status) {
+        // v2.1: GitHub workflow status instances are sameAs platform execution status
+        switch (status.toLowerCase()) {
+            case "completed":
+                return "completed"; // github:completed sameAs platform:execution_completed
+            case "queued":
+                return "queued"; // github:queued sameAs platform:execution_queued
+            case "in_progress":
+                return "in_progress"; // github:in_progress sameAs platform:running
+            case "waiting":
+                return "waiting"; // github:waiting sameAs platform:waiting
+            default:
+                return status.toLowerCase();
+        }
+    }
+
+    private static String mapGitHubConclusionToPlatform(String conclusion) {
+        // v2.1: GitHub workflow conclusion instances are sameAs platform execution conclusion
+        switch (conclusion.toLowerCase()) {
+            case "success":
+                return "success"; // github:success sameAs platform:execution_success
+            case "failure":
+                return "failure"; // github:failure sameAs platform:execution_failure
+            case "cancelled":
+                return "cancelled"; // github:cancelled sameAs platform:execution_cancelled
+            case "skipped":
+                return "skipped"; // github:skipped sameAs platform:execution_skipped
+            case "neutral":
+                return "neutral"; // github:neutral (GitHub-specific)
+            default:
+                return conclusion.toLowerCase();
+        }
     }
 
     public static Triple createWorkflowEventProperty(String runUri, String event) {
         return Triple.create(RdfUtils.uri(runUri), eventProperty(), RdfUtils.stringLiteral(event));
     }
 
-    public static Triple createWorkflowRunNumberProperty(String runUri, long runNumber) {
-        return Triple.create(RdfUtils.uri(runUri), runNumberProperty(), RdfUtils.longLiteral(runNumber));
-    }
 
     public static Triple createWorkflowCommitShaProperty(String runUri, String sha) {
         return Triple.create(RdfUtils.uri(runUri), commitShaProperty(), RdfUtils.stringLiteral(sha));

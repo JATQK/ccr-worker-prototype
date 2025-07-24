@@ -1,7 +1,9 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.github;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
-import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.uri;
+import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
+
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 
 import java.time.LocalDateTime;
 
@@ -21,9 +23,9 @@ public final class RdfGithubReactionUtils {
 
     public static Node identifierProperty() { return uri(GH_NS + "reactionId"); }
     public static Node contentProperty() { return uri(GH_NS + "reactionContent"); }
-    public static Node userProperty() { return uri(GH_NS + "user"); }
+    public static Node reactionUserProperty() { return uri(GH_NS + "reactionUser"); }
     public static Node createdAtProperty() { return uri(GH_NS + "reactionCreatedAt"); }
-    public static Node reactionOfProperty() { return uri(GH_NS + "reactionOf"); }
+    // Removed reactionOfProperty - reactions are linked via hasReaction from parent entity
     
 
     public static Triple createReactionRdfTypeProperty(String reactionUri) {
@@ -39,14 +41,12 @@ public final class RdfGithubReactionUtils {
     }
 
     public static Triple createReactionUserProperty(String reactionUri, String userUri) {
-        return Triple.create(uri(reactionUri), userProperty(), uri(userUri));
+        return Triple.create(uri(reactionUri), reactionUserProperty(), uri(userUri));
     }
 
     public static Triple createReactionCreatedAtProperty(String reactionUri, LocalDateTime createdAt) {
         return Triple.create(uri(reactionUri), createdAtProperty(), RdfUtils.dateTimeLiteral(createdAt));
     }
 
-    public static Triple createReactionOfProperty(String reactionUri, String commentUri) {
-        return Triple.create(uri(reactionUri), reactionOfProperty(), uri(commentUri));
-    }
+    // Removed createReactionOfProperty - use hasReaction from parent entity instead
 }

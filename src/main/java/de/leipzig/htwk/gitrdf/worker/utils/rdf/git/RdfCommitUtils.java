@@ -1,11 +1,11 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.git;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.GIT_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.OWL_SCHEMA_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.RDF_SCHEMA_NAMESPACE;
-import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.dateTimeLiteral;
-import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.stringLiteral;
-import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.uri;
+import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.dateTimeLiteral;
+import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.stringLiteral;
+import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -20,6 +20,7 @@ import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.patch.FileHeader;
 
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -29,7 +30,7 @@ public class RdfCommitUtils {
     protected static final String GIT_NS = GIT_NAMESPACE + ":";
     protected static final String RDF_NS = RDF_SCHEMA_NAMESPACE + ":";
     protected static final String OWL_NS = OWL_SCHEMA_NAMESPACE + ":";
-    protected static final String SPDX_NS = "spdx:";
+    // REMOVED: SPDX namespace no longer needed in v2.1
 
     public static Node rdfTypeProperty() {
         return RdfUtils.uri(RDF_NS + "type");
@@ -107,7 +108,7 @@ public class RdfCommitUtils {
 
     public static Node owlSameAsProperty() { return uri(OWL_NS + "sameAs"); }
 
-    public static Node commitDiffEntryEditTypeProperty() {
+    public static Node commitDiffEntryChangeTypeProperty() {
         return uri(GIT_NS + "changeType");
     }
 
@@ -182,12 +183,12 @@ public class RdfCommitUtils {
         return uri(GIT_NS + "lineNumber");
     }
 
-    public static Node branchSnapshotLinenumberBeginProperty() {
-        return uri(GIT_NS + "branchSnapshotLinenumberBegin");
+    public static Node lineBeginProperty() {
+        return uri(GIT_NS + "lineBegin");
     }
 
-    public static Node branchSnapshotLinenumberEndProperty() {
-        return uri(GIT_NS + "branchSnapshotLinenumberEnd");
+    public static Node lineEndProperty() {
+        return uri(GIT_NS + "lineEnd");
     }
 
 
@@ -237,26 +238,18 @@ public class RdfCommitUtils {
         return Triple.create(snapshotLineEntryNode, branchSnapshotLineProperty(), RdfUtils.integerLiteral(line));
     }
 
-    public static Triple createBranchSnapshotLinenumberBeginProperty(Node snapshotLineEntryNode, int linenumberBegin) {
-        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberBeginProperty(), RdfUtils.integerLiteral(linenumberBegin));
+    public static Triple createLineBeginProperty(Node snapshotLineEntryNode, int linenumberBegin) {
+        return Triple.create(snapshotLineEntryNode, lineBeginProperty(), RdfUtils.integerLiteral(linenumberBegin));
     }
 
-    public static Triple createBranchSnapshotLinenumberEndProperty(Node snapshotLineEntryNode, int linenumberEnd) {
-        return Triple.create(snapshotLineEntryNode, branchSnapshotLinenumberEndProperty(), RdfUtils.integerLiteral(linenumberEnd));
+    public static Triple createLineEndProperty(Node snapshotLineEntryNode, int linenumberEnd) {
+        return Triple.create(snapshotLineEntryNode, lineEndProperty(), RdfUtils.integerLiteral(linenumberEnd));
     }
 
 
     public static Triple createBranchSnapshotCommitHashProperty(Node snapshotLineEntryNode, String commitHash) {
-        // Create an SPDX CheckSum object instead of a string literal
-        Node checksumNode = createSpdxCheckSum(commitHash);
-        return Triple.create(snapshotLineEntryNode, branchSnapshotCommitHashProperty(), checksumNode);
-    }
-
-    /**
-     * Creates additional triples for branch snapshot commit hash SPDX CheckSum object.
-     */
-    public static Set<Triple> createBranchSnapshotSpdxCheckSumTriples(String commitHash) {
-        return createSpdxCheckSumTriples(commitHash);
+        // v2.1: Use plain string instead of SPDX CheckSum
+        return Triple.create(snapshotLineEntryNode, branchSnapshotCommitHashProperty(), stringLiteral(commitHash));
     }
 
     // Commit
@@ -297,8 +290,8 @@ public class RdfCommitUtils {
         return Triple.create(uri(commitUri), commitMessageProperty(), stringLiteral(commitMessageValue));
     }
 
-    public static Triple createCommitDiffEntryEditTypeProperty(Node diffEntryNode, DiffEntry.ChangeType changeType) {
-        return Triple.create(diffEntryNode, commitDiffEntryEditTypeProperty(), uri(GIT_NS + changeType.toString().toLowerCase()));
+    public static Triple createCommitDiffEntryChangeTypeProperty(Node diffEntryNode, DiffEntry.ChangeType changeType) {
+        return Triple.create(diffEntryNode, commitDiffEntryChangeTypeProperty(), uri(GIT_NS + changeType.toString().toLowerCase()));
     }
 
     public static Triple createCommitResource(String commitUri, Node commitNode) {
@@ -336,7 +329,26 @@ public class RdfCommitUtils {
     }
 
     public static Triple createCommitDiffEditTypeProperty(Node editNode, Edit.Type editType) {
-        return Triple.create(editNode, commitDiffEntryEditTypeProperty(), uri(GIT_NS + editType.toString().toLowerCase()));
+        // v2.1: Map JGit Edit.Type to valid git:EditType instances
+        String mappedEditType = mapJGitEditTypeToGitEditType(editType);
+        return Triple.create(editNode, commitDiffEditTypeProperty(), uri(GIT_NS + mappedEditType));
+    }
+
+    private static String mapJGitEditTypeToGitEditType(Edit.Type editType) {
+        // v2.1: Map JGit Edit.Type enum to valid git:EditType instances
+        switch (editType) {
+            case INSERT:
+                return "insert";
+            case REPLACE:
+                return "replace";
+            case DELETE:
+                // v2.1: Map DELETE to REPLACE since git:EditType doesn't include delete
+                // Semantically, a DELETE operation replaces existing lines with nothing
+                return "replace";
+            default:
+                // Fallback to replace for any unknown edit types
+                return "replace";
+        }
     }
 
     public static Triple createEditOldLinenumberBeginProperty(Node editNode, int lineNumberBegin ) {
@@ -465,40 +477,8 @@ public class RdfCommitUtils {
     }
 
     public static Triple createSubmoduleCommitProperty(Node submoduleNode, String commitHash) {
-        // Create an SPDX CheckSum object instead of a string literal
-        Node checksumNode = createSpdxCheckSum(commitHash);
-        return Triple.create(submoduleNode, rdfSubmoduleCommitProperty(), checksumNode);
-    }
-
-    /**
-     * Creates additional triples for the SPDX CheckSum object.
-     * This should be called after createSubmoduleCommitProperty to complete the CheckSum structure.
-     */
-    public static Set<Triple> createSpdxCheckSumTriples(String commitHash) {
-        Node checksumNode = RdfUtils.createSpdxCheckSumNode(commitHash);
-        Set<Triple> triples = new LinkedHashSet<>();
-        
-        // rdf:type spdx:CheckSum
-        triples.add(Triple.create(checksumNode, rdfTypeProperty(), uri(SPDX_NS + "CheckSum")));
-        
-        // spdx:checksumValue "hash_value"
-        triples.add(Triple.create(checksumNode, uri(SPDX_NS + "checksumValue"), stringLiteral(commitHash)));
-        
-        // spdx:algorithm spdx:checksumAlgorithm_sha1 (Git uses SHA-1)
-        triples.add(Triple.create(checksumNode, uri(SPDX_NS + "algorithm"), uri(SPDX_NS + "checksumAlgorithm_sha1")));
-        
-        return triples;
-    }
-
-    /**
-     * Creates an SPDX CheckSum object for a given hash value.
-     * According to SPDX specification, a CheckSum should have:
-     * - rdf:type spdx:CheckSum
-     * - spdx:checksumValue (the actual hash)
-     * - spdx:algorithm (the algorithm used, typically SHA1 for Git)
-     */
-    private static Node createSpdxCheckSum(String hashValue) {
-        return RdfUtils.createSpdxCheckSumNode(hashValue);
+        // v2.1: Use plain string instead of SPDX CheckSum
+        return Triple.create(submoduleNode, rdfSubmoduleCommitProperty(), stringLiteral(commitHash));
     }
 
     public static Triple createSubmoduleCommitEntryProperty(Node submoduleNode, String commitUrl) {

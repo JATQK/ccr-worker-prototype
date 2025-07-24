@@ -1,4 +1,4 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.git;
 
 import java.io.IOException;
 
@@ -7,7 +7,7 @@ import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
 
 import de.leipzig.htwk.gitrdf.worker.utils.GithubUriUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.GithubUserInfo;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.GithubUserInfo;
 
 import lombok.extern.slf4j.Slf4j;
 

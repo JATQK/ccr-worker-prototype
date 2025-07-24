@@ -1,4 +1,4 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf.gitdatatypes;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.git.gitdatatypes;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;

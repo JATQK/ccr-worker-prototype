@@ -13,7 +13,6 @@ import java.nio.charset.IllegalCharsetNameException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -88,20 +87,23 @@ import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
 import de.leipzig.htwk.gitrdf.worker.handler.LockHandler;
 import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.GithubUriUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.GithubUserInfo;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfCommitUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGitCommitUserUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubCommentUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubCommitUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueReviewUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubIssueUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubPullRequestUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubReactionUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubUserUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowJobUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowStepUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfGithubWorkflowUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfTurtleTidier;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.GithubUserInfo;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.git.RdfCommitUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.git.RdfGitCommitUserUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.RdfGithubCommentUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.RdfGithubCommitUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.RdfGithubIssueReviewUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.RdfGithubIssueUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.RdfGithubPullRequestUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.RdfGithubReactionUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.RdfGithubUserUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.RdfGithubWorkflowJobUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.RdfGithubWorkflowStepUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.RdfGithubWorkflowUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformPersonUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformRepositoryUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformTicketUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfTurtleTidier;
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 
@@ -111,10 +113,10 @@ public class GithubRdfConversionTransactionService {
 
     private static final int TWENTY_FIVE_MEGABYTE = 1024 * 1024 * 25;
 
-    private static final int PROCESS_ISSUE_LIMIT = 4000; // Limit for the number of issues to process
+    private static final int PROCESS_ISSUE_LIMIT = 50; // Limit for the number of issues to process
     private static final String[] PROCESS_ISSUE_ONLY = {}; // Only process these issues // "9946", "9947", "9948",
                                                            // "9949", "9950"
-    private static final int PROCESS_COMMIT_LIMIT = 40000; // Limit for the number of commits to process
+    private static final int PROCESS_COMMIT_LIMIT = 50; // Limit for the number of commits to process
 
     private static final boolean PROCESS_COMMENT_REACTIONS = true;
 
@@ -136,8 +138,7 @@ public class GithubRdfConversionTransactionService {
     public static final String OWL_SCHEMA_NAMESPACE = "owl";
     public static final String OWL_SCHEMA_URI = "http://www.w3.org/2002/07/owl#";
 
-    public static final String SPDX_NAMESPACE = "spdx";
-    public static final String SPDX_URI = "http://spdx.org/rdf/terms#";
+    // REMOVED: SPDX constants no longer needed in v2.1
 
     private final GithubHandlerService githubHandlerService;
 
@@ -399,12 +400,12 @@ public class GithubRdfConversionTransactionService {
 
             GHRepository githubRepositoryHandle = gitHubHandle.getRepository(githubRepositoryName);
             // See: https://jena.apache.org/documentation/io/rdf-output.html#streamed-block-formats
-            StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE_BLOCKS);
+            StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE);
 
             writer.prefix(XSD_SCHEMA_NAMESPACE, XSD_SCHEMA_URI);
             writer.prefix(RDF_SCHEMA_NAMESPACE, RDF_SCHEMA_URI);
             writer.prefix(OWL_SCHEMA_NAMESPACE, OWL_SCHEMA_URI);
-            writer.prefix(SPDX_NAMESPACE, SPDX_URI);
+            // REMOVED: SPDX prefix no longer needed in v2.1
             writer.prefix(GIT_NAMESPACE, GIT_URI);
             writer.prefix(PLATFORM_NAMESPACE, PLATFORM_URI);
             writer.prefix(PLATFORM_GITHUB_NAMESPACE, PLATFORM_GITHUB_URI);
@@ -530,10 +531,7 @@ public class GithubRdfConversionTransactionService {
                             RdfCommitUtils.createSubmoduleCommitEntryProperty(submoduleNode, submoduleCommitHashUri));
                     writer.triple(RdfCommitUtils.createSubmoduleCommitProperty(submoduleNode, submoduleCommitHash));
                     
-                    // Add the SPDX CheckSum triples
-                    for (org.apache.jena.graph.Triple checksumTriple : RdfCommitUtils.createSpdxCheckSumTriples(submoduleCommitHash)) {
-                        writer.triple(checksumTriple);
-                    }
+                    // v2.1: No longer need SPDX CheckSum triples - hash is now a plain string
 
                     log.info("Submodule: path: {} url: {} commit-hash: {}", submodulePath, submoduleUrl,
                             submoduleCommitHash);
@@ -878,10 +876,15 @@ public class GithubRdfConversionTransactionService {
                         // }
                         // // ********************** ** **************** ** **********************
 
-                        writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(issueUri));
+                        // Create correct RDF type based on whether this is an issue or pull request
+                        if (ghIssue.isPullRequest()) {
+                            writer.triple(RdfGithubPullRequestUtils.createRdfTypeProperty(issueUri));
+                        } else {
+                            writer.triple(RdfGithubIssueUtils.createRdfTypeProperty(issueUri));
+                        }
 
                         if (githubIssueRepositoryFilter.isEnableIssueNumber()) {
-                            writer.triple(RdfGithubIssueUtils.createIssueNumberProperty(issueUri, issueNumber));
+                            writer.triple(RdfPlatformTicketUtils.createNumberProperty(issueUri, issueNumber));
                         }
 
                         // Add GitHub issue ID (internal ID)
@@ -894,25 +897,25 @@ public class GithubRdfConversionTransactionService {
                             writer.triple(RdfGithubIssueUtils.createIssueNodeIdProperty(issueUri, ghIssue.getNodeId()));
                         }
                         
-                        writer.triple(RdfGithubIssueUtils.createIssueLockedProperty(issueUri, ghIssue.isLocked()));
+                        writer.triple(RdfPlatformTicketUtils.createLockedProperty(issueUri, ghIssue.isLocked()));
 
                         if (githubIssueRepositoryFilter.isEnableIssueTitle() && ghIssue.getTitle() != null) {
-                            writer.triple(RdfGithubIssueUtils.createIssueTitleProperty(issueUri, ghIssue.getTitle()));
+                            writer.triple(RdfPlatformTicketUtils.createTitleProperty(issueUri, ghIssue.getTitle()));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueBody() && ghIssue.getBody() != null) {
-                            writer.triple(RdfGithubIssueUtils.createIssueBodyProperty(issueUri, ghIssue.getBody()));
+                            writer.triple(RdfPlatformTicketUtils.createBodyProperty(issueUri, ghIssue.getBody()));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() != null) {
-                            writer.triple(RdfGithubIssueUtils.createIssueStateProperty(
+                            writer.triple(RdfPlatformTicketUtils.createStateProperty(
                                     issueUri, ghIssue.getState().toString()));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueUser() && ghIssue.getUser() != null) {
                             String githubIssueUserUri = ghIssue.getUser().getHtmlUrl().toString();
                             writer.triple(
-                                    RdfGithubIssueUtils.createIssueUserProperty(issueUri, githubIssueUserUri));
+                                    RdfPlatformTicketUtils.createSubmitterProperty(issueUri, githubIssueUserUri));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueReviewers() && ghIssue.isPullRequest()) {
@@ -936,7 +939,7 @@ public class GithubRdfConversionTransactionService {
 
                         if (githubIssueRepositoryFilter.isEnableIssueCreatedAt() && ghIssue.getCreatedAt() != null) {
                             LocalDateTime createdAt = localDateTimeFrom(ghIssue.getCreatedAt());
-                            writer.triple(RdfGithubIssueUtils.createIssueSubmittedAtProperty(issueUri, createdAt));
+                            writer.triple(RdfPlatformTicketUtils.createCreatedAtProperty(issueUri, createdAt));
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueUpdatedAt()) {
@@ -944,7 +947,7 @@ public class GithubRdfConversionTransactionService {
                             if (updatedAtUtilDate != null) {
                                 LocalDateTime updatedAt = localDateTimeFrom(updatedAtUtilDate);
                                 writer.triple(
-                                        RdfGithubIssueUtils.createIssueUpdatedAtProperty(issueUri, updatedAt));
+                                        RdfPlatformTicketUtils.createUpdatedAtProperty(issueUri, updatedAt));
                             }
                         }
 
@@ -953,7 +956,7 @@ public class GithubRdfConversionTransactionService {
                             if (closedAtUtilDate != null) {
                                 LocalDateTime closedAt = localDateTimeFrom(closedAtUtilDate);
                                 writer.triple(
-                                        RdfGithubIssueUtils.createIssueClosedAtProperty(issueUri, closedAt));
+                                        RdfPlatformTicketUtils.createClosedAtProperty(issueUri, closedAt));
                             }
                         }
                         // SHIT
@@ -971,7 +974,7 @@ public class GithubRdfConversionTransactionService {
                             List<GHUser> assignees = ghIssue.getAssignees();
                             for (GHUser assignee : assignees) {
                                 String assigneeUri = assignee.getHtmlUrl().toString();
-                                writer.triple(RdfGithubIssueUtils.createIssueAssigneeProperty(issueUri, assigneeUri));
+                                writer.triple(RdfPlatformTicketUtils.createAssigneeProperty(issueUri, assigneeUri));
                             }
                         }
 
@@ -1067,8 +1070,6 @@ public class GithubRdfConversionTransactionService {
                                     Long parentId = c.getInReplyToId();
                                     boolean isRoot = (parentId == null || parentId.equals(cid) || parentId <= 0);
 
-                                    // Mark if this is a root discussion
-                                    writer.triple(RdfGithubCommentUtils.createIsRootComment(reviewCommentURI, isRoot));
 
                                     // If this is a reply, link to parent
                                     if (!isRoot && parentId != null && parentId > 0) {
@@ -1086,9 +1087,6 @@ public class GithubRdfConversionTransactionService {
                                     // Reactions
                                     if (PROCESS_COMMENT_REACTIONS) {
                                         List<GHReaction> reactions = getReviewCommentReactionsCached(c);
-                                        writer.triple(
-                                                RdfGithubCommentUtils.createReactionCount(
-                                                        reviewCommentURI, reactions.size()));
                                         for (GHReaction r : reactions) {
                                             String reactionURI = GithubUriUtils.getIssueReviewCommentReactionUri(
                                                     issueUri, String.valueOf(cid), String.valueOf(r.getId()));
@@ -1100,8 +1098,7 @@ public class GithubRdfConversionTransactionService {
                                                     RdfGithubReactionUtils.createReactionRdfTypeProperty(reactionURI));
                                             writer.triple(RdfGithubReactionUtils.createReactionIdProperty(reactionURI,
                                                     r.getId()));
-                                            writer.triple(RdfGithubReactionUtils.createReactionOfProperty(reactionURI,
-                                                    reviewCommentURI));
+                                            // Reaction relationship handled via hasReaction from comment
 
                                             if (r.getContent() != null) {
                                                 writer.triple(RdfGithubReactionUtils.createReactionContentProperty(
@@ -1151,13 +1148,9 @@ public class GithubRdfConversionTransactionService {
                                             issueCommentURI,
                                             localDateTimeFrom(c.getCreatedAt())));
                                 }
-                                // Issue comments have no threading, treat all as root
-                                writer.triple(RdfGithubCommentUtils.createIsRootComment(issueCommentURI, true));
 
                                 // Reactions
                                 List<GHReaction> reactions = getIssueCommentReactionsCached(c);
-                                writer.triple(
-                                        RdfGithubCommentUtils.createReactionCount(issueCommentURI, reactions.size()));
                                 for (GHReaction r : reactions) {
 
                                     String reactionURI = GithubUriUtils.getIssueCommentReactionUri(issueUri,
@@ -1168,8 +1161,7 @@ public class GithubRdfConversionTransactionService {
                                     writer.triple(RdfGithubReactionUtils.createReactionRdfTypeProperty(reactionURI));
                                     writer.triple(RdfGithubReactionUtils.createReactionIdProperty(
                                             reactionURI, r.getId()));
-                                    writer.triple(RdfGithubReactionUtils.createReactionOfProperty(
-                                            reactionURI, issueCommentURI));
+                                    // Reaction relationship handled via hasReaction from comment
                                     if (r.getContent() != null) {
                                         writer.triple(RdfGithubReactionUtils.createReactionContentProperty(
                                                 reactionURI, r.getContent().toString()));
@@ -1548,7 +1540,7 @@ public class GithubRdfConversionTransactionService {
                     if (log.isDebugEnabled())
                         log.debug("Set RDF commit diff entry edit type property");
 
-                    writer.triple(RdfCommitUtils.createCommitDiffEntryEditTypeProperty(diffEntryNode, changeType));
+                    writer.triple(RdfCommitUtils.createCommitDiffEntryChangeTypeProperty(diffEntryNode, changeType));
 
                     FileHeader fileHeader = currentRepositoryDiffFormatter.toFileHeader(diffEntry);
 
@@ -1707,7 +1699,6 @@ public class GithubRdfConversionTransactionService {
             writer.triple(RdfGithubWorkflowUtils.createWorkflowEventProperty(runUri, run.getEvent().toString()));
         }
 
-        writer.triple(RdfGithubWorkflowUtils.createWorkflowRunNumberProperty(runUri, run.getRunNumber()));
         writer.triple(RdfGithubWorkflowUtils.createWorkflowCommitShaProperty(runUri, mergeSha));
         try {
             if (run.getCreatedAt() != null) {

@@ -1,7 +1,10 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.github;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
-import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.uri;
+import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
+
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformCommentUtils;
 
 import java.time.LocalDateTime;
 
@@ -61,8 +64,8 @@ public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
     return uri(GH_NS + "isEdited");
   }
 
-  public static Node reactionProperty() {
-    return uri(GH_NS + "reaction");
+  public static Node hasReactionProperty() {
+    return uri(GH_NS + "hasReaction");
   }
 
   public static Node authorAssociationProperty() {
@@ -93,18 +96,11 @@ public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
   }
 
   // GitHub-specific property creation methods
-  public static Triple createCommentHtmlUrl(String commentUri, String htmlUrl) {
-    return Triple.create(uri(commentUri), commentHtmlUrlProperty(), uri(htmlUrl));
-  }
 
   public static Triple createCommentUpdatedAt(String commentUri, LocalDateTime updatedAt) {
     return Triple.create(uri(commentUri), commentUpdatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
   }
 
-  // Use inherited platform method for root comment
-  public static Triple createIsRootComment(String commentUri, boolean isRoot) {
-    return createIsRootCommentProperty(commentUri, isRoot);
-  }
 
   public static Triple createParentComment(String commentUri, String parentUri) {
     return Triple.create(uri(commentUri), parentCommentProperty(), uri(parentUri));
@@ -118,10 +114,6 @@ public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
     return Triple.create(uri(commentUri), replyCountProperty(), RdfUtils.nonNegativeIntegerLiteral(count));
   }
 
-  // Use inherited platform method for reaction count
-  public static Triple createReactionCount(String commentUri, long reactionCount) {
-    return createReactionCountProperty(commentUri, reactionCount);
-  }
 
   public static Triple createThreadDepth(String commentUri, int depth) {
     return Triple.create(uri(commentUri), threadDepthProperty(), RdfUtils.integerLiteral(depth));
@@ -144,7 +136,7 @@ public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
 
 
   public static Triple createCommentReaction(String commentUri, String reactionUri) {
-    return Triple.create(uri(commentUri), reactionProperty(), uri(reactionUri));
+    return Triple.create(uri(commentUri), hasReactionProperty(), uri(reactionUri));
   }
 
   public static Triple createAuthorAssociation(String commentUri, String association) {
@@ -153,15 +145,14 @@ public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
 
   // Convenience methods for creating complete comment entities
   public static Triple[] createBasicComment(String commentUri, long id, String body, String userUri,
-      LocalDateTime createdAt, String parentEntityUri, boolean isRoot) {
+      LocalDateTime createdAt, String parentEntityUri) {
     return new Triple[] {
         createCommentRdfType(commentUri),
         createCommentId(commentUri, id),
         createCommentBody(commentUri, body),
         createCommentUser(commentUri, userUri),
         createCommentCreatedAt(commentUri, createdAt),
-        createCommentOf(commentUri, parentEntityUri),
-        createIsRootComment(commentUri, isRoot)
+        createCommentOf(commentUri, parentEntityUri)
     };
   }
 
@@ -176,7 +167,6 @@ public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
         createCommentCreatedAt(commentUri, createdAt),
         createCommentOf(commentUri, parentEntityUri),
         createParentComment(commentUri, parentCommentUri),
-        createIsRootComment(commentUri, false),
         createThreadDepth(commentUri, threadDepth)
     };
   }

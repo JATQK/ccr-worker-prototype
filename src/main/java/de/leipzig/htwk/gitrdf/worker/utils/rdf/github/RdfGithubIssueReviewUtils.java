@@ -1,8 +1,11 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.github;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
-import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.uri;
+import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
+
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformTicketUtils;
 
 import java.time.LocalDateTime;
 
@@ -26,7 +29,7 @@ public final class RdfGithubIssueReviewUtils {
 
     public static Node identifierProperty() { return uri(GH_NS + "id");}
     public static Node urlProperty() { return uri(GH_NS + "url"); }
-    public static Node descriptionProperty() { return uri(GH_NS + "description"); }
+    public static Node reviewBodyProperty() { return uri(GH_NS + "reviewBody"); }
     public static Node commitIdProperty() { return uri(GH_NS + "commitId"); }
     
     public static Node commentProperty() {
@@ -53,7 +56,7 @@ public final class RdfGithubIssueReviewUtils {
 
     public static Triple createIssueReviewRdfTypeProperty(String issueUri) {
         return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(),
-                RdfUtils.uri("github:GithubIssueReview"));
+                RdfUtils.uri("github:GithubReview"));
     }
 
     public static Triple createIssueReviewProperty(String issueUri, String reviewId) {
@@ -70,7 +73,7 @@ public final class RdfGithubIssueReviewUtils {
     }
 
     public static Triple createReviewDescriptionProperty(String reviewUri, String body) {
-        return Triple.create(uri(reviewUri), descriptionProperty(), RdfUtils.stringLiteral(body));
+        return Triple.create(uri(reviewUri), reviewBodyProperty(), RdfUtils.stringLiteral(body));
     }
 
     public static Triple createReviewStateProperty(String reviewUri, String state) {

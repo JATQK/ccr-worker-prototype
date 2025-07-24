@@ -1,4 +1,4 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.platform;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 
@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
+
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -56,7 +58,23 @@ public class RdfPlatformWorkflowJobUtils {
     }
 
     public static Triple createJobStatusProperty(String jobUri, String status) {
-        return Triple.create(RdfUtils.uri(jobUri), jobStatusProperty(), RdfUtils.uri(PLATFORM_NS + status.toLowerCase()));
+        // v2.1: Map to proper job status instances (e.g., "completed" → "job_completed")
+        String mappedStatus = mapToJobStatus(status);
+        return Triple.create(RdfUtils.uri(jobUri), jobStatusProperty(), RdfUtils.uri(PLATFORM_NS + mappedStatus));
+    }
+
+    private static String mapToJobStatus(String status) {
+        // v2.1: Map status values to avoid conflicts with execution status
+        switch (status.toLowerCase()) {
+            case "completed":
+                return "job_completed";
+            case "queued":
+                return "queued"; // shared with execution status
+            case "in_progress":
+                return "in_progress";
+            default:
+                return status.toLowerCase();
+        }
     }
 
     public static Triple createJobStartedAtProperty(String jobUri, LocalDateTime startedAt) {

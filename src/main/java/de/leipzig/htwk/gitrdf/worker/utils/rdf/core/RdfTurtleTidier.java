@@ -1,4 +1,4 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.core;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,7 +25,7 @@ public final class RdfTurtleTidier {
             RDFDataMgr.read(model, in, Lang.TURTLE);
         }
         try (OutputStream out = new FileOutputStream(file)) {
-            RDFDataMgr.write(out, model, RDFFormat.TURTLE_BLOCKS);
+            RDFDataMgr.write(out, model, RDFFormat.TURTLE);
         }
     }
 }

@@ -1,9 +1,12 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.github;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
-import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.stringLiteral;
-import static de.leipzig.htwk.gitrdf.worker.utils.rdf.RdfUtils.uri;
+import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
+
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.git.RdfCommitUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformRepositoryUtils;
 
 import java.time.LocalDateTime;
 
@@ -20,20 +23,18 @@ public final class RdfGithubCommitUtils {
     private static final String PLATFORM_NS = PLATFORM_NAMESPACE + ":";
 
     public static Node repositoryNameProperty() {
-        return uri(GITHUB_NS + "repositoryName");
+        return RdfPlatformRepositoryUtils.repositoryNameProperty();
     }
 
     public static Node repositoryOwnerProperty() {
-        return uri(GITHUB_NS + "repositoryOwner");
+        return RdfPlatformRepositoryUtils.repositoryOwnerProperty();
     }
 
     public static Node commitGitHubUserProperty() {
-        return uri(GITHUB_NS + "user");
+        return uri(PLATFORM_NS + "submitter");
     }
 
-    public static Node commitIssueProperty() {
-        return uri(GITHUB_NS + "issue");
-    }
+    // Removed - use partOfIssueProperty() instead for proper GitHub ontology compliance
 
     public static Node partOfIssueProperty() {
         return uri(GITHUB_NS + "partOfIssue");
@@ -44,11 +45,11 @@ public final class RdfGithubCommitUtils {
     }
 
     public static Node isMergedProperty() {
-        return uri(GITHUB_NS + "isMerged");
+        return uri(PLATFORM_NS + "merged");
     }
 
     public static Node mergedAtProperty() {
-        return uri(GITHUB_NS + "mergedAt");
+        return uri(PLATFORM_NS + "mergedAt");
     }
 
     public static Node mergedIntoIssueProperty() {
@@ -56,15 +57,15 @@ public final class RdfGithubCommitUtils {
     }
 
     public static Triple createRepositoryRdfTypeProperty(String repoUri) {
-        return Triple.create(RdfUtils.uri(repoUri), RdfCommitUtils.rdfTypeProperty(), RdfUtils.uri(GITHUB_NS + "GitRepository"));
+        return Triple.create(RdfUtils.uri(repoUri), RdfCommitUtils.rdfTypeProperty(), RdfUtils.uri(GITHUB_NS + "GithubRepository"));
     }
 
     public static Triple createRepositoryOwnerProperty(String repoUri, String ownerUri) {
-        return Triple.create(uri(repoUri), repositoryOwnerProperty(), uri(ownerUri));
+        return RdfPlatformRepositoryUtils.createRepositoryOwnerProperty(repoUri, ownerUri);
     }
 
     public static Triple createRepositoryNameProperty(String repoUri, String repositoryName) {
-        return Triple.create(uri(repoUri), repositoryNameProperty(), stringLiteral(repositoryName));
+        return RdfPlatformRepositoryUtils.createRepositoryNameProperty(repoUri, repositoryName);
     }
 
     public static Triple createCommiterGitHubUserProperty(String commitUri, String commiterGitHubUser) {
@@ -72,7 +73,7 @@ public final class RdfGithubCommitUtils {
     }
 
     public static Triple createCommitIssueProperty(String commitUri, String issueUri) {
-        return Triple.create(uri(commitUri), commitIssueProperty(), uri(issueUri));
+        return Triple.create(uri(commitUri), partOfIssueProperty(), uri(issueUri));
     }
 
     public static Triple createCommitPartOfIssueProperty(String commitUri, String issueUri) {

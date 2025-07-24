@@ -34,11 +34,11 @@ public final class GithubUriUtils {
     }
 
     public static String getTagUri(String owner, String repository, String tagName) {
-        return GITHUB_BASE + owner + "/" + repository + "/tags/" + tagName;
+        return GITHUB_BASE + owner + "/" + repository + "/releases/tag/" + tagName;
     }
 
     public static String getTagUrl(String owner, String repository, String tagName) {
-        return GITHUB_API_BASE + "repos/" + owner + "/" + repository + "/git/tags/" + tagName;
+        return GITHUB_API_BASE + "repos/" + owner + "/" + repository + "/releases/tags/" + tagName;
     }
 
     public static String getPullRequestUri(String prUrl) {

@@ -1,4 +1,4 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.platform;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 
@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -42,13 +43,7 @@ public class RdfPlatformCommentUtils {
         return RdfUtils.uri(PLATFORM_NS + "commentedAt");
     }
 
-    public static Node isRootCommentProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "isRootComment");
-    }
 
-    public static Node reactionCountProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "reactionCount");
-    }
 
     // Triple creation methods for platform properties
     public static Triple createRdfTypeProperty(String commentUri) {
@@ -71,11 +66,5 @@ public class RdfPlatformCommentUtils {
         return Triple.create(RdfUtils.uri(commentUri), commentedAtProperty(), RdfUtils.dateTimeLiteral(commentedAt));
     }
 
-    public static Triple createIsRootCommentProperty(String commentUri, boolean isRoot) {
-        return Triple.create(RdfUtils.uri(commentUri), isRootCommentProperty(), RdfUtils.booleanLiteral(isRoot));
-    }
 
-    public static Triple createReactionCountProperty(String commentUri, long reactionCount) {
-        return Triple.create(RdfUtils.uri(commentUri), reactionCountProperty(), RdfUtils.nonNegativeIntegerLiteral(reactionCount));
-    }
 }

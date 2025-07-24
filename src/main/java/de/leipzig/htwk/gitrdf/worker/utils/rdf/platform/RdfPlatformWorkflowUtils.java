@@ -1,9 +1,11 @@
-package de.leipzig.htwk.gitrdf.worker.utils.rdf;
+package de.leipzig.htwk.gitrdf.worker.utils.rdf.platform;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
+
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
