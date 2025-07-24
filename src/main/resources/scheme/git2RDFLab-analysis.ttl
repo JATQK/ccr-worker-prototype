@@ -1,0 +1,485 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix analysis: <https://purl.archive.org/git2rdf/v2/git2RDFLab-analysis#> .
+
+# Ontology Declaration
+<https://purl.archive.org/git2rdf/v2/git2RDFLab-analysis#> a owl:Ontology ;
+    owl:versionInfo "2.0" ;
+    rdfs:label "Git2RDF Analysis Ontology"@en ;
+    rdfs:comment "Analysis and metrics framework for evaluating software development artifacts"@en .
+
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Core Analysis Classes                            │
+# ╰──────────────────────────────────────────────────╯
+#
+
+analysis:Result a rdfs:Class ;
+    rdfs:label "Analysis Result"@en ;
+    rdfs:comment "A result from executing an analysis metric"@en .
+
+analysis:Metric a rdfs:Class ;
+    rdfs:label "Analysis Metric"@en ;
+    rdfs:comment "A metric definition for analysis"@en .
+
+analysis:Execution a rdfs:Class ;
+    rdfs:label "Analysis Execution"@en ;
+    rdfs:comment "An execution context containing multiple results"@en .
+
+analysis:Scale a rdfs:Class ;
+    rdfs:label "Measurement Scale"@en ;
+    rdfs:comment "The scale on which measurements are taken"@en .
+
+analysis:Agent a rdfs:Class ;
+    rdfs:label "Analysis Agent"@en ;
+    rdfs:comment "Abstract base class for entities performing analysis"@en .
+
+analysis:HumanAgent a rdfs:Class ;
+    rdfs:subClassOf analysis:Agent ;
+    rdfs:label "Human Agent"@en ;
+    rdfs:comment "A human performing analysis"@en .
+
+analysis:AutomatedAgent a rdfs:Class ;
+    rdfs:subClassOf analysis:Agent ;
+    rdfs:label "Automated Agent"@en ;
+    rdfs:comment "An automated system performing analysis"@en .
+
+analysis:LLMConfiguration a rdfs:Class ;
+    rdfs:label "LLM Configuration"@en ;
+    rdfs:comment "Configuration settings for Large Language Model"@en .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Result Properties                                │
+# ╰──────────────────────────────────────────────────╯
+#
+
+analysis:value a rdf:Property ;
+    rdfs:label "Value"@en ;
+    rdfs:comment "The measured or computed value"@en ;
+    rdfs:domain analysis:Result ;
+    rdfs:range [ owl:unionOf (xsd:integer xsd:decimal xsd:string xsd:boolean) ] .
+
+analysis:metricId a rdf:Property ;
+    rdfs:label "Metric ID"@en ;
+    rdfs:comment "Identifier of the metric used"@en ;
+    rdfs:domain [ owl:unionOf ( analysis:Result analysis:Metric ) ] ;
+    rdfs:range xsd:string .
+
+analysis:executionTimestamp a rdf:Property ;
+    rdfs:label "Execution Timestamp"@en ;
+    rdfs:comment "When this analysis was executed"@en ;
+    rdfs:domain [ owl:unionOf ( analysis:Result analysis:Execution ) ] ;
+    rdfs:range xsd:dateTime .
+
+analysis:category a rdf:Property ;
+    rdfs:label "Category"@en ;
+    rdfs:comment "The category of analysis or metric"@en ;
+    rdfs:domain [ owl:unionOf ( analysis:Result analysis:Metric ) ] ;
+    rdfs:range xsd:string .
+
+analysis:status a rdf:Property ;
+    rdfs:label "Status"@en ;
+    rdfs:comment "The execution status of the analysis"@en ;
+    rdfs:domain analysis:Result ;
+    rdfs:range analysis:Status .
+
+analysis:dataType a rdf:Property ;
+    rdfs:label "Data Type"@en ;
+    rdfs:comment "The data type of the result value"@en ;
+    rdfs:domain analysis:Result ;
+    rdfs:range analysis:DataType .
+
+analysis:measuredEntity a rdf:Property ;
+    rdfs:label "Measured Entity"@en ;
+    rdfs:comment "The entity that was measured"@en ;
+    rdfs:domain analysis:Result .
+
+analysis:basedOnMetric a rdf:Property ;
+    rdfs:label "Based On Metric"@en ;
+    rdfs:comment "The metric definition this result is based on"@en ;
+    rdfs:domain analysis:Result ;
+    rdfs:range analysis:Metric .
+
+analysis:onScale a rdf:Property ;
+    rdfs:label "On Scale"@en ;
+    rdfs:comment "The measurement scale used"@en ;
+    rdfs:domain analysis:Result ;
+    rdfs:range analysis:Scale .
+
+analysis:feedback a rdf:Property ;
+    rdfs:label "Feedback"@en ;
+    rdfs:comment "Feedback or explanation for the result"@en ;
+    rdfs:domain analysis:Result ;
+    rdfs:range xsd:string .
+
+analysis:confidence a rdf:Property ;
+    rdfs:label "Confidence"@en ;
+    rdfs:comment "Confidence score for the result"@en ;
+    rdfs:domain analysis:Result ;
+    rdfs:range xsd:decimal .
+
+analysis:unit a rdf:Property ;
+    rdfs:label "Unit"@en ;
+    rdfs:comment "Unit of measurement"@en ;
+    rdfs:domain analysis:Result ;
+    rdfs:range xsd:string .
+
+analysis:inputTokens a rdf:Property ;
+    rdfs:label "Input Tokens"@en ;
+    rdfs:comment "Number of input tokens processed"@en ;
+    rdfs:domain analysis:Result ;
+    rdfs:range xsd:integer .
+
+analysis:outputTokens a rdf:Property ;
+    rdfs:label "Output Tokens"@en ;
+    rdfs:comment "Number of output tokens generated"@en ;
+    rdfs:domain analysis:Result ;
+    rdfs:range xsd:integer .
+
+analysis:wasGeneratedBy a rdf:Property ;
+    rdfs:label "Was Generated By"@en ;
+    rdfs:comment "The execution that generated this result"@en ;
+    rdfs:domain analysis:Result ;
+    rdfs:range analysis:Execution .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Metric Properties                                │
+# ╰──────────────────────────────────────────────────╯
+#
+
+analysis:version a rdf:Property ;
+    rdfs:label "Version"@en ;
+    rdfs:comment "Version number of the metric or execution"@en ;
+    rdfs:domain [ owl:unionOf ( analysis:Metric analysis:Execution ) ] ;
+    rdfs:range xsd:string .
+
+analysis:instruction a rdf:Property ;
+    rdfs:label "Instruction"@en ;
+    rdfs:comment "Instructions for applying this metric"@en ;
+    rdfs:domain analysis:Metric ;
+    rdfs:range xsd:string .
+
+analysis:description a rdf:Property ;
+    rdfs:label "Description"@en ;
+    rdfs:comment "Detailed description"@en ;
+    rdfs:domain analysis:Metric ;
+    rdfs:range xsd:string .
+
+analysis:metricType a rdf:Property ;
+    rdfs:label "Metric Type"@en ;
+    rdfs:comment "The type of metric"@en ;
+    rdfs:domain analysis:Metric ;
+    rdfs:range analysis:MetricType .
+
+analysis:expectedScale a rdf:Property ;
+    rdfs:label "Expected Scale"@en ;
+    rdfs:comment "The expected measurement scale"@en ;
+    rdfs:domain analysis:Metric ;
+    rdfs:range xsd:string .
+
+analysis:usesField a rdf:Property ;
+    rdfs:label "Uses Field"@en ;
+    rdfs:comment "Fields used by this metric"@en ;
+    rdfs:domain analysis:Metric ;
+    rdfs:range xsd:string .
+
+analysis:promptLabel a rdf:Property ;
+    rdfs:label "Prompt Label"@en ;
+    rdfs:comment "Label for the prompt used"@en ;
+    rdfs:domain analysis:Metric ;
+    rdfs:range xsd:string .
+
+analysis:promptVersion a rdf:Property ;
+    rdfs:label "Prompt Version"@en ;
+    rdfs:comment "Version of the prompt used"@en ;
+    rdfs:domain analysis:Metric ;
+    rdfs:range xsd:integer .
+
+analysis:scale a rdf:Property ;
+    rdfs:label "Scale"@en ;
+    rdfs:comment "The measurement scale identifier"@en ;
+    rdfs:domain analysis:Metric ;
+    rdfs:range xsd:string .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Execution Properties                             │
+# ╰──────────────────────────────────────────────────╯
+#
+
+analysis:contains a rdf:Property ;
+    rdfs:label "Contains"@en ;
+    rdfs:comment "This execution contains results"@en ;
+    rdfs:domain analysis:Execution ;
+    rdfs:range analysis:Result .
+
+analysis:purpose a rdf:Property ;
+    rdfs:label "Purpose"@en ;
+    rdfs:comment "The purpose of this execution"@en ;
+    rdfs:domain analysis:Execution ;
+    rdfs:range xsd:string .
+
+analysis:scope a rdf:Property ;
+    rdfs:label "Scope"@en ;
+    rdfs:comment "The scope of this execution"@en ;
+    rdfs:domain analysis:Execution ;
+    rdfs:range xsd:string .
+
+analysis:taskId a rdf:Property ;
+    rdfs:label "Task ID"@en ;
+    rdfs:comment "Identifier of the task"@en ;
+    rdfs:domain analysis:Execution ;
+    rdfs:range xsd:string .
+
+analysis:experimentName a rdf:Property ;
+    rdfs:label "Experiment Name"@en ;
+    rdfs:comment "Name of the experiment"@en ;
+    rdfs:domain analysis:Execution ;
+    rdfs:range xsd:string .
+
+analysis:usesConfiguration a rdf:Property ;
+    rdfs:label "Uses Configuration"@en ;
+    rdfs:comment "The configuration used by this execution"@en ;
+    rdfs:domain analysis:Execution ;
+    rdfs:range analysis:LLMConfiguration .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Agent Properties                                 │
+# ╰──────────────────────────────────────────────────╯
+#
+
+analysis:agentName a rdf:Property ;
+    rdfs:label "Agent Name"@en ;
+    rdfs:comment "Name of the analysis agent"@en ;
+    rdfs:domain analysis:Agent ;
+    rdfs:range xsd:string .
+
+analysis:affiliation a rdf:Property ;
+    rdfs:label "Affiliation"@en ;
+    rdfs:comment "Organizational affiliation of the human agent"@en ;
+    rdfs:domain analysis:HumanAgent ;
+    rdfs:range xsd:string .
+
+analysis:expertise a rdf:Property ;
+    rdfs:label "Expertise"@en ;
+    rdfs:comment "Area of expertise of the human agent"@en ;
+    rdfs:domain analysis:HumanAgent ;
+    rdfs:range xsd:string .
+
+analysis:model a rdf:Property ;
+    rdfs:label "Model"@en ;
+    rdfs:comment "The model used by the automated agent"@en ;
+    rdfs:domain analysis:AutomatedAgent ;
+    rdfs:range xsd:string .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ LLM Configuration Properties                     │
+# ╰──────────────────────────────────────────────────╯
+#
+
+analysis:modelName a rdf:Property ;
+    rdfs:label "Model Name"@en ;
+    rdfs:comment "Name of the LLM model"@en ;
+    rdfs:domain analysis:LLMConfiguration ;
+    rdfs:range xsd:string .
+
+analysis:modelVersion a rdf:Property ;
+    rdfs:label "Model Version"@en ;
+    rdfs:comment "Version of the LLM model"@en ;
+    rdfs:domain analysis:LLMConfiguration ;
+    rdfs:range xsd:string .
+
+analysis:modelProvider a rdf:Property ;
+    rdfs:label "Model Provider"@en ;
+    rdfs:comment "Provider of the LLM model"@en ;
+    rdfs:domain analysis:LLMConfiguration ;
+    rdfs:range xsd:string .
+
+analysis:temperature a rdf:Property ;
+    rdfs:label "Temperature"@en ;
+    rdfs:comment "Temperature setting for the LLM"@en ;
+    rdfs:domain analysis:LLMConfiguration ;
+    rdfs:range xsd:float .
+
+analysis:maxTokens a rdf:Property ;
+    rdfs:label "Max Tokens"@en ;
+    rdfs:comment "Maximum number of tokens to generate"@en ;
+    rdfs:domain analysis:LLMConfiguration ;
+    rdfs:range xsd:integer .
+
+analysis:timeout a rdf:Property ;
+    rdfs:label "Timeout"@en ;
+    rdfs:comment "Timeout in milliseconds"@en ;
+    rdfs:domain [ owl:unionOf ( analysis:LLMConfiguration analysis:Execution ) ] ;
+    rdfs:range xsd:integer .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Scale Properties                                 │
+# ╰──────────────────────────────────────────────────╯
+#
+
+analysis:scaleType a rdf:Property ;
+    rdfs:label "Scale Type"@en ;
+    rdfs:comment "The type of measurement scale"@en ;
+    rdfs:domain analysis:Scale ;
+    rdfs:range analysis:ScaleType .
+
+analysis:minValue a rdf:Property ;
+    rdfs:label "Min Value"@en ;
+    rdfs:comment "Minimum value on the scale"@en ;
+    rdfs:domain analysis:Scale ;
+    rdfs:range xsd:decimal .
+
+analysis:maxValue a rdf:Property ;
+    rdfs:label "Max Value"@en ;
+    rdfs:comment "Maximum value on the scale"@en ;
+    rdfs:domain analysis:Scale ;
+    rdfs:range xsd:decimal .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Cross-Domain Relationship Properties             │
+# ╰──────────────────────────────────────────────────╯
+#
+
+analysis:hasResult a rdf:Property ;
+    rdfs:label "Has Result"@en ;
+    rdfs:comment "This resource has analysis results"@en ;
+    rdfs:range analysis:Result .
+
+analysis:hasStatisticalResult a rdf:Property ;
+    rdfs:subPropertyOf analysis:hasResult ;
+    rdfs:label "Has Statistical Result"@en ;
+    rdfs:comment "This resource has statistical analysis results (measurements, counts, etc.)"@en ;
+    rdfs:range analysis:Result .
+
+analysis:hasRatingResult a rdf:Property ;
+    rdfs:subPropertyOf analysis:hasResult ;
+    rdfs:label "Has Rating Result"@en ;
+    rdfs:comment "This resource has rating analysis results (qualitative assessments)"@en ;
+    rdfs:range analysis:Result .
+
+analysis:hasWorkflowMetric a rdf:Property ;
+    rdfs:subPropertyOf analysis:hasResult ;
+    rdfs:label "Has Workflow Metric"@en ;
+    rdfs:comment "This workflow execution has associated metrics (failure rate, duration, etc.)"@en ;
+    rdfs:range analysis:Result .
+
+analysis:hasExecution a rdf:Property ;
+    rdfs:label "Has Execution"@en ;
+    rdfs:comment "This resource has analysis executions"@en ;
+    rdfs:range analysis:Execution .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Status Enumeration Values                        │
+# ╰──────────────────────────────────────────────────╯
+#
+
+# Status Class
+analysis:Status a rdfs:Class ;
+    rdfs:label "Analysis Status"@en ;
+    rdfs:comment "Status values for analysis execution"@en .
+
+analysis:SUCCESS a analysis:Status ;
+    rdfs:label "Success"@en ;
+    rdfs:comment "Analysis completed successfully"@en .
+
+analysis:FAILED a analysis:Status ;
+    rdfs:label "Failed"@en ;
+    rdfs:comment "Analysis failed"@en .
+
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Data Type Enumeration Values                     │
+# ╰──────────────────────────────────────────────────╯
+#
+
+# Data Type Class
+analysis:DataType a rdfs:Class ;
+    rdfs:label "Analysis Data Type"@en ;
+    rdfs:comment "Data types for analysis values"@en .
+
+analysis:boolean a analysis:DataType ;
+    rdfs:label "Boolean"@en ;
+    rdfs:comment "Boolean data type"@en .
+
+analysis:integer a analysis:DataType ;
+    rdfs:label "Integer"@en ;
+    rdfs:comment "Integer data type"@en .
+
+analysis:decimal a analysis:DataType ;
+    rdfs:label "Decimal"@en ;
+    rdfs:comment "Decimal data type"@en .
+
+analysis:string a analysis:DataType ;
+    rdfs:label "String"@en ;
+    rdfs:comment "String data type"@en .
+
+analysis:duration a analysis:DataType ;
+    rdfs:label "Duration"@en ;
+    rdfs:comment "Duration data type"@en .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Metric Type Enumeration Values                   │
+# ╰──────────────────────────────────────────────────╯
+#
+
+# Metric Type Class
+analysis:MetricType a rdfs:Class ;
+    rdfs:label "Analysis Metric Type"@en ;
+    rdfs:comment "Types of analysis metrics"@en .
+
+analysis:rating a analysis:MetricType ;
+    rdfs:label "Rating"@en ;
+    rdfs:comment "Rating metric type"@en .
+
+analysis:measurement a analysis:MetricType ;
+    rdfs:label "Measurement"@en ;
+    rdfs:comment "Measurement metric type"@en .
+
+analysis:check a analysis:MetricType ;
+    rdfs:label "Check"@en ;
+    rdfs:comment "Check metric type"@en .
+
+analysis:audit a analysis:MetricType ;
+    rdfs:label "Audit"@en ;
+    rdfs:comment "Audit metric type"@en .
+
+#
+# ╭──────────────────────────────────────────────────╮
+# │ Scale Type Enumeration Values                    │
+# ╰──────────────────────────────────────────────────╯
+#
+
+# Scale Type Class
+analysis:ScaleType a rdfs:Class ;
+    rdfs:label "Analysis Scale Type"@en ;
+    rdfs:comment "Types of measurement scales"@en .
+
+analysis:ordinal a analysis:ScaleType ;
+    rdfs:label "Ordinal"@en ;
+    rdfs:comment "Ordinal scale type"@en .
+
+analysis:interval a analysis:ScaleType ;
+    rdfs:label "Interval"@en ;
+    rdfs:comment "Interval scale type"@en .
+
+analysis:ratio a analysis:ScaleType ;
+    rdfs:label "Ratio"@en ;
+    rdfs:comment "Ratio scale type"@en .
+
+analysis:categorical a analysis:ScaleType ;
+    rdfs:label "Categorical"@en ;
+    rdfs:comment "Categorical scale type"@en .
