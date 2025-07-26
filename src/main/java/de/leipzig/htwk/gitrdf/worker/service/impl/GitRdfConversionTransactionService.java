@@ -17,9 +17,12 @@ import java.time.ZoneId;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.StreamRDF;
-import org.apache.jena.riot.system.StreamRDFWriter;
+import org.apache.jena.riot.system.StreamRDFLib;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Repository;
@@ -86,7 +89,11 @@ public class GitRdfConversionTransactionService {
 
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(tempFile))) {
 
-            StreamRDF writer = StreamRDFWriter.getWriterStream(outputStream, RDFFormat.TURTLE);
+            // Apache Jena 5.5.0+: Use model-based approach similar to RdfTurtleTidier
+            // Create a model to collect triples, then write it out using RDFDataMgr
+            Model model = ModelFactory.createDefaultModel();
+            StreamRDF writer = StreamRDFLib.graph(model.getGraph());
+            
             writer.prefix(GIT_NAMESPACE, GIT_URI);
 
             Repository gitRepository = new FileRepositoryBuilder().setGitDir(gitFile).build();
@@ -128,6 +135,9 @@ public class GitRdfConversionTransactionService {
                 }
 
                 writer.finish();
+                
+                // Write the collected model to the output stream using RDFDataMgr
+                RDFDataMgr.write(outputStream, model, RDFFormat.TURTLE);
 
                 if (finished) {
                     break;

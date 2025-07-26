@@ -19,12 +19,10 @@ public class RdfPlatformPersonUtils {
 
     protected static final String PLATFORM_NS = PLATFORM_NAMESPACE + ":";
 
-    // Core RDF properties
     public static Node rdfTypeProperty() {
         return RdfUtils.uri("rdf:type");
     }
 
-    // Platform Person Properties (from platform ontology lines 59-101)
     public static Node nameProperty() {
         return RdfUtils.uri(PLATFORM_NS + "name");
     }
@@ -37,23 +35,14 @@ public class RdfPlatformPersonUtils {
         return RdfUtils.uri(PLATFORM_NS + "username");
     }
 
-    public static Node profileUrlProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "profileUrl");
-    }
-
     public static Node userIdProperty() {
         return RdfUtils.uri(PLATFORM_NS + "userId");
-    }
-
-    public static Node avatarUrlProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "avatarUrl");
     }
 
     public static Node userTypeProperty() {
         return RdfUtils.uri(PLATFORM_NS + "userType");
     }
 
-    // Triple creation methods for platform properties
     public static Triple createRdfTypeProperty(String personUri) {
         return Triple.create(RdfUtils.uri(personUri), rdfTypeProperty(), RdfUtils.uri("platform:Person"));
     }
@@ -70,17 +59,8 @@ public class RdfPlatformPersonUtils {
         return Triple.create(RdfUtils.uri(personUri), usernameProperty(), RdfUtils.stringLiteral(username));
     }
 
-    public static Triple createProfileUrlProperty(String personUri, String profileUrl) {
-        return Triple.create(RdfUtils.uri(personUri), profileUrlProperty(), RdfUtils.anyUriLiteral(profileUrl));
-    }
-
     public static Triple createUserIdProperty(String personUri, String userId) {
-        // v2.1: Changed from long to String to handle alphanumeric IDs across platforms
         return Triple.create(RdfUtils.uri(personUri), userIdProperty(), RdfUtils.stringLiteral(userId));
-    }
-
-    public static Triple createAvatarUrlProperty(String personUri, String avatarUrl) {
-        return Triple.create(RdfUtils.uri(personUri), avatarUrlProperty(), RdfUtils.anyUriLiteral(avatarUrl));
     }
 
     public static Triple createUserTypeProperty(String personUri, String userType) {

@@ -4,14 +4,13 @@ import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTran
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
 
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformTicketUtils;
-
 import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformTicketUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -28,12 +27,12 @@ public final class RdfGithubIssueReviewUtils {
     public static Node reviewOfProperty() { return uri(GH_NS + "reviewOf"); }
 
     public static Node identifierProperty() { return uri(GH_NS + "id");}
-    public static Node urlProperty() { return uri(GH_NS + "url"); }
+    public static Node apiUrlProperty() { return uri(GH_NS + "apiUrl"); }
     public static Node reviewBodyProperty() { return uri(GH_NS + "reviewBody"); }
     public static Node commitIdProperty() { return uri(GH_NS + "commitId"); }
     
     public static Node commentProperty() {
-        return uri(GH_NS + "comment");
+        return uri(GH_NS + "hasComment");
     }
 
     public static Node rootCommentsProperty() { return uri(GH_NS + "rootComment"); }
@@ -50,8 +49,8 @@ public final class RdfGithubIssueReviewUtils {
     public static Triple createReviewCommentProperty(String reviewUri, String commentUri) {
         return Triple.create(uri(reviewUri), commentProperty(), uri(commentUri));
     }
-    public static Triple createReviewUrlProperty(String reviewUri, String reviewUrl) {
-        return Triple.create(uri(reviewUri), urlProperty(), RdfUtils.uri(reviewUrl));
+    public static Triple createReviewApiUrlProperty(String reviewUri, String reviewUrl) {
+        return Triple.create(uri(reviewUri), apiUrlProperty(), RdfUtils.uri(reviewUrl));
     }
 
     public static Triple createIssueReviewRdfTypeProperty(String issueUri) {

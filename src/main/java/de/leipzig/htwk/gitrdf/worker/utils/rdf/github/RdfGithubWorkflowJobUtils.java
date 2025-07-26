@@ -25,7 +25,7 @@ public final class RdfGithubWorkflowJobUtils extends RdfPlatformWorkflowJobUtils
 
     // GitHub-specific workflow job properties
     public static Node identifierProperty() { return RdfUtils.uri(GH_NS + "workflowJobId"); }
-    public static Node jobUrlProperty() { return RdfUtils.uri(GH_NS + "workflowJobUrl"); }
+    public static Node apiUrlProperty() { return RdfUtils.uri(GH_NS + "apiUrl"); }
     public static Node hasStepProperty() { return RdfUtils.uri(GH_NS + "hasStep"); }
     
 
@@ -62,7 +62,7 @@ public final class RdfGithubWorkflowJobUtils extends RdfPlatformWorkflowJobUtils
     public static Triple createWorkflowJobStepProperty(String jobUri, String stepUri) {
         return Triple.create(RdfUtils.uri(jobUri), hasStepProperty(), RdfUtils.uri(stepUri));
     }
-    public static Triple createWorkflowJobUrlProperty(String jobUri, String jobUrl) {
-        return Triple.create(RdfUtils.uri(jobUri), jobUrlProperty(), RdfUtils.uri(jobUrl));
+    public static Triple createWorkflowJobApiUrlProperty(String jobUri, String jobUrl) {
+        return Triple.create(RdfUtils.uri(jobUri), apiUrlProperty(), RdfUtils.uri(jobUrl));
     }
 }

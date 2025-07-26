@@ -25,7 +25,7 @@ public final class RdfTurtleTidier {
             RDFDataMgr.read(model, in, Lang.TURTLE);
         }
         try (OutputStream out = new FileOutputStream(file)) {
-            RDFDataMgr.write(out, model, RDFFormat.TURTLE);
+            RDFDataMgr.write(out, model, RDFFormat.TURTLE_PRETTY);
         }
     }
 }

@@ -1,16 +1,16 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf.github;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
-
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformCommentUtils;
 
 import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformCommentUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -23,12 +23,9 @@ import lombok.NoArgsConstructor;
 public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
 
   private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
+  private static final String PLATFORM_NS = PLATFORM_NAMESPACE + ":";
 
   // GitHub-specific comment properties
-  public static Node commentHtmlUrlProperty() {
-    return uri(GH_NS + "commentUrl");
-  }
-
   public static Node commentUpdatedAtProperty() {
     return uri(GH_NS + "updatedAt");
   }
@@ -68,9 +65,18 @@ public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
     return uri(GH_NS + "hasReaction");
   }
 
+  public static Node hasCommentProperty() {
+    return uri(GH_NS + "hasComment");
+  }
+
   public static Node authorAssociationProperty() {
     return uri(GH_NS + "authorAssociation");
   }
+
+  public static Node apiUrlProperty() {
+    return uri(PLATFORM_NS + "apiUrl");
+  }
+
 
   // Override platform method to create GitHub Comment type
   public static Triple createCommentRdfType(String commentUri) {
@@ -143,6 +149,15 @@ public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
     return Triple.create(uri(commentUri), authorAssociationProperty(), RdfUtils.stringLiteral(association));
   }
 
+  public static Triple createCommentReactionsApiUrl(String commentUri, String reactionsApiUrl) {
+    return Triple.create(uri(commentUri), apiUrlProperty(), uri(reactionsApiUrl));
+  }
+
+  public static Triple createHasCommentProperty(String parentEntityUri, String commentUri) {
+    return Triple.create(uri(parentEntityUri), hasCommentProperty(), uri(commentUri));
+  }
+
+
   // Convenience methods for creating complete comment entities
   public static Triple[] createBasicComment(String commentUri, long id, String body, String userUri,
       LocalDateTime createdAt, String parentEntityUri) {
@@ -151,8 +166,8 @@ public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
         createCommentId(commentUri, id),
         createCommentBody(commentUri, body),
         createCommentUser(commentUri, userUri),
-        createCommentCreatedAt(commentUri, createdAt),
-        createCommentOf(commentUri, parentEntityUri)
+        createCommentCreatedAt(commentUri, createdAt)
+        // Note: Parent-to-comment relationship now handled by parent entity using platform:hasComment
     };
   }
 
@@ -165,7 +180,7 @@ public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
         createCommentBody(commentUri, body),
         createCommentUser(commentUri, userUri),
         createCommentCreatedAt(commentUri, createdAt),
-        createCommentOf(commentUri, parentEntityUri),
+        // Note: Parent-to-comment relationship now handled by parent entity using platform:hasComment
         createParentComment(commentUri, parentCommentUri),
         createThreadDepth(commentUri, threadDepth)
     };

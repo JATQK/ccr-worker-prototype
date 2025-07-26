@@ -93,14 +93,24 @@ public final class GithubUriUtils {
 
     // Reaction
     public static String getIssueCommentReactionUri(String issueUri, String commentId, String reactionId) {
-        // https://github.com/dotnet/core/issues/9945/comments/3034788473/reactions/295051788
-        return issueUri + "/comments/" + commentId + "/reactions/" + reactionId;
+        // Extract issue number from issueUri (e.g., from https://github.com/dotnet/core/issues/7455)
+        String issueNumber = issueUri.substring(issueUri.lastIndexOf('/') + 1);
+        // github:reaction-i7455-c1207081381-r178832322
+        return "github:reaction-i" + issueNumber + "-c" + commentId + "-r" + reactionId;
     }
     
     public static String getIssueReviewCommentReactionUri(String issueUri, String commentId, String reactionId) {
-        // https://github.com/dotnet/core/issues/9945/comments/3034788473/reactions/295051788
-        return issueUri + "/comments/" + commentId + "/reactions/" + reactionId;
+        // Extract issue number from issueUri (e.g., from https://github.com/dotnet/core/issues/7455)
+        String issueNumber = issueUri.substring(issueUri.lastIndexOf('/') + 1);
+        // github:reaction-i7455-c1207081381-r178832322
+        return "github:reaction-i" + issueNumber + "-c" + commentId + "-r" + reactionId;
     }
+
+    public static String getIssueCommentReactionsApiUrl(String owner, String repository, String commentId) {
+        // https://api.github.com/repos/dotnet/core/issues/comments/1207081381/reactions
+        return GITHUB_API_BASE + "repos/" + owner + "/" + repository + "/issues/comments/" + commentId + "/reactions";
+    }
+
 
     // Workflow
     public static String getWorkflowJobUri(String runUri, Long jobId) {

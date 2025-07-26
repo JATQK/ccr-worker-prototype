@@ -53,7 +53,7 @@ public final class RdfGithubCommitUtils {
     }
 
     public static Node mergedIntoIssueProperty() {
-        return uri(GITHUB_NS + "mergedIntoIssue");
+        return uri(PLATFORM_NS + "mergedIntoIssue");
     }
 
     public static Triple createRepositoryRdfTypeProperty(String repoUri) {

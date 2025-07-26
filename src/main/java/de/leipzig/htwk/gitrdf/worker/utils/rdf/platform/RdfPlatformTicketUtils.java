@@ -8,7 +8,6 @@ import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
-
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -93,11 +92,6 @@ public class RdfPlatformTicketUtils {
         return RdfUtils.uri(PLATFORM_NS + "mergedBy");
     }
 
-    // Additional ticket properties
-    public static Node urlProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "url");
-    }
-
     public static Node lockedProperty() {
         return RdfUtils.uri(PLATFORM_NS + "locked");
     }
@@ -170,10 +164,6 @@ public class RdfPlatformTicketUtils {
 
     public static Triple createMergedByProperty(String ticketUri, String userUri) {
         return Triple.create(RdfUtils.uri(ticketUri), mergedByProperty(), RdfUtils.uri(userUri));
-    }
-
-    public static Triple createUrlProperty(String ticketUri, String url) {
-        return Triple.create(RdfUtils.uri(ticketUri), urlProperty(), RdfUtils.anyUriLiteral(url));
     }
 
     public static Triple createLockedProperty(String ticketUri, boolean locked) {

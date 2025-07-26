@@ -6,7 +6,6 @@ import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
-
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -20,12 +19,10 @@ public class RdfPlatformRepositoryUtils {
 
     protected static final String PLATFORM_NS = PLATFORM_NAMESPACE + ":";
 
-    // Core RDF properties
     public static Node rdfTypeProperty() {
         return RdfUtils.uri("rdf:type");
     }
 
-    // Platform Repository Properties (from platform ontology lines 327-362)
     public static Node repositoryNameProperty() {
         return RdfUtils.uri(PLATFORM_NS + "repositoryName");
     }
@@ -46,11 +43,6 @@ public class RdfPlatformRepositoryUtils {
         return RdfUtils.uri(PLATFORM_NS + "defaultBranch");
     }
 
-    public static Node repositoryUrlProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "repositoryUrl");
-    }
-
-    // Triple creation methods for platform properties
     public static Triple createRdfTypeProperty(String repositoryUri) {
         return Triple.create(RdfUtils.uri(repositoryUri), rdfTypeProperty(), RdfUtils.uri("platform:Repository"));
     }
@@ -75,7 +67,4 @@ public class RdfPlatformRepositoryUtils {
         return Triple.create(RdfUtils.uri(repositoryUri), defaultBranchProperty(), RdfUtils.stringLiteral(defaultBranch));
     }
 
-    public static Triple createRepositoryUrlProperty(String repositoryUri, String url) {
-        return Triple.create(RdfUtils.uri(repositoryUri), repositoryUrlProperty(), RdfUtils.anyUriLiteral(url));
-    }
 }
