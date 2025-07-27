@@ -41,16 +41,34 @@ worker:
 
 github:
   login:
-    #jwt-token: ${GITHUB_LOGIN_JWT_TOKEN}
-    key: ${GITHUB_LOGIN_KEY}
+    # Legacy single account configuration (still supported)
+    key: ${GITHUB_LOGIN_KEY:}
     app:
-      id: ${GITHUB_LOGIN_APP_ID}
+      id: ${GITHUB_LOGIN_APP_ID:}
       installation:
-        id: ${GITHUB_LOGIN_APP_INSTALLATION_ID}
+        id: ${GITHUB_LOGIN_APP_INSTALLATION_ID:}
     system:
       user:
-        name: ${GITHUB_LOGIN_SYSTEM_USER_NAME}
-        personal-access-token: ${GITHUB_LOGIN_SYSTEM_USER_PERSONALACCESSTOKEN}
+        name: ${GITHUB_LOGIN_SYSTEM_USER_NAME:}
+        personal-access-token: ${GITHUB_LOGIN_SYSTEM_USER_PERSONALACCESSTOKEN:}
+    
+    # Multi-account configuration with numbered suffixes
+    # Account 1
+    key.1: ${GITHUB_LOGIN_KEY_1:}
+    app.id.1: ${GITHUB_LOGIN_APP_ID_1:}
+    app.installation.id.1: ${GITHUB_LOGIN_APP_INSTALLATION_ID_1:}
+    system.user.name.1: ${GITHUB_LOGIN_SYSTEM_USER_NAME_1:}
+    system.user.personal-access-token.1: ${GITHUB_LOGIN_SYSTEM_USER_PERSONALACCESSTOKEN_1:}
+    
+    # Account 2
+    key.2: ${GITHUB_LOGIN_KEY_2:}
+    app.id.2: ${GITHUB_LOGIN_APP_ID_2:}
+    app.installation.id.2: ${GITHUB_LOGIN_APP_INSTALLATION_ID_2:}
+    system.user.name.2: ${GITHUB_LOGIN_SYSTEM_USER_NAME_2:}
+    system.user.personal-access-token.2: ${GITHUB_LOGIN_SYSTEM_USER_PERSONALACCESSTOKEN_2:}
+    
+    # Additional accounts can be added by incrementing the numbers (3, 4, 5, etc.)
+    
   rate-limit:
     requests-left-border: 50 # At this amount of requests left the application will start waiting for the rate limit to reset
 

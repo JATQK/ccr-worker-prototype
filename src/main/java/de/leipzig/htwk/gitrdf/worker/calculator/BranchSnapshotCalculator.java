@@ -57,7 +57,7 @@ public class BranchSnapshotCalculator {
         Node branchSnapshotNode = branchSnapshotResource.asNode();
 
         writer.triple(RdfCommitUtils.createBranchSnapshotProperty(branchSnapshotNode));
-        writer.triple(RdfCommitUtils.createBranchSnapshotDateProperty(branchSnapshotNode, LocalDateTime.now()));
+        writer.triple(RdfCommitUtils.createBranchSnapshotDateProperty(branchSnapshotNode, LocalDateTime.now(java.time.Clock.systemUTC())));
 
         writer.finish();
 

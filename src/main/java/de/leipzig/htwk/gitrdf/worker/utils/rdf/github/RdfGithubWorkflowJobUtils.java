@@ -1,6 +1,7 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf.github;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 
 import java.time.LocalDateTime;
 
@@ -23,9 +24,11 @@ public final class RdfGithubWorkflowJobUtils extends RdfPlatformWorkflowJobUtils
 
     private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
 
+    protected static final String PLATFORM_NS = PLATFORM_NAMESPACE + ":";
+
     // GitHub-specific workflow job properties
     public static Node identifierProperty() { return RdfUtils.uri(GH_NS + "workflowJobId"); }
-    public static Node apiUrlProperty() { return RdfUtils.uri(GH_NS + "apiUrl"); }
+    public static Node apiUrlProperty() { return RdfUtils.uri(PLATFORM_NS + "apiUrl"); }
     public static Node hasStepProperty() { return RdfUtils.uri(GH_NS + "hasStep"); }
     
 

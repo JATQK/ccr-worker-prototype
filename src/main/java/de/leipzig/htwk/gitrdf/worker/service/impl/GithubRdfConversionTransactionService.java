@@ -113,9 +113,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class GithubRdfConversionTransactionService {
 
-    private static final int PROCESS_ISSUE_LIMIT = 500; // Limit for the number of issues to process
+    private static final int PROCESS_ISSUE_LIMIT = 10000; // Limit for the number of issues to process
 
-    private static final int PROCESS_COMMIT_LIMIT = 500; // Limit for the number of commits to process
+    private static final int PROCESS_COMMIT_LIMIT = 10000; // Limit for the number of commits to process
 
     private static final boolean PROCESS_COMMENT_REACTIONS = true;
 
@@ -162,6 +162,7 @@ public class GithubRdfConversionTransactionService {
     private final Map<Integer, GHPullRequest> pullRequestCache = new HashMap<>();
     private final Map<Integer, List<GHPullRequestReview>> reviewCache = new HashMap<>();
     private final Map<Long, List<GHPullRequestReviewComment>> reviewCommentsCache = new HashMap<>();
+    private final Map<Long, GHPullRequestReviewComment> individualReviewCommentsCache = new HashMap<>();
     private final Map<Integer, List<GHIssueComment>> issueCommentsCache = new HashMap<>();
     private final Map<Long, List<GHReaction>> reviewCommentReactionsCache = new HashMap<>();
     private final Map<Long, List<GHReaction>> issueCommentReactionsCache = new HashMap<>();
@@ -263,7 +264,7 @@ public class GithubRdfConversionTransactionService {
 
     }
 
-    private void writeMergeInfo(GHIssue issue, GHPullRequest pr, StreamRDF writer, String issueUri) {
+    private void writeMergeInfo(GHIssue issue, GHPullRequest pr, StreamRDF writer, String issueUri, GitHub gitHubHandle) {
         if (issue == null || !issue.isPullRequest() || pr == null) {
             return;
         }
@@ -277,8 +278,11 @@ public class GithubRdfConversionTransactionService {
             }
 
             if (pr.getMergedBy() != null && pr.getMergedBy().getLogin() != null) {
-                writer.triple(RdfGithubPullRequestUtils.createIssueMergedByProperty(issueUri,
-                        pr.getMergedBy().getHtmlUrl().toString()));
+                // Validate and ensure GitHub user exists in RDF
+                String mergedByUserUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, pr.getMergedBy());
+                if (mergedByUserUri != null) {
+                    writer.triple(RdfGithubPullRequestUtils.createIssueMergedByProperty(issueUri, mergedByUserUri));
+                }
             }
 
             if (pr.getMergeCommitSha() != null) {
@@ -974,7 +978,7 @@ public class GithubRdfConversionTransactionService {
                             if (ghIssue.isPullRequest()) {
                                 GHPullRequest pullRequest = getPullRequestCached(
                                         githubRepositoryHandle, issueNumber);
-                                writeMergeInfo(ghIssue, pullRequest, writer, issueUri);
+                                writeMergeInfo(ghIssue, pullRequest, writer, issueUri, gitHubHandle);
                                 writeWorkflowRunInfo(pullRequest, writer, issueUri, repositoryUri);
                             }
                         }
@@ -984,8 +988,11 @@ public class GithubRdfConversionTransactionService {
                             List<GHUser> assignees = ghIssue.getAssignees();
                             for (GHUser assignee : assignees) {
                                 if (assignee != null && assignee.getLogin() != null) {
-                                    String assigneeUri = assignee.getHtmlUrl().toString();
-                                    writer.triple(RdfPlatformTicketUtils.createAssigneeProperty(issueUri, assigneeUri));
+                                    // Validate and ensure GitHub user exists in RDF
+                                    String assigneeUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, assignee);
+                                    if (assigneeUri != null) {
+                                        writer.triple(RdfPlatformTicketUtils.createAssigneeProperty(issueUri, assigneeUri));
+                                    }
                                 }
                             }
                         }
@@ -1053,6 +1060,9 @@ public class GithubRdfConversionTransactionService {
                                 // Process the comments of the review
                                 for (GHPullRequestReviewComment c : reviewComments) {
                                     long cid = c.getId();
+                                    
+                                    // Cache individual comment for potential parent lookups
+                                    individualReviewCommentsCache.put(cid, c);
 
                                     // Setup the URI for a review comment of a pull request
                                     String reviewCommentURI = GithubUriUtils.getIssueReviewCommentUri(
@@ -1100,12 +1110,16 @@ public class GithubRdfConversionTransactionService {
                                         String parentCommentUri = GithubUriUtils.getIssueReviewCommentUri(
                                                 repositoryUri, String.valueOf(parentId));
 
-                                        writer.triple(RdfGithubCommentUtils.createParentComment(
-                                                reviewCommentURI, parentCommentUri));
+                                        // Validate and ensure parent comment exists before creating relationships
+                                        if (validateAndEnsureParentReviewComment(writer, githubRepositoryHandle, 
+                                                parentId, repositoryUri, issueUri, gitHubHandle)) {
+                                            writer.triple(RdfGithubCommentUtils.createParentComment(
+                                                    reviewCommentURI, parentCommentUri));
 
-                                        // Also create the reverse relationship - parent has this as a reply
-                                        writer.triple(RdfGithubCommentUtils.createHasReply(
-                                                parentCommentUri, reviewCommentURI));
+                                            // Also create the reverse relationship - parent has this as a reply
+                                            writer.triple(RdfGithubCommentUtils.createHasReply(
+                                                    parentCommentUri, reviewCommentURI));
+                                        }
                                     }
 
                                     // Reactions
@@ -1901,6 +1915,87 @@ public class GithubRdfConversionTransactionService {
             reviewCommentReactionsCache.put(id, reactions);
         }
         return reactions;
+    }
+
+    /**
+     * Fetches an individual review comment by ID from GitHub API
+     * Since GitHub API doesn't provide direct access to review comments by ID,
+     * we check our existing cache first, then return null if not found
+     */
+    private GHPullRequestReviewComment getIndividualReviewCommentCached(GHRepository repo, long commentId)
+            throws IOException, InterruptedException {
+        GHPullRequestReviewComment comment = individualReviewCommentsCache.get(commentId);
+        if (comment != null) {
+            return comment;
+        }
+        
+        // GitHub API doesn't provide direct access to review comments by ID
+        // The comment should have been cached during normal processing
+        // If it's not in cache, it means it wasn't processed yet or doesn't exist
+        log.debug("Review comment {} not found in cache, may not exist or not yet processed", commentId);
+        return null;
+    }
+
+    /**
+     * Validates that a parent review comment exists and creates its full RDF representation if needed
+     */
+    private boolean validateAndEnsureParentReviewComment(StreamRDF writer, GHRepository repo, 
+            long parentCommentId, String repositoryUri, String issueUri, GitHub gitHubHandle) {
+        try {
+            // Check if we already have this comment in our cache
+            GHPullRequestReviewComment parentComment = getIndividualReviewCommentCached(repo, parentCommentId);
+            
+            if (parentComment == null) {
+                log.warn("Parent review comment {} not found or inaccessible", parentCommentId);
+                return false;
+            }
+
+            // Create the full RDF representation of the parent comment
+            String parentCommentUri = GithubUriUtils.getIssueReviewCommentUri(
+                    repositoryUri, String.valueOf(parentCommentId));
+
+            // Create basic comment triples
+            writer.triple(RdfGithubCommentUtils.createCommentRdfType(parentCommentUri));
+            writer.triple(RdfGithubCommentUtils.createCommentId(parentCommentUri, parentComment.getId()));
+
+            // Content and user
+            if (parentComment.getBody() != null && !parentComment.getBody().isEmpty()) {
+                writer.triple(RdfGithubCommentUtils.createCommentBody(parentCommentUri, parentComment.getBody()));
+            }
+            
+            if (parentComment.getUser() != null && parentComment.getUser().getLogin() != null) {
+                // Validate and ensure GitHub user exists in RDF
+                String commentUserUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, parentComment.getUser());
+                if (commentUserUri != null) {
+                    writer.triple(RdfGithubCommentUtils.createCommentUser(parentCommentUri, commentUserUri));
+                }
+            }
+            
+            if (parentComment.getCreatedAt() != null) {
+                writer.triple(RdfGithubCommentUtils.createCommentCreatedAt(
+                        parentCommentUri, localDateTimeFrom(parentComment.getCreatedAt())));
+            }
+
+            // Handle nested parent relationships recursively
+            Long grandParentId = parentComment.getInReplyToId();
+            if (grandParentId != null && grandParentId > 0 && !grandParentId.equals(parentCommentId)) {
+                String grandParentCommentUri = GithubUriUtils.getIssueReviewCommentUri(
+                        repositoryUri, String.valueOf(grandParentId));
+                
+                // Recursively ensure grandparent exists
+                if (validateAndEnsureParentReviewComment(writer, repo, grandParentId, repositoryUri, issueUri, gitHubHandle)) {
+                    writer.triple(RdfGithubCommentUtils.createParentComment(parentCommentUri, grandParentCommentUri));
+                    writer.triple(RdfGithubCommentUtils.createHasReply(grandParentCommentUri, parentCommentUri));
+                }
+            }
+
+            log.debug("Successfully ensured parent review comment {} exists in RDF", parentCommentId);
+            return true;
+
+        } catch (Exception e) {
+            log.error("Error validating/ensuring parent review comment {}: {}", parentCommentId, e.getMessage(), e);
+            return false;
+        }
     }
 
     private List<GHIssueComment> getIssueCommentsCached(GHIssue issue)

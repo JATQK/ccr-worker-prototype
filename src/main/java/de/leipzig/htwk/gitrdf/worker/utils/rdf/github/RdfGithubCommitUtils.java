@@ -4,15 +4,14 @@ import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTran
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
 
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.git.RdfCommitUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformRepositoryUtils;
-
 import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.git.RdfCommitUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformRepositoryUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -53,7 +52,7 @@ public final class RdfGithubCommitUtils {
     }
 
     public static Node mergedIntoIssueProperty() {
-        return uri(PLATFORM_NS + "mergedIntoIssue");
+        return uri(GITHUB_NS + "mergedIntoIssue");
     }
 
     public static Triple createRepositoryRdfTypeProperty(String repoUri) {

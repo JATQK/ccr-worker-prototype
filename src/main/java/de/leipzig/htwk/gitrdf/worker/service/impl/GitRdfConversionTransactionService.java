@@ -120,7 +120,7 @@ public class GitRdfConversionTransactionService {
                     writer.triple(createAuthorEmailProperty(gitHash, commit.getAuthorIdent().getEmailAddress()));
 
                     Instant instant = Instant.ofEpochSecond(commit.getCommitTime());
-                    LocalDateTime commitDateTime = instant.atZone(ZoneId.of("Europe/Berlin")).toLocalDateTime();
+                    LocalDateTime commitDateTime = instant.atOffset(java.time.ZoneOffset.UTC).toLocalDateTime();
 
                     writer.triple(createAuthorDateProperty(gitHash, commitDateTime.toString()));
                     writer.triple(createCommitDateProperty(gitHash, commitDateTime.toString()));

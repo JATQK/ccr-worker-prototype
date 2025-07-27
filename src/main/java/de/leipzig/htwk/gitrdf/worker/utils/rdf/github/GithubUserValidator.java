@@ -31,7 +31,11 @@ public class GithubUserValidator {
      * @return The user URI if successful, null if user is invalid
      */
     public static String validateAndEnsureUser(StreamRDF writer, GitHub github, GHUser ghUser) {
-        // Enhanced null safety checks
+        // Enhanced null safety checks - allow null writer for validation-only mode
+        if (writer == null) {
+            log.debug("StreamRDF writer is null, running in validation-only mode (no RDF output)");
+        }
+        
         if (ghUser == null) {
             log.debug("Received null GHUser, skipping user creation");
             return null;
@@ -64,22 +68,53 @@ public class GithubUserValidator {
         }
         
         try {
-            // Create the GitHub user RDF representation
-            createGithubUserRdf(writer, ghUser, userUri);
+            // Create the GitHub user RDF representation (only if writer is provided)
+            if (writer != null) {
+                createGithubUserRdf(writer, ghUser, userUri);
+                log.debug("Created GitHub user RDF for: {}", login);
+            } else {
+                log.debug("Validation-only mode: Skipping RDF creation for: {}", login);
+            }
             processedUsers.add(userUri);
-            
-            log.debug("Created GitHub user RDF for: {}", login);
             return userUri;
             
         } catch (Exception e) {
-            log.warn("Failed to create GitHub user RDF for login '{}': {}", login, e.getMessage());
-            // Try to create at least a basic user entry as fallback
-            try {
-                createBasicGithubUserRdf(writer, login, userUri);
+            log.warn("Failed to create GitHub user RDF for login '{}' using embedded user object: {}", login, e.getMessage());
+            
+            // FALLBACK: Try to fetch user directly from GitHub API if the embedded object failed
+            if (github != null) {
+                log.debug("Attempting fallback: fetching user '{}' directly from GitHub API", login);
+                try {
+                    GHUser directUser = github.getUser(login);
+                    if (directUser != null) {
+                        // Try again with the directly fetched user (only if writer is provided)
+                        if (writer != null) {
+                            createGithubUserRdf(writer, directUser, userUri);
+                            log.info("Successfully created GitHub user RDF for '{}' using direct API fallback", login);
+                        } else {
+                            log.debug("Validation-only mode: Direct API fallback successful for: {}", login);
+                        }
+                        processedUsers.add(userUri);
+                        return userUri;
+                    }
+                } catch (Exception directFetchException) {
+                    log.warn("Direct API fallback also failed for user '{}': {}", login, directFetchException.getMessage());
+                }
+            }
+            
+            // If both methods failed, try to create at least a basic user entry as final fallback
+            if (writer != null) {
+                try {
+                    createBasicGithubUserRdf(writer, login, userUri);
+                    processedUsers.add(userUri);
+                    log.debug("Created fallback basic user RDF for: {}", login);
+                } catch (Exception fallbackException) {
+                    log.error("Even basic fallback user creation failed for '{}': {}", login, fallbackException.getMessage());
+                }
+            } else {
+                // In validation-only mode, still add to processed users and return URI
                 processedUsers.add(userUri);
-                log.debug("Created fallback basic user RDF for: {}", login);
-            } catch (Exception fallbackException) {
-                log.error("Even fallback user creation failed for '{}': {}", login, fallbackException.getMessage());
+                log.debug("Validation-only mode: Basic fallback for: {}", login);
             }
             return userUri; // Return URI even if some properties failed
         }

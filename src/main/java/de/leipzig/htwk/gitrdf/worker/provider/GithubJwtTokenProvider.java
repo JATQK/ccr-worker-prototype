@@ -1,6 +1,7 @@
 package de.leipzig.htwk.gitrdf.worker.provider;
 
 import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
+import de.leipzig.htwk.gitrdf.worker.service.GithubAccountRotationService;
 import io.jsonwebtoken.Jwts;
 import lombok.extern.slf4j.Slf4j;
 import org.kohsuke.github.authorization.AuthorizationProvider;
@@ -16,36 +17,49 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
 public class GithubJwtTokenProvider implements AuthorizationProvider {
 
-    private final GithubConfig githubConfig;
+    private final GithubAccountRotationService githubAccountRotationService;
 
     private final Clock clock;
 
-    private final PrivateKey privateKey;
+    private final Map<Integer, PrivateKey> privateKeys = new ConcurrentHashMap<>();
 
     public GithubJwtTokenProvider(
-            GithubConfig githubConfig, Clock clock) throws NoSuchAlgorithmException, InvalidKeySpecException {
+            GithubConfig githubConfig, 
+            GithubAccountRotationService githubAccountRotationService,
+            Clock clock) throws NoSuchAlgorithmException, InvalidKeySpecException {
 
         // weird cryptography java adapter dependency
         java.security.Security.addProvider(
                 new org.bouncycastle.jce.provider.BouncyCastleProvider());
 
+        this.githubAccountRotationService = githubAccountRotationService;
+        this.clock = clock;
+        
+        // Initialize private keys for all accounts
+        for (GithubConfig.GithubApiAccount account : githubConfig.getGithubApiAccounts()) {
+            PrivateKey privateKey = createPrivateKey(account.getPemPrivateBase64Key());
+            privateKeys.put(account.getAccountNumber(), privateKey);
+        }
+    }
+    
+    private PrivateKey createPrivateKey(String pemPrivateBase64Key) throws NoSuchAlgorithmException, InvalidKeySpecException {
         // not really pkcs8 encoded (its actually pkcs1), but with the bouncy castle provider above,
         // the key can be generated successfully nevertheless.
         // Sadly github only provides pkcs1 keys
-        byte[] pkcs8EncodedBytes = Base64.getDecoder().decode(githubConfig.getPemPrivateBase64Key());
+        byte[] pkcs8EncodedBytes = Base64.getDecoder().decode(pemPrivateBase64Key);
 
         PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(pkcs8EncodedBytes);
 
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 
-        this.privateKey = keyFactory.generatePrivate(keySpec);
-        this.githubConfig = githubConfig;
-        this.clock = clock;
+        return keyFactory.generatePrivate(keySpec);
     }
 
     @Override
@@ -55,12 +69,16 @@ public class GithubJwtTokenProvider implements AuthorizationProvider {
     }
 
     public String getSignedJwtTokenToFetchInstallationToken() {
+        GithubConfig.GithubApiAccount currentAccount = githubAccountRotationService.getCurrentAccount();
+        PrivateKey currentPrivateKey = privateKeys.get(currentAccount.getAccountNumber());
+        
+        log.debug("Using GitHub API account {} for JWT token generation", currentAccount.getAccountNumber());
 
         return Jwts.builder()
-                .issuer(githubConfig.getGithubAppId())
+                .issuer(currentAccount.getGithubAppId())
                 .issuedAt(getDateOneMinuteInThePast())
                 .expiration(getDateThreeMinutesInTheFuture())
-                .signWith(this.privateKey, Jwts.SIG.RS256)
+                .signWith(currentPrivateKey, Jwts.SIG.RS256)
                 .compact();
     }
 
