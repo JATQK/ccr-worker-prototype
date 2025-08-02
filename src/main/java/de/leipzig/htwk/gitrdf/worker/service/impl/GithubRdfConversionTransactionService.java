@@ -88,6 +88,7 @@ import de.leipzig.htwk.gitrdf.worker.calculator.BranchSnapshotCalculator;
 import de.leipzig.htwk.gitrdf.worker.calculator.CommitBranchCalculator;
 import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
 import de.leipzig.htwk.gitrdf.worker.handler.LockHandler;
+import de.leipzig.htwk.gitrdf.worker.service.GithubAccountRotationService;
 import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import de.leipzig.htwk.gitrdf.worker.utils.GithubUriUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfTurtleTidier;
@@ -146,6 +147,8 @@ public class GithubRdfConversionTransactionService {
     private final EntityManager entityManager;
 
     private final int commitsPerIteration;
+    
+    private final GithubAccountRotationService githubAccountRotationService;
 
     private static final int RETRY_DELAY_MS = 1000;
 
@@ -184,12 +187,14 @@ public class GithubRdfConversionTransactionService {
             GithubHandlerService githubHandlerService,
             EntityManager entityManager,
             GithubConfig githubConfig,
+            GithubAccountRotationService githubAccountRotationService,
             @Value("${worker.commits-per-iteration}") int commitsPerIteration) {
 
         this.githubHandlerService = githubHandlerService;
         this.githubConfig = githubConfig;
         this.entityManager = entityManager;
         this.commitsPerIteration = commitsPerIteration;
+        this.githubAccountRotationService = githubAccountRotationService;
     }
 
     @Transactional(rollbackFor = { IOException.class, GitAPIException.class, URISyntaxException.class,
@@ -210,6 +215,11 @@ public class GithubRdfConversionTransactionService {
         issueCommentReactionsCache.clear();
         commitCache.clear();
         seenReviewIds.clear();
+        
+        // Initialize processing limits for rate limit logging
+        githubAccountRotationService.setProcessingLimits(PROCESS_ISSUE_LIMIT, PROCESS_COMMIT_LIMIT);
+        githubAccountRotationService.updateProcessedIssuesCount(0);
+        githubAccountRotationService.updateProcessedCommitsCount(0);
 
         Git gitHandler = null;
 
@@ -584,6 +594,7 @@ public class GithubRdfConversionTransactionService {
 
                     for (RevCommit commit : commits) {
                         commitsProcessed++;
+                        githubAccountRotationService.updateProcessedCommitsCount(commitsProcessed);
                         if (commitsProcessed > PROCESS_COMMIT_LIMIT && PROCESS_COMMIT_LIMIT > 0) {
                             log.info("Max computed commits reached, stopping commit processing.");
                             finished = true;
@@ -1234,6 +1245,7 @@ public class GithubRdfConversionTransactionService {
                         issueCounter++;
                         // Count the outside of limit the number of issues to process
                         issuesProcessed++;
+                        githubAccountRotationService.updateProcessedIssuesCount(issuesProcessed);
 
                         if (issueCounter > 100) {
                             log.info("Finish issue rdf conversion batch");

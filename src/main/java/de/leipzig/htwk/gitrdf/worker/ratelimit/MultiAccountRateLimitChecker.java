@@ -38,7 +38,8 @@ public class MultiAccountRateLimitChecker extends RateLimitChecker {
 
         // If we're at or below the threshold, try to switch accounts instead of sleeping
         if (remaining <= sleepAtOrBelow) {
-            log.warn("GitHub API rate limit threshold reached. Remaining: {}, Threshold: {}", remaining, sleepAtOrBelow);
+            log.warn("GitHub API rate limit threshold reached. Remaining: {}, Threshold: {}. Processing progress: {}", 
+                    remaining, sleepAtOrBelow, githubAccountRotationService.getProcessingStatistics());
             
             // Check if we have other accounts available
             long availableAccounts = githubAccountRotationService.getAvailableAccountsCount();
@@ -55,7 +56,8 @@ public class MultiAccountRateLimitChecker extends RateLimitChecker {
                 return false;
             } else {
                 // No other accounts available, fall back to sleeping until the earliest reset time
-                log.warn("No other GitHub API accounts available. Falling back to waiting for earliest rate limit reset.");
+                log.warn("No other GitHub API accounts available. Falling back to waiting for earliest rate limit reset. Processing progress: {}", 
+                        githubAccountRotationService.getProcessingStatistics());
                 java.time.Instant earliestReset = githubAccountRotationService.getEarliestRateLimitResetTime();
                 long sleepTime = 0;
                 if (earliestReset != null) {

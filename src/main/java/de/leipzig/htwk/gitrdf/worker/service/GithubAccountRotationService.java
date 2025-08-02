@@ -22,6 +22,12 @@ public class GithubAccountRotationService {
     private final Map<Integer, Boolean> accountAvailability = new ConcurrentHashMap<>();
     private final Map<Integer, Boolean> accountValidCredentials = new ConcurrentHashMap<>();
     
+    // Processing statistics
+    private final AtomicInteger processedIssuesCount = new AtomicInteger(0);
+    private final AtomicInteger processedCommitsCount = new AtomicInteger(0);
+    private volatile int maxIssuesLimit = 0;
+    private volatile int maxCommitsLimit = 0;
+    
     public GithubAccountRotationService(GithubConfig githubConfig) {
         this.githubConfig = githubConfig;
         // Initialize all accounts as available and with valid credentials
@@ -233,5 +239,41 @@ public class GithubAccountRotationService {
         return accountValidCredentials.values().stream()
                 .mapToLong(valid -> valid ? 1 : 0)
                 .sum();
+    }
+    
+    /**
+     * Set the maximum limits for processing
+     */
+    public void setProcessingLimits(int maxIssues, int maxCommits) {
+        this.maxIssuesLimit = maxIssues;
+        this.maxCommitsLimit = maxCommits;
+    }
+    
+    /**
+     * Update the count of processed issues
+     */
+    public void updateProcessedIssuesCount(int count) {
+        this.processedIssuesCount.set(count);
+    }
+    
+    /**
+     * Update the count of processed commits
+     */
+    public void updateProcessedCommitsCount(int count) {
+        this.processedCommitsCount.set(count);
+    }
+    
+    /**
+     * Get current processing statistics for logging when rate limit is hit
+     */
+    public String getProcessingStatistics() {
+        int currentIssues = processedIssuesCount.get();
+        int currentCommits = processedCommitsCount.get();
+        int remainingIssues = Math.max(0, maxIssuesLimit - currentIssues);
+        int remainingCommits = Math.max(0, maxCommitsLimit - currentCommits);
+        
+        return String.format("Issues: %d processed, %d remaining (limit: %d). Commits: %d processed, %d remaining (limit: %d)", 
+                currentIssues, remainingIssues, maxIssuesLimit,
+                currentCommits, remainingCommits, maxCommitsLimit);
     }
 }
