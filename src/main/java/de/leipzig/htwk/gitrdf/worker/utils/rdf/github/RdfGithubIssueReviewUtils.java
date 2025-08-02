@@ -26,7 +26,7 @@ public final class RdfGithubIssueReviewUtils {
     public static Node reviewProperty() { return uri(GH_NS + "review"); }
     public static Node reviewOfProperty() { return uri(GH_NS + "reviewOf"); }
 
-    public static Node identifierProperty() { return uri(GH_NS + "id");}
+    public static Node identifierProperty() { return uri(GH_NS + "reviewId");}
     public static Node apiUrlProperty() { return uri(PLATFORM_NS + "apiUrl"); }
     public static Node reviewBodyProperty() { return uri(GH_NS + "reviewBody"); }
     public static Node commitIdProperty() { return uri(GH_NS + "commitId"); }
@@ -63,8 +63,8 @@ public final class RdfGithubIssueReviewUtils {
                 reviewId));
             }
 
-    public static Triple createReviewIdentifierProperty(String reviewUri, long id) {
-        return Triple.create(uri(reviewUri), identifierProperty(), RdfUtils.longLiteral(id));
+    public static Triple createReviewIdentifierProperty(String reviewUri, long reviewId) {
+        return Triple.create(uri(reviewUri), identifierProperty(), RdfUtils.longLiteral(reviewId));
     }
 
     public static Triple createReviewOfProperty(String reviewUri, String issueUri) {

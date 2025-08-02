@@ -1,14 +1,16 @@
 package de.leipzig.htwk.gitrdf.worker.service;
 
-import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.springframework.stereotype.Service;
+
+import de.leipzig.htwk.gitrdf.worker.config.GithubConfig;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -18,12 +20,14 @@ public class GithubAccountRotationService {
     private final AtomicInteger currentAccountNumber = new AtomicInteger(-1);
     private final Map<Integer, Instant> accountRateLimitResetTimes = new ConcurrentHashMap<>();
     private final Map<Integer, Boolean> accountAvailability = new ConcurrentHashMap<>();
+    private final Map<Integer, Boolean> accountValidCredentials = new ConcurrentHashMap<>();
     
     public GithubAccountRotationService(GithubConfig githubConfig) {
         this.githubConfig = githubConfig;
-        // Initialize all accounts as available using their account numbers
+        // Initialize all accounts as available and with valid credentials
         for (GithubConfig.GithubApiAccount account : githubConfig.getGithubApiAccounts()) {
             accountAvailability.put(account.getAccountNumber(), true);
+            accountValidCredentials.put(account.getAccountNumber(), true);
         }
     }
     
@@ -148,9 +152,14 @@ public class GithubAccountRotationService {
     }
     
     /**
-     * Check if an account is available (not rate limited)
+     * Check if an account is available (not rate limited and has valid credentials)
      */
     private boolean isAccountAvailable(int accountNumber) {
+        // Check if credentials are valid first
+        if (!accountValidCredentials.getOrDefault(accountNumber, true)) {
+            return false;
+        }
+        
         if (!accountAvailability.getOrDefault(accountNumber, true)) {
             checkAndResetAccountAvailability(accountNumber);
         }
@@ -175,6 +184,16 @@ public class GithubAccountRotationService {
     public int getCurrentAccountNumber() {
         return getCurrentAccount().getAccountNumber();
     }
+
+    /**
+     * Get the earliest rate limit reset time among all rate-limited accounts.
+     * Returns null if no accounts are rate limited.
+     */
+    public Instant getEarliestRateLimitResetTime() {
+        return accountRateLimitResetTimes.values().stream()
+            .min(Comparator.naturalOrder())
+            .orElse(null);
+    }
     
     /**
      * Get total number of configured accounts
@@ -194,5 +213,25 @@ public class GithubAccountRotationService {
         
         return githubConfig.getGithubApiAccounts().size() - 
                accountAvailability.values().stream().mapToLong(available -> available ? 0 : 1).sum();
+    }
+    
+    /**
+     * Mark an account as having invalid credentials (JWT/auth failures)
+     */
+    public void markAccountInvalidCredentials(int accountNumber) {
+        log.error("Account {} has invalid credentials (JWT/auth failure), marking as unavailable", accountNumber);
+        accountValidCredentials.put(accountNumber, false);
+        
+        // Force rotation to next available account
+        rotateToNextAvailableAccount();
+    }
+    
+    /**
+     * Check how many accounts have valid credentials
+     */
+    public long getAccountsWithValidCredentialsCount() {
+        return accountValidCredentials.values().stream()
+                .mapToLong(valid -> valid ? 1 : 0)
+                .sum();
     }
 }

@@ -18,8 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class GithubUserValidator {
     
-    // Track users that have already been processed to avoid duplicates
-    private static final Set<String> processedUsers = ConcurrentHashMap.newKeySet();
+    // Track users that have been fully created in RDF (not just validated)
+    private static final Set<String> rdfCreatedUsers = ConcurrentHashMap.newKeySet();
     
     /**
      * Validates that a GitHub user exists in RDF and creates the user if missing.
@@ -62,8 +62,8 @@ public class GithubUserValidator {
             return null;
         }
         
-        // Skip if already processed in this session
-        if (processedUsers.contains(userUri)) {
+        // Skip if already created in RDF in this session (only skip if writer was provided)
+        if (writer != null && rdfCreatedUsers.contains(userUri)) {
             return userUri;
         }
         
@@ -71,11 +71,11 @@ public class GithubUserValidator {
             // Create the GitHub user RDF representation (only if writer is provided)
             if (writer != null) {
                 createGithubUserRdf(writer, ghUser, userUri);
+                rdfCreatedUsers.add(userUri);
                 log.debug("Created GitHub user RDF for: {}", login);
             } else {
                 log.debug("Validation-only mode: Skipping RDF creation for: {}", login);
             }
-            processedUsers.add(userUri);
             return userUri;
             
         } catch (Exception e) {
@@ -90,12 +90,19 @@ public class GithubUserValidator {
                         // Try again with the directly fetched user (only if writer is provided)
                         if (writer != null) {
                             createGithubUserRdf(writer, directUser, userUri);
+                            rdfCreatedUsers.add(userUri);
                             log.info("Successfully created GitHub user RDF for '{}' using direct API fallback", login);
                         } else {
                             log.debug("Validation-only mode: Direct API fallback successful for: {}", login);
                         }
-                        processedUsers.add(userUri);
                         return userUri;
+                    }
+                } catch (org.kohsuke.github.HttpException directFetchException) {
+                    // Handle specific HTTP errors for direct fetch fallback
+                    if (directFetchException.getResponseCode() == -1) {
+                        log.warn("Direct API fallback connection failed for user '{}' (response code -1): {}", login, directFetchException.getMessage());
+                    } else {
+                        log.warn("Direct API fallback HTTP error {} for user '{}': {}", directFetchException.getResponseCode(), login, directFetchException.getMessage());
                     }
                 } catch (Exception directFetchException) {
                     log.warn("Direct API fallback also failed for user '{}': {}", login, directFetchException.getMessage());
@@ -106,14 +113,13 @@ public class GithubUserValidator {
             if (writer != null) {
                 try {
                     createBasicGithubUserRdf(writer, login, userUri);
-                    processedUsers.add(userUri);
+                    rdfCreatedUsers.add(userUri);
                     log.debug("Created fallback basic user RDF for: {}", login);
                 } catch (Exception fallbackException) {
                     log.error("Even basic fallback user creation failed for '{}': {}", login, fallbackException.getMessage());
                 }
             } else {
-                // In validation-only mode, still add to processed users and return URI
-                processedUsers.add(userUri);
+                // In validation-only mode, don't add to cache - allow future RDF creation
                 log.debug("Validation-only mode: Basic fallback for: {}", login);
             }
             return userUri; // Return URI even if some properties failed
@@ -150,8 +156,8 @@ public class GithubUserValidator {
             return null;
         }
         
-        // Skip if already processed
-        if (processedUsers.contains(userUri)) {
+        // Skip if already created in RDF in this session
+        if (rdfCreatedUsers.contains(userUri)) {
             return userUri;
         }
         
@@ -161,16 +167,32 @@ public class GithubUserValidator {
                 log.warn("GitHub API returned null user for login '{}'", login);
                 // Still create basic user entry with available info
                 createBasicGithubUserRdf(writer, login, userUri);
-                processedUsers.add(userUri);
+                rdfCreatedUsers.add(userUri);
                 return userUri;
             }
             return validateAndEnsureUser(writer, github, ghUser);
+        } catch (org.kohsuke.github.HttpException e) {
+            // Handle specific HTTP errors, including connection failures (response code -1)
+            if (e.getResponseCode() == -1) {
+                log.warn("GitHub API connection failed for user '{}' (response code -1): {}. Creating basic user entry.", login, e.getMessage());
+            } else {
+                log.warn("GitHub API HTTP error {} for user '{}': {}. Creating basic user entry.", e.getResponseCode(), login, e.getMessage());
+            }
+            // Still create basic user entry with available info
+            try {
+                createBasicGithubUserRdf(writer, login, userUri);
+                rdfCreatedUsers.add(userUri);
+                return userUri;
+            } catch (Exception fallbackException) {
+                log.error("Even basic user creation failed for '{}': {}", login, fallbackException.getMessage());
+                return null;
+            }
         } catch (IOException e) {
             log.warn("Failed to fetch GitHub user '{}' from API: {}", login, e.getMessage());
             // Still create basic user entry with available info
             try {
                 createBasicGithubUserRdf(writer, login, userUri);
-                processedUsers.add(userUri);
+                rdfCreatedUsers.add(userUri);
                 return userUri;
             } catch (Exception fallbackException) {
                 log.error("Even basic user creation failed for '{}': {}", login, fallbackException.getMessage());
@@ -181,7 +203,7 @@ public class GithubUserValidator {
             // Try basic fallback
             try {
                 createBasicGithubUserRdf(writer, login, userUri);
-                processedUsers.add(userUri);
+                rdfCreatedUsers.add(userUri);
                 return userUri;
             } catch (Exception fallbackException) {
                 log.error("Fallback user creation failed for '{}': {}", login, fallbackException.getMessage());
@@ -288,16 +310,16 @@ public class GithubUserValidator {
     }
     
     /**
-     * Clears the processed users cache - useful for testing or when starting fresh
+     * Clears the RDF created users cache - useful for testing or when starting fresh
      */
     public static void clearProcessedUsersCache() {
-        processedUsers.clear();
+        rdfCreatedUsers.clear();
     }
     
     /**
-     * Gets the count of processed users in current session
+     * Gets the count of RDF created users in current session
      */
     public static int getProcessedUsersCount() {
-        return processedUsers.size();
+        return rdfCreatedUsers.size();
     }
 }

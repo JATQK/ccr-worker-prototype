@@ -1,14 +1,15 @@
 package de.leipzig.htwk.gitrdf.worker.ratelimit;
 
-import de.leipzig.htwk.gitrdf.worker.service.GithubAccountRotationService;
-import lombok.extern.slf4j.Slf4j;
-import org.kohsuke.github.GHRateLimit;
-import org.kohsuke.github.RateLimitChecker;
-
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+
+import org.kohsuke.github.GHRateLimit;
+import org.kohsuke.github.RateLimitChecker;
+
+import de.leipzig.htwk.gitrdf.worker.service.GithubAccountRotationService;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class MultiAccountRateLimitChecker extends RateLimitChecker {
@@ -53,11 +54,17 @@ public class MultiAccountRateLimitChecker extends RateLimitChecker {
                 // Don't sleep - let the request retry with the new account
                 return false;
             } else {
-                // No other accounts available, fall back to sleeping
-                log.warn("No other GitHub API accounts available. Falling back to waiting for rate limit reset.");
-                long sleepTime = Math.max(0, resetTime - currentTime);
+                // No other accounts available, fall back to sleeping until the earliest reset time
+                log.warn("No other GitHub API accounts available. Falling back to waiting for earliest rate limit reset.");
+                java.time.Instant earliestReset = githubAccountRotationService.getEarliestRateLimitResetTime();
+                long sleepTime = 0;
+                if (earliestReset != null) {
+                    sleepTime = Math.max(0, earliestReset.getEpochSecond() - currentTime);
+                }
                 if (sleepTime > 0) {
-                    String localResetTime = formatDateInLocalTimezone(record.getResetDate().toInstant());
+                    String localResetTime = earliestReset != null
+                        ? formatDateInLocalTimezone(earliestReset)
+                        : formatDateInLocalTimezone(record.getResetDate().toInstant());
                     log.info("GitHub API - Current quota has {} remaining of {}. Waiting for quota to reset at {} (local time)", 
                             remaining, record.getLimit(), localResetTime);
                     Thread.sleep(sleepTime * 1000);

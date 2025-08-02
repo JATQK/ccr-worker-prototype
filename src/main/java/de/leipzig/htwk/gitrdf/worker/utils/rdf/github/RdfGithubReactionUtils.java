@@ -23,7 +23,7 @@ public final class RdfGithubReactionUtils {
 
     public static Node identifierProperty() { return uri(GH_NS + "reactionId"); }
     public static Node contentProperty() { return uri(GH_NS + "reactionContent"); }
-    public static Node reactionUserProperty() { return uri(GH_NS + "reactionUser"); }
+    public static Node reactionByProperty() { return uri(GH_NS + "reactionBy"); }
     public static Node createdAtProperty() { return uri(GH_NS + "reactionCreatedAt"); }
     // Removed reactionOfProperty - reactions are linked via hasReaction from parent entity
     
@@ -40,8 +40,8 @@ public final class RdfGithubReactionUtils {
         return Triple.create(uri(reactionUri), contentProperty(), RdfUtils.stringLiteral(content));
     }
 
-    public static Triple createReactionUserProperty(String reactionUri, String userUri) {
-        return Triple.create(uri(reactionUri), reactionUserProperty(), uri(userUri));
+    public static Triple createReactionByProperty(String reactionUri, String userUri) {
+        return Triple.create(uri(reactionUri), reactionByProperty(), uri(userUri));
     }
 
     public static Triple createReactionCreatedAtProperty(String reactionUri, LocalDateTime createdAt) {

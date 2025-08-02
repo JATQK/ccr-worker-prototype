@@ -113,9 +113,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class GithubRdfConversionTransactionService {
 
-    private static final int PROCESS_ISSUE_LIMIT = 10000; // Limit for the number of issues to process
+    private static final int PROCESS_ISSUE_LIMIT = 30000; // Limit for the number of issues to process
 
-    private static final int PROCESS_COMMIT_LIMIT = 10000; // Limit for the number of commits to process
+    private static final int PROCESS_COMMIT_LIMIT = 30000; // Limit for the number of commits to process
 
     private static final boolean PROCESS_COMMENT_REACTIONS = true;
 
@@ -448,16 +448,12 @@ public class GithubRdfConversionTransactionService {
             String ownerUri = GithubUriUtils.getUserUri(owner);
             writer.triple(RdfGithubCommitUtils.createRepositoryOwnerProperty(repositoryUri, ownerUri));
             GHUser repoOwner = githubRepositoryHandle.getOwner();
-            if (repoOwner != null) {
-                writer.triple(RdfGithubUserUtils.createGitHubUserType(ownerUri));
-                writer.triple(RdfGithubUserUtils.createLoginProperty(ownerUri, repoOwner.getLogin()));
-                writer.triple(RdfGithubUserUtils.createEmailProperty(ownerUri, repoOwner.getEmail()));
-                writer.triple(RdfGithubUserUtils.createUserIdProperty(ownerUri, repoOwner.getId()));
-                if (repoOwner.getType() != null) {
-                    writer.triple(RdfGithubUserUtils.createUserTypeProperty(ownerUri, repoOwner.getType()));
-                }
-                if (repoOwner.getName() != null && !repoOwner.getName().isEmpty()) {
-                    writer.triple(RdfGithubUserUtils.createNameProperty(ownerUri, repoOwner.getName()));
+            if (repoOwner != null && repoOwner.getLogin() != null) {
+                // Validate and ensure GitHub user exists in RDF
+                String ownerUserUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, repoOwner);
+                if (ownerUserUri != null) {
+                    // The user validation already creates the user, we just need to verify the ownerUri matches
+                    log.debug("Repository owner user created/validated: {}", ownerUserUri);
                 }
             }
             writer.triple(RdfGithubCommitUtils.createRepositoryNameProperty(repositoryUri, repositoryName));
@@ -639,7 +635,7 @@ public class GithubRdfConversionTransactionService {
                         if (gitCommitRepositoryFilter.isEnableAuthorEmail()) {
                             calculateAuthorEmail( // Also brings github identifier into rdf
                                     authorIdent, uniqueGitCommiterWithHash, writer, commitUri, gitHash,
-                                    githubRepositoryHandle);
+                                    githubRepositoryHandle, gitHubHandle);
                         }
 
                         if (log.isDebugEnabled())
@@ -1078,9 +1074,10 @@ public class GithubRdfConversionTransactionService {
                                     writer.triple(RdfGithubCommentUtils.createCommentId(reviewCommentURI, cid));
                                     writer.triple(RdfGithubCommentUtils.createHasCommentProperty(reviewURI, reviewCommentURI));
                                     
-                                    // Add reactions API URL
-                                    String reactionsApiUrl = GithubUriUtils.getIssueCommentReactionsApiUrl(owner, repositoryName, String.valueOf(cid));
-                                    writer.triple(RdfGithubCommentUtils.createCommentReactionsApiUrl(reviewCommentURI, reactionsApiUrl));
+                                    // Add comment API URL
+                                    String repoString = "https://github.com/" + owner + "/" + repositoryName;
+                                    String commentApiUrl = GithubUriUtils.getIssueCommentUrl(repoString, String.valueOf(cid));
+                                    writer.triple(RdfGithubCommentUtils.createCommentApiUrl(reviewCommentURI, commentApiUrl));
 
                                     // Content and user
                                     if (c.getBody() != null && !c.getBody().isEmpty()) {
@@ -1144,11 +1141,11 @@ public class GithubRdfConversionTransactionService {
                                             }
                                             if (r.getUser() != null && r.getUser().getLogin() != null) {
                                                 // Validate and ensure GitHub user exists in RDF
-                                                String reactionUserUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, r.getUser());
-                                                if (reactionUserUri != null) {
+                                                String reactionByUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, r.getUser());
+                                                if (reactionByUri != null) {
                                                     writer.triple(
-                                                            RdfGithubReactionUtils.createReactionUserProperty(reactionURI,
-                                                                    reactionUserUri));
+                                                            RdfGithubReactionUtils.createReactionByProperty(reactionURI,
+                                                                    reactionByUri));
                                                 }
                                             }
                                             if (r.getCreatedAt() != null) {
@@ -1176,9 +1173,10 @@ public class GithubRdfConversionTransactionService {
                                 writer.triple(RdfGithubCommentUtils.createCommentId(issueCommentURI, cid));
                                 writer.triple(RdfGithubCommentUtils.createHasCommentProperty(issueUri, issueCommentURI));
                                 
-                                // Add reactions API URL
-                                String reactionsApiUrl = GithubUriUtils.getIssueCommentReactionsApiUrl(owner, repositoryName, String.valueOf(cid));
-                                writer.triple(RdfGithubCommentUtils.createCommentReactionsApiUrl(issueCommentURI, reactionsApiUrl));
+                                // Add comment API URL
+                                String repoString = "https://github.com/" + owner + "/" + repositoryName;
+                                String commentApiUrl = GithubUriUtils.getIssueCommentUrl(repoString, String.valueOf(cid));
+                                writer.triple(RdfGithubCommentUtils.createCommentApiUrl(issueCommentURI, commentApiUrl));
 
                                 if (c.getBody() != null && !c.getBody().isEmpty()) {
                                     writer.triple(RdfGithubCommentUtils.createCommentBody(
@@ -1218,10 +1216,10 @@ public class GithubRdfConversionTransactionService {
                                     }
                                     if (r.getUser() != null && r.getUser().getLogin() != null) {
                                         // Validate and ensure GitHub user exists in RDF
-                                        String reactionUserUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, r.getUser());
-                                        if (reactionUserUri != null) {
-                                            writer.triple(RdfGithubReactionUtils.createReactionUserProperty(
-                                                    reactionURI, reactionUserUri));
+                                        String reactionByUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, r.getUser());
+                                        if (reactionByUri != null) {
+                                            writer.triple(RdfGithubReactionUtils.createReactionByProperty(
+                                                    reactionURI, reactionByUri));
                                         }
                                     }
                                     if (r.getCreatedAt() != null) {
@@ -1302,14 +1300,16 @@ public class GithubRdfConversionTransactionService {
                     break;
                 }
 
-                if (!pr.isMerged()) {
-                    continue;
-                }
+                try {
+                    if (!pr.isMerged()) {
+                        continue;
+                    }
 
-                Date merged = pr.getMergedAt();
+                    Date merged = pr.getMergedAt();
 
-                String prUri = GithubUriUtils.getIssueUri(repo.getOwnerName(), repo.getName(),
-                        String.valueOf(pr.getNumber()));
+                // Sanitize PR number to remove any invisible Unicode characters
+                String prNumber = String.valueOf(pr.getNumber()).replaceAll("[\\p{C}&&[^\\r\\n\\t]]", "");
+                String prUri = GithubUriUtils.getIssueUri(repo.getOwnerName(), repo.getName(), prNumber);
                 LocalDateTime mergedAt = localDateTimeFrom(merged);
 
                 PullRequestInfo info = new PullRequestInfo(prUri, pr.getMergeCommitSha(), mergedAt);
@@ -1351,7 +1351,16 @@ public class GithubRdfConversionTransactionService {
                     }
                 }
 
-                prsProcessed++;
+                    prsProcessed++;
+                } catch (IOException e) {
+                    log.warn("GitHub API error processing PR {}: {}. Skipping this PR.", pr.getNumber(), e.getMessage());
+                    prsProcessed++;
+                    continue;
+                } catch (Exception e) {
+                    log.warn("Unexpected error processing PR {}: {}. Skipping this PR.", pr.getNumber(), e.getMessage());
+                    prsProcessed++;
+                    continue;
+                }
             }
 
             log.info("Built commit-PR mapping with {} PRs", prsProcessed);
@@ -1407,7 +1416,8 @@ public class GithubRdfConversionTransactionService {
             StreamRDF writer,
             String commitUri,
             String gitHash,
-            GHRepository githubRepositoryHandle) {
+            GHRepository githubRepositoryHandle,
+            GitHub gitHubHandle) {
 
         if (authorIdent == null) {
             return;
@@ -1426,19 +1436,14 @@ public class GithubRdfConversionTransactionService {
         }
 
         String userUri = info == null ? null : info.uri;
-        if (userUri != null && !userUri.isEmpty()) {
-            writer.triple(RdfGithubCommitUtils.createCommiterGitHubUserProperty(commitUri, userUri));
-            writer.triple(RdfGithubUserUtils.createGitHubUserType(userUri));
-            if (info != null) {
-                writer.triple(RdfGithubUserUtils.createUserIdProperty(userUri, info.userId));
-                if (info.login != null && !info.login.isEmpty()) {
-                    writer.triple(RdfGithubUserUtils.createLoginProperty(userUri, info.login));
-                }  
-                if (info.name != null && !info.name.isEmpty()) {
-                    writer.triple(RdfGithubUserUtils.createNameProperty(userUri, info.name));
-                }
+        if (userUri != null && !userUri.isEmpty() && info != null && info.login != null && !info.login.isEmpty()) {
+            // Validate and ensure GitHub user exists in RDF using the login from commit info
+            String validatedUserUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, info.login);
+            if (validatedUserUri != null) {
+                writer.triple(RdfGithubCommitUtils.createCommiterGitHubUserProperty(commitUri, validatedUserUri));
+                // Add additional commit-specific properties that aren't handled by the validator
                 if (info.gitAuthorEmail != null && !info.gitAuthorEmail.isEmpty()) {
-                    writer.triple(RdfGithubUserUtils.createGitAuthorEmailProperty(userUri, info.gitAuthorEmail));
+                    writer.triple(RdfGithubUserUtils.createGitAuthorEmailProperty(validatedUserUri, info.gitAuthorEmail));
                 }
             }
         }
@@ -1778,23 +1783,34 @@ public class GithubRdfConversionTransactionService {
         // Further limit job processing based on issue limits
         int maxJobsToProcess = Math.min(PROCESS_ISSUE_LIMIT * 5, 50);
 
-        PagedIterable<GHWorkflowJob> jobIterable = executeWithRetry(
-                () -> run.listJobs().withPageSize(10), // Smaller page size
-                "listJobs for run " + run.getId());
+        try {
+            PagedIterable<GHWorkflowJob> jobIterable = executeWithRetry(
+                    () -> run.listJobs().withPageSize(10), // Smaller page size
+                    "listJobs for run " + run.getId());
 
-        int jobsProcessed = 0;
+            int jobsProcessed = 0;
 
-        for (GHWorkflowJob job : jobIterable) {
-            if (jobsProcessed >= maxJobsToProcess) {
-                log.debug("Reached max jobs limit ({}) for workflow run {}", maxJobsToProcess, run.getId());
-                break;
+            for (GHWorkflowJob job : jobIterable) {
+                if (jobsProcessed >= maxJobsToProcess) {
+                    log.debug("Reached max jobs limit ({}) for workflow run {}", maxJobsToProcess, run.getId());
+                    break;
+                }
+
+                try {
+                    writeJobProperties(job, writer, runUri, repositoryUri);
+                    jobsProcessed++;
+                } catch (Exception e) {
+                    log.warn("Error processing job {} for workflow run {}: {}", 
+                            job.getId(), run.getId(), e.getMessage());
+                    // Continue processing other jobs
+                }
             }
 
-            writeJobProperties(job, writer, runUri, repositoryUri);
-            jobsProcessed++;
+            log.debug("Processed {} jobs for workflow run {}", jobsProcessed, run.getId());
+        } catch (Exception e) {
+            log.warn("Error fetching jobs for workflow run {}: {}", run.getId(), e.getMessage());
+            // Don't rethrow - continue processing without jobs data
         }
-
-        log.debug("Processed {} jobs for workflow run {}", jobsProcessed, run.getId());
     }
 
     private void writeJobProperties(GHWorkflowJob job, StreamRDF writer, String runUri, String repositoryUri) {
@@ -1895,12 +1911,12 @@ public class GithubRdfConversionTransactionService {
 
     private List<GHPullRequestReviewComment> getReviewCommentsCached(GHPullRequestReview review)
             throws IOException, InterruptedException {
-        long id = review.getId();
-        List<GHPullRequestReviewComment> comments = reviewCommentsCache.get(id);
+        long reviewId = review.getId();
+        List<GHPullRequestReviewComment> comments = reviewCommentsCache.get(reviewId);
         if (comments == null) {
             comments = executeWithRetry(() -> review.listReviewComments().toList(),
-                    "listReviewComments for review " + id);
-            reviewCommentsCache.put(id, comments);
+                    "listReviewComments for review " + reviewId);
+            reviewCommentsCache.put(reviewId, comments);
         }
         return comments;
     }

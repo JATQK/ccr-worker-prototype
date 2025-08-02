@@ -26,9 +26,27 @@ public class GithubMultiAccountRateLimitHandler extends GitHubRateLimitHandler {
         
         int currentAccountNumber = githubAccountRotationService.getCurrentAccountNumber();
         String body = getBodyFrom(connectorResponse);
+        int statusCode = connectorResponse.statusCode();
         
+        if (statusCode == 401) {
+            // Authentication error - mark account as having invalid credentials
+            log.error("GitHub authentication failed for account {}. Status code: {}. Response body: {}", 
+                    currentAccountNumber, statusCode, body);
+            
+            githubAccountRotationService.markAccountInvalidCredentials(currentAccountNumber);
+            
+            long validAccounts = githubAccountRotationService.getAccountsWithValidCredentialsCount();
+            if (validAccounts > 0) {
+                log.info("Rotated to next valid GitHub API account. {} accounts with valid credentials still available.", validAccounts);
+                return; // Allow retry with new account
+            } else {
+                throw new RuntimeException("All GitHub API accounts have invalid credentials. Please check your configuration.");
+            }
+        }
+        
+        // Handle rate limiting (403)
         log.warn("GitHub rate limit exceeded for account {}. Status code: {}. Response body: {}", 
-                currentAccountNumber, connectorResponse.statusCode(), body);
+                currentAccountNumber, statusCode, body);
 
         // Extract rate limit reset time from headers if available
         Instant resetTime = extractRateLimitResetTime(connectorResponse);
@@ -46,15 +64,34 @@ public class GithubMultiAccountRateLimitHandler extends GitHubRateLimitHandler {
             // Don't throw exception - let the request retry with the new account
             return;
         } else {
-            // No accounts available, throw exception as before
-            String errorMessage = String.format("All GitHub API accounts (%d total) are rate limited. " +
-                    "Status code is '%d'. " +
-                    "Http body is (hard cut after 256 characters): '%s'",
-                    githubAccountRotationService.getTotalAccountsConfigured(),
-                    connectorResponse.statusCode(),
-                    body);
-            
-            throw new RuntimeException(errorMessage);
+            // No accounts available, sleep until earliest reset time
+            Instant earliestReset = githubAccountRotationService.getEarliestRateLimitResetTime();
+            if (earliestReset != null) {
+                long currentTimeSeconds = System.currentTimeMillis() / 1000L;
+                long sleepTimeSeconds = Math.max(1, earliestReset.getEpochSecond() - currentTimeSeconds);
+                
+                log.warn("All GitHub API accounts ({} total) are rate limited. Sleeping for {} seconds until reset at {}", 
+                        githubAccountRotationService.getTotalAccountsConfigured(), sleepTimeSeconds, earliestReset);
+                
+                try {
+                    Thread.sleep(sleepTimeSeconds * 1000);
+                    log.info("Rate limit sleep completed, retrying with refreshed accounts");
+                    return; // Allow retry with refreshed accounts
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Interrupted while waiting for rate limit reset", e);
+                }
+            } else {
+                // Fallback: sleep for 1 hour if we can't determine reset time
+                log.warn("All GitHub API accounts are rate limited and no reset time available. Sleeping for 1 hour");
+                try {
+                    Thread.sleep(3600 * 1000);
+                    return;
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Interrupted while waiting for rate limit reset", e);
+                }
+            }
         }
     }
     

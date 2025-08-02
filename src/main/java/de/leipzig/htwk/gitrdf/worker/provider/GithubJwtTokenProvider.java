@@ -69,17 +69,41 @@ public class GithubJwtTokenProvider implements AuthorizationProvider {
     }
 
     public String getSignedJwtTokenToFetchInstallationToken() {
-        GithubConfig.GithubApiAccount currentAccount = githubAccountRotationService.getCurrentAccount();
-        PrivateKey currentPrivateKey = privateKeys.get(currentAccount.getAccountNumber());
+        // Try up to 3 accounts to handle invalid credentials gracefully
+        int maxAttempts = Math.min(3, (int) githubAccountRotationService.getAccountsWithValidCredentialsCount());
         
-        log.debug("Using GitHub API account {} for JWT token generation", currentAccount.getAccountNumber());
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            GithubConfig.GithubApiAccount currentAccount = githubAccountRotationService.getCurrentAccount();
+            PrivateKey currentPrivateKey = privateKeys.get(currentAccount.getAccountNumber());
+            
+            if (currentPrivateKey == null) {
+                log.error("No private key found for GitHub API account {}, marking as invalid", currentAccount.getAccountNumber());
+                githubAccountRotationService.markAccountInvalidCredentials(currentAccount.getAccountNumber());
+                continue;
+            }
+            
+            log.debug("Using GitHub API account {} (App ID: {}) for JWT token generation (attempt {}/{})", 
+                    currentAccount.getAccountNumber(), currentAccount.getGithubAppId(), attempt, maxAttempts);
 
-        return Jwts.builder()
-                .issuer(currentAccount.getGithubAppId())
-                .issuedAt(getDateOneMinuteInThePast())
-                .expiration(getDateThreeMinutesInTheFuture())
-                .signWith(currentPrivateKey, Jwts.SIG.RS256)
-                .compact();
+            try {
+                return Jwts.builder()
+                        .issuer(currentAccount.getGithubAppId())
+                        .issuedAt(getDateOneMinuteInThePast())
+                        .expiration(getDateThreeMinutesInTheFuture())
+                        .signWith(currentPrivateKey, Jwts.SIG.RS256)
+                        .compact();
+            } catch (Exception e) {
+                log.error("Failed to generate JWT token for account {} (App ID: {}): {}, marking as invalid", 
+                        currentAccount.getAccountNumber(), currentAccount.getGithubAppId(), e.getMessage());
+                githubAccountRotationService.markAccountInvalidCredentials(currentAccount.getAccountNumber());
+                
+                if (attempt == maxAttempts) {
+                    throw new RuntimeException("JWT token generation failed for all available accounts", e);
+                }
+            }
+        }
+        
+        throw new RuntimeException("No valid GitHub accounts available for JWT token generation");
     }
 
     private Date getDateOneMinuteInThePast() {

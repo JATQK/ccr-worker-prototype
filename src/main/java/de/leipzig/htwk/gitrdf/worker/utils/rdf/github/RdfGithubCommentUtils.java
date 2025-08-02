@@ -149,8 +149,8 @@ public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
     return Triple.create(uri(commentUri), authorAssociationProperty(), RdfUtils.stringLiteral(association));
   }
 
-  public static Triple createCommentReactionsApiUrl(String commentUri, String reactionsApiUrl) {
-    return Triple.create(uri(commentUri), apiUrlProperty(), uri(reactionsApiUrl));
+  public static Triple createCommentApiUrl(String commentUri, String commentApiUrl) {
+    return Triple.create(uri(commentUri), apiUrlProperty(), uri(commentApiUrl));
   }
 
   public static Triple createHasCommentProperty(String parentEntityUri, String commentUri) {
