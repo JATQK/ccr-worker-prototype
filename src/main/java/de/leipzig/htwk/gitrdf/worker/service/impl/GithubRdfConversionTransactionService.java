@@ -216,11 +216,6 @@ public class GithubRdfConversionTransactionService {
         commitCache.clear();
         seenReviewIds.clear();
         
-        // Initialize processing limits for rate limit logging
-        githubAccountRotationService.setProcessingLimits(PROCESS_ISSUE_LIMIT, PROCESS_COMMIT_LIMIT);
-        githubAccountRotationService.updateProcessedIssuesCount(0);
-        githubAccountRotationService.updateProcessedCommitsCount(0);
-
         Git gitHandler = null;
 
         try {
@@ -233,6 +228,23 @@ public class GithubRdfConversionTransactionService {
 
             String owner = githubRepositoryOrderEntity.getOwnerName();
             String repo = githubRepositoryOrderEntity.getRepositoryName();
+
+            // Initialize processing limits for rate limit logging
+            githubAccountRotationService.setProcessingLimits(PROCESS_ISSUE_LIMIT, PROCESS_COMMIT_LIMIT);
+            githubAccountRotationService.updateProcessedIssuesCount(0);
+            githubAccountRotationService.updateProcessedCommitsCount(0);
+            
+            // Fetch actual repository totals from GitHub API for accurate progress tracking
+            try {
+                log.info("Fetching repository totals for {}/{}", owner, repo);
+                int totalIssues = githubHandlerService.getTotalIssuesCount(owner, repo);
+                int totalCommits = githubHandlerService.getTotalCommitsCount(owner, repo);
+                
+                githubAccountRotationService.setRepositoryTotals(totalIssues, totalCommits);
+            } catch (Exception e) {
+                log.warn("Failed to fetch repository totals, will use processing limits for progress tracking: {}", e.getMessage());
+                // Continue with processing - the service will fall back to using limits
+            }
 
             lockHandler.renewLockOnRenewTimeFulfillment();
 

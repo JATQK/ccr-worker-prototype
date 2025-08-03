@@ -28,6 +28,10 @@ public class GithubAccountRotationService {
     private volatile int maxIssuesLimit = 0;
     private volatile int maxCommitsLimit = 0;
     
+    // Actual repository totals
+    private volatile int actualTotalIssues = 0;
+    private volatile int actualTotalCommits = 0;
+    
     public GithubAccountRotationService(GithubConfig githubConfig) {
         this.githubConfig = githubConfig;
         // Initialize all accounts as available and with valid credentials
@@ -250,6 +254,16 @@ public class GithubAccountRotationService {
     }
     
     /**
+     * Set the actual repository totals from GitHub API
+     */
+    public void setRepositoryTotals(int totalIssues, int totalCommits) {
+        this.actualTotalIssues = totalIssues;
+        this.actualTotalCommits = totalCommits;
+        
+        log.info("Repository totals updated: {} issues, {} commits", totalIssues, totalCommits);
+    }
+    
+    /**
      * Update the count of processed issues
      */
     public void updateProcessedIssuesCount(int count) {
@@ -269,11 +283,20 @@ public class GithubAccountRotationService {
     public String getProcessingStatistics() {
         int currentIssues = processedIssuesCount.get();
         int currentCommits = processedCommitsCount.get();
-        int remainingIssues = Math.max(0, maxIssuesLimit - currentIssues);
-        int remainingCommits = Math.max(0, maxCommitsLimit - currentCommits);
         
-        return String.format("Issues: %d processed, %d remaining (limit: %d). Commits: %d processed, %d remaining (limit: %d)", 
-                currentIssues, remainingIssues, maxIssuesLimit,
-                currentCommits, remainingCommits, maxCommitsLimit);
+        // Use actual repository totals if available, otherwise fall back to processing limits
+        int totalIssues = actualTotalIssues > 0 ? actualTotalIssues : maxIssuesLimit;
+        int totalCommits = actualTotalCommits > 0 ? actualTotalCommits : maxCommitsLimit;
+        
+        int remainingIssues = Math.max(0, totalIssues - currentIssues);
+        int remainingCommits = Math.max(0, totalCommits - currentCommits);
+        
+        // Indicate whether we're using actual totals or limits
+        String issueSource = actualTotalIssues > 0 ? "total" : "limit";
+        String commitSource = actualTotalCommits > 0 ? "total" : "limit";
+        
+        return String.format("Issues: %d processed, %d remaining (%s: %d). Commits: %d processed, %d remaining (%s: %d)", 
+                currentIssues, remainingIssues, issueSource, totalIssues,
+                currentCommits, remainingCommits, commitSource, totalCommits);
     }
 }
