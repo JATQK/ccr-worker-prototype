@@ -1,6 +1,7 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf.platform;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
@@ -20,50 +21,52 @@ public class RdfPlatformPersonUtils {
     protected static final String PLATFORM_NS = PLATFORM_NAMESPACE + ":";
 
     public static Node rdfTypeProperty() {
-        return RdfUtils.uri("rdf:type");
+        return uri("rdf:type");
+    }
+
+    public static Node idProperty() {
+        return uri(PLATFORM_NS + "id");
     }
 
     public static Node nameProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "name");
+        return uri(PLATFORM_NS + "name");
     }
 
     public static Node emailProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "email");
+        return uri(PLATFORM_NS + "email");
     }
 
     public static Node usernameProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "username");
+        return uri(PLATFORM_NS + "username");
     }
 
+    // Legacy property - use idProperty instead
     public static Node userIdProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "userId");
-    }
-
-    public static Node userTypeProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "userType");
+        return idProperty();
     }
 
     public static Triple createRdfTypeProperty(String personUri) {
-        return Triple.create(RdfUtils.uri(personUri), rdfTypeProperty(), RdfUtils.uri("platform:Person"));
+        return Triple.create(uri(personUri), rdfTypeProperty(), uri("platform:Person"));
     }
 
     public static Triple createNameProperty(String personUri, String name) {
-        return Triple.create(RdfUtils.uri(personUri), nameProperty(), RdfUtils.stringLiteral(name));
+        return Triple.create(uri(personUri), nameProperty(), RdfUtils.stringLiteral(name));
     }
 
     public static Triple createEmailProperty(String personUri, String email) {
-        return Triple.create(RdfUtils.uri(personUri), emailProperty(), RdfUtils.stringLiteral(email));
+        return Triple.create(uri(personUri), emailProperty(), RdfUtils.stringLiteral(email));
     }
 
     public static Triple createUsernameProperty(String personUri, String username) {
-        return Triple.create(RdfUtils.uri(personUri), usernameProperty(), RdfUtils.stringLiteral(username));
+        return Triple.create(uri(personUri), usernameProperty(), RdfUtils.stringLiteral(username));
     }
 
+    public static Triple createIdProperty(String personUri, String id) {
+        return Triple.create(uri(personUri), idProperty(), RdfUtils.stringLiteral(id));
+    }
+
+    // Legacy method for backward compatibility
     public static Triple createUserIdProperty(String personUri, String userId) {
-        return Triple.create(RdfUtils.uri(personUri), userIdProperty(), RdfUtils.stringLiteral(userId));
-    }
-
-    public static Triple createUserTypeProperty(String personUri, String userType) {
-        return Triple.create(RdfUtils.uri(personUri), userTypeProperty(), RdfUtils.stringLiteral(userType));
+        return createIdProperty(personUri, userId);
     }
 }

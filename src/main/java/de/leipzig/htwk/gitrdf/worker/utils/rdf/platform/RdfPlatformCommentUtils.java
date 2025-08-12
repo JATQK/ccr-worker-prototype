@@ -1,6 +1,7 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf.platform;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
 
 import java.time.LocalDateTime;
 
@@ -23,48 +24,98 @@ public class RdfPlatformCommentUtils {
 
     // Core RDF properties
     public static Node rdfTypeProperty() {
-        return RdfUtils.uri("rdf:type");
+        return uri("rdf:type");
     }
 
-    // Platform Comment Properties (from platform ontology)
-    public static Node commentBodyProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "commentBody");
+    // Platform Comment Properties (from platform ontology v2)
+    public static Node bodyProperty() {
+        return uri(PLATFORM_NS + "body");
     }
 
-    public static Node commentAuthorProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "commentAuthor");
+    public static Node authorProperty() {
+        return uri(PLATFORM_NS + "author");
     }
 
-    public static Node commentIdProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "commentId");
+    public static Node idProperty() {
+        return uri(PLATFORM_NS + "id");
     }
 
-    public static Node commentedAtProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "commentedAt");
+    public static Node createdAtProperty() {
+        return uri(PLATFORM_NS + "createdAt");
     }
 
+    public static Node updatedAtProperty() {
+        return uri(PLATFORM_NS + "updatedAt");
+    }
+
+    public static Node urlProperty() {
+        return uri(PLATFORM_NS + "url");
+    }
+
+    public static Node hasReactionProperty() {
+        return uri(PLATFORM_NS + "hasReaction");
+    }
+
+    public static Node commentOnProperty() {
+        return uri(PLATFORM_NS + "commentOn");
+    }
 
 
     // Triple creation methods for platform properties
     public static Triple createRdfTypeProperty(String commentUri) {
-        return Triple.create(RdfUtils.uri(commentUri), rdfTypeProperty(), RdfUtils.uri("platform:Comment"));
+        return Triple.create(uri(commentUri), rdfTypeProperty(), uri("platform:Comment"));
     }
 
+    public static Triple createBodyProperty(String commentUri, String body) {
+        return Triple.create(uri(commentUri), bodyProperty(), RdfUtils.stringLiteral(body));
+    }
+
+    public static Triple createAuthorProperty(String commentUri, String authorUri) {
+        return Triple.create(uri(commentUri), authorProperty(), uri(authorUri));
+    }
+
+    public static Triple createIdProperty(String commentUri, String commentId) {
+        return Triple.create(uri(commentUri), idProperty(), RdfUtils.stringLiteral(commentId));
+    }
+
+    public static Triple createCreatedAtProperty(String commentUri, LocalDateTime createdAt) {
+        return Triple.create(uri(commentUri), createdAtProperty(), RdfUtils.dateTimeLiteral(createdAt));
+    }
+
+    public static Triple createUpdatedAtProperty(String commentUri, LocalDateTime updatedAt) {
+        return Triple.create(uri(commentUri), updatedAtProperty(), RdfUtils.dateTimeLiteral(updatedAt));
+    }
+
+    public static Triple createUrlProperty(String commentUri, String url) {
+        return Triple.create(uri(commentUri), urlProperty(), RdfUtils.stringLiteral(url));
+    }
+
+    public static Triple createHasReactionProperty(String commentUri, String reactionUri) {
+        return Triple.create(uri(commentUri), hasReactionProperty(), uri(reactionUri));
+    }
+
+    public static Triple createCommentOnProperty(String commentUri, String targetUri) {
+        return Triple.create(uri(commentUri), commentOnProperty(), uri(targetUri));
+    }
+
+    // Legacy method compatibility
     public static Triple createCommentBodyProperty(String commentUri, String body) {
-        return Triple.create(RdfUtils.uri(commentUri), commentBodyProperty(), RdfUtils.stringLiteral(body));
+        return createBodyProperty(commentUri, body);
     }
 
     public static Triple createCommentAuthorProperty(String commentUri, String authorUri) {
-        return Triple.create(RdfUtils.uri(commentUri), commentAuthorProperty(), RdfUtils.uri(authorUri));
+        return createAuthorProperty(commentUri, authorUri);
+    }
+
+    public static Triple createCommentIdProperty(String commentUri, String commentId) {
+        return createIdProperty(commentUri, commentId);
     }
 
     public static Triple createCommentIdProperty(String commentUri, long commentId) {
-        return Triple.create(RdfUtils.uri(commentUri), commentIdProperty(), RdfUtils.longLiteral(commentId));
+        return createIdProperty(commentUri, String.valueOf(commentId));
     }
 
     public static Triple createCommentedAtProperty(String commentUri, LocalDateTime commentedAt) {
-        return Triple.create(RdfUtils.uri(commentUri), commentedAtProperty(), RdfUtils.dateTimeLiteral(commentedAt));
+        return createCreatedAtProperty(commentUri, commentedAt);
     }
-
-
 }

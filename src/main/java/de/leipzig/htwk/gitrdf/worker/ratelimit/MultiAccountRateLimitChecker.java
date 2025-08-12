@@ -63,15 +63,19 @@ public class MultiAccountRateLimitChecker extends RateLimitChecker {
                 if (earliestReset != null) {
                     sleepTime = Math.max(0, earliestReset.getEpochSecond() - currentTime);
                 }
-                if (sleepTime > 0) {
-                    String localResetTime = earliestReset != null
-                        ? formatDateInLocalTimezone(earliestReset)
-                        : formatDateInLocalTimezone(record.getResetDate().toInstant());
-                    log.info("GitHub API - Current quota has {} remaining of {}. Waiting for quota to reset at {} (local time)", 
-                            remaining, record.getLimit(), localResetTime);
-                    Thread.sleep(sleepTime * 1000);
-                    return true;
+                
+                // If no valid sleep time calculated, use the current record's reset time
+                if (sleepTime <= 0) {
+                    sleepTime = Math.max(60, resetTime - currentTime); // At least 60 seconds
                 }
+                
+                String localResetTime = earliestReset != null
+                    ? formatDateInLocalTimezone(earliestReset)
+                    : formatDateInLocalTimezone(record.getResetDate().toInstant());
+                log.info("GitHub API - Rate limit threshold reached. {} remaining of {}. Waiting {} seconds for quota to reset at {} (local time)", 
+                        remaining, record.getLimit(), sleepTime, localResetTime);
+                Thread.sleep(sleepTime * 1000);
+                return true;
             }
         }
 

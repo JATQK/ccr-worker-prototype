@@ -1,7 +1,7 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf.github;
 
-import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
 
 import java.time.LocalDateTime;
 
@@ -14,67 +14,69 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 /**
- * GitHub-specific utility class for RDF operations on github:GithubIssue entities.
+ * GitHub-specific utility class for RDF operations on github:Issue entities.
  * This class extends RdfPlatformTicketUtils and adds GitHub-specific properties
  * as defined in the git2RDFLab-platform-github ontology.
  */
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RdfGithubIssueUtils extends RdfPlatformTicketUtils {
 
-    private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
-    private static final String PF_NS = PLATFORM_NAMESPACE + ":";
+    private static final String PLATFORM_NS = PLATFORM_NAMESPACE + ":";
 
-    // GitHub-specific Issue Properties (from github ontology)
+    // Use platform ontology properties (v2)
+    public static Node lockedProperty() {
+        return uri(PLATFORM_NS + "locked");
+    }
 
-    public static Node issueIdProperty() {
-        return RdfUtils.uri(GH_NS + "issueId");
+    public static Node requestedReviewerProperty() {
+        return uri(PLATFORM_NS + "requestedReviewer");
+    }
+
+    public static Node draftProperty() {
+        return uri(PLATFORM_NS + "draft");
     }
 
     public static Node nodeIdProperty() {
-        return RdfUtils.uri(GH_NS + "nodeId");
-    }
-
-    public static Node lockedProperty() {
-        return RdfUtils.uri(PF_NS + "locked");
-    }
-
-
-    public static Node requestedReviewerProperty() {
-        return RdfUtils.uri(GH_NS + "requestedReviewer");
-    }
-
-
-    // GitHub-specific commit linking
-    public static Node containsCommitProperty() {
-        return RdfUtils.uri(GH_NS + "containsCommit");
+        return uri(PLATFORM_NS + "nodeId");
     }
 
     public static Node referencedByProperty() {
-        return RdfUtils.uri(GH_NS + "referencedBy");
+        return uri(PLATFORM_NS + "referencedBy");
+    }
+
+
+    // Use platform properties for relationships
+    public static Node containsCommitProperty() {
+        return uri("platform:containsCommit");
     }
 
 
     // Override platform method to create GitHub Issue type
     public static Triple createRdfTypeProperty(String issueUri) {
-        return Triple.create(RdfUtils.uri(issueUri), rdfTypeProperty(), RdfUtils.uri("github:GithubIssue"));
+        return Triple.create(uri(issueUri), rdfTypeProperty(), uri("github:Issue"));
     }
+
 
     // v2.1: Use inherited platform method for number
     public static Triple createIssueNumberProperty(String issueUri, int number) {
         return RdfPlatformTicketUtils.createNumberProperty(issueUri, number);
     }
 
-    // GitHub-specific property creation methods
-    public static Triple createIssueIdProperty(String issueUri, long issueId) {
-        return Triple.create(RdfUtils.uri(issueUri), issueIdProperty(), RdfUtils.longLiteral(issueId));
+    // Use platform id property
+    public static Triple createIssueIdProperty(String issueUri, String issueId) {
+        return RdfPlatformTicketUtils.createIdProperty(issueUri, issueId);
     }
     
-    public static Triple createIssueNodeIdProperty(String issueUri, String nodeId) {
-        return Triple.create(RdfUtils.uri(issueUri), nodeIdProperty(), RdfUtils.stringLiteral(nodeId));
+    public static Triple createIssueIdProperty(String issueUri, long issueId) {
+        return createIssueIdProperty(issueUri, String.valueOf(issueId));
     }
 
     public static Triple createIssueLockedProperty(String issueUri, boolean locked) {
-        return Triple.create(RdfUtils.uri(issueUri), lockedProperty(), RdfUtils.booleanLiteral(locked));
+        return Triple.create(uri(issueUri), lockedProperty(), RdfUtils.booleanLiteral(locked));
+    }
+
+    public static Triple createIssueDraftProperty(String issueUri, boolean draft) {
+        return Triple.create(uri(issueUri), draftProperty(), RdfUtils.booleanLiteral(draft));
     }
 
 
@@ -117,15 +119,19 @@ public class RdfGithubIssueUtils extends RdfPlatformTicketUtils {
 
 
     public static Triple createIssueContainsCommitProperty(String issueUri, String commitUri) {
-        return Triple.create(RdfUtils.uri(issueUri), containsCommitProperty(), RdfUtils.uri(commitUri));
-    }
-
-    public static Triple createIssueReferencedByProperty(String issueUri, String commitUri) {
-        return Triple.create(RdfUtils.uri(issueUri), referencedByProperty(), RdfUtils.uri(commitUri));
+        return Triple.create(uri(issueUri), containsCommitProperty(), uri(commitUri));
     }
 
     public static Triple createIssueRequestedReviewerProperty(String issueUri, String reviewerUri) {
-        return Triple.create(RdfUtils.uri(issueUri), requestedReviewerProperty(), RdfUtils.uri(reviewerUri));
+        return Triple.create(uri(issueUri), requestedReviewerProperty(), uri(reviewerUri));
+    }
+
+    public static Triple createIssueNodeIdProperty(String issueUri, String nodeId) {
+        return Triple.create(uri(issueUri), nodeIdProperty(), RdfUtils.stringLiteral(nodeId));
+    }
+
+    public static Triple createIssueReferencedByProperty(String issueUri, String referencingUri) {
+        return Triple.create(uri(issueUri), referencedByProperty(), uri(referencingUri));
     }
 
 }

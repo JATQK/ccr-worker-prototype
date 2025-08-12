@@ -1,6 +1,7 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf.platform;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
 
 import java.time.LocalDateTime;
 
@@ -23,52 +24,76 @@ public class RdfPlatformWorkflowJobUtils {
 
     // Core RDF properties
     public static Node rdfTypeProperty() {
-        return RdfUtils.uri("rdf:type");
+        return uri("rdf:type");
     }
 
     // Platform WorkflowJob Properties (from platform ontology)
     public static Node jobNameProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "jobName");
+        return uri(PLATFORM_NS + "jobName");
     }
 
     public static Node jobStatusProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "jobStatus");
+        return uri(PLATFORM_NS + "jobStatus");
     }
 
     public static Node jobStartedAtProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "jobStartedAt");
+        return uri(PLATFORM_NS + "jobStartedAt");
     }
 
     public static Node jobCompletedAtProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "jobCompletedAt");
+        return uri(PLATFORM_NS + "jobCompletedAt");
     }
 
     public static Node jobConclusionProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "jobConclusion");
+        return uri(PLATFORM_NS + "jobConclusion");
+    }
+
+    public static Node jobIdProperty() {
+        return uri(PLATFORM_NS + "jobId");
+    }
+
+    public static Node jobUrlProperty() {
+        return uri(PLATFORM_NS + "jobUrl");
+    }
+
+    public static Node hasJobStepProperty() {
+        return uri(PLATFORM_NS + "hasJobStep");
     }
 
     // Triple creation methods for platform properties
     public static Triple createRdfTypeProperty(String jobUri) {
-        return Triple.create(RdfUtils.uri(jobUri), rdfTypeProperty(), RdfUtils.uri("platform:WorkflowJob"));
+        return Triple.create(uri(jobUri), rdfTypeProperty(), uri("platform:WorkflowJob"));
     }
 
     public static Triple createJobNameProperty(String jobUri, String name) {
-        return Triple.create(RdfUtils.uri(jobUri), jobNameProperty(), RdfUtils.stringLiteral(name));
+        return Triple.create(uri(jobUri), jobNameProperty(), RdfUtils.stringLiteral(name));
     }
 
     public static Triple createJobStatusProperty(String jobUri, String status) {
-        return Triple.create(RdfUtils.uri(jobUri), jobStatusProperty(), RdfUtils.uri(PLATFORM_NS + status.toLowerCase()));
+        return Triple.create(uri(jobUri), jobStatusProperty(), uri("platform:" + status.toLowerCase()));
     }
 
     public static Triple createJobStartedAtProperty(String jobUri, LocalDateTime startedAt) {
-        return Triple.create(RdfUtils.uri(jobUri), jobStartedAtProperty(), RdfUtils.dateTimeLiteral(startedAt));
+        return Triple.create(uri(jobUri), jobStartedAtProperty(), RdfUtils.dateTimeLiteral(startedAt));
     }
 
     public static Triple createJobCompletedAtProperty(String jobUri, LocalDateTime completedAt) {
-        return Triple.create(RdfUtils.uri(jobUri), jobCompletedAtProperty(), RdfUtils.dateTimeLiteral(completedAt));
+        return Triple.create(uri(jobUri), jobCompletedAtProperty(), RdfUtils.dateTimeLiteral(completedAt));
     }
 
     public static Triple createJobConclusionProperty(String jobUri, String conclusion) {
-        return Triple.create(RdfUtils.uri(jobUri), jobConclusionProperty(), RdfUtils.uri(PLATFORM_NS + conclusion.toLowerCase()));
+        return Triple.create(uri(jobUri), jobConclusionProperty(), uri("platform:" + conclusion.toLowerCase()));
+    }
+
+    public static Triple createJobIdProperty(String jobUri, String id) {
+        return Triple.create(uri(jobUri), jobIdProperty(), RdfUtils.stringLiteral(id));
+    }
+
+    public static Triple createJobUrlProperty(String jobUri, String url) {
+        return Triple.create(uri(jobUri), jobUrlProperty(), RdfUtils.stringLiteral(url));
+    }
+
+    public static Triple createHasJobStepProperty(String jobUri, String stepUri) {
+        return Triple.create(uri(jobUri), hasJobStepProperty(), uri(stepUri));
     }
 }

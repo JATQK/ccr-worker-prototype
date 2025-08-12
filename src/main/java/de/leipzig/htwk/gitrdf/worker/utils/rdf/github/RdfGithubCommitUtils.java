@@ -1,90 +1,84 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf.github;
 
-import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
-import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
 import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
 
 import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
-
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.git.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformRepositoryUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfGithubCommitUtils {
 
-    private static final String GITHUB_NS = PLATFORM_GITHUB_NAMESPACE + ":";
-    private static final String PLATFORM_NS = PLATFORM_NAMESPACE + ":";
 
-    public static Node repositoryNameProperty() {
-        return RdfPlatformRepositoryUtils.repositoryNameProperty();
+    // Use git ontology properties for commits
+    public static Node commitOfProperty() {
+        return uri("git:commitOf");
     }
 
-    public static Node repositoryOwnerProperty() {
-        return RdfPlatformRepositoryUtils.repositoryOwnerProperty();
+    // Use platform properties for repository relationships
+    public static Node partOfTicketProperty() {
+        return uri("platform:partOfTicket");
     }
 
-    public static Node commitGitHubUserProperty() {
-        return uri(PLATFORM_NS + "submitter");
-    }
 
-    // Removed - use partOfIssueProperty() instead for proper GitHub ontology compliance
-
-    public static Node partOfIssueProperty() {
-        return uri(GITHUB_NS + "partOfIssue");
-    }
-
-    public static Node partOfPullRequestProperty() {
-        return uri(GITHUB_NS + "partOfPullRequest");
-    }
-
-    public static Node isMergedProperty() {
-        return uri(PLATFORM_NS + "merged");
-    }
-
-    public static Node mergedAtProperty() {
-        return uri(PLATFORM_NS + "mergedAt");
-    }
-
-    public static Node mergedIntoIssueProperty() {
-        return uri(GITHUB_NS + "mergedIntoIssue");
-    }
-
+    // Use git ontology for repository type
     public static Triple createRepositoryRdfTypeProperty(String repoUri) {
-        return Triple.create(RdfUtils.uri(repoUri), RdfCommitUtils.rdfTypeProperty(), RdfUtils.uri(GITHUB_NS + "GithubRepository"));
+        return Triple.create(uri(repoUri), RdfCommitUtils.rdfTypeProperty(), uri("github:Repository"));
     }
 
+    // Delegate to platform utils for common repository properties
     public static Triple createRepositoryOwnerProperty(String repoUri, String ownerUri) {
-        return RdfPlatformRepositoryUtils.createRepositoryOwnerProperty(repoUri, ownerUri);
+        return RdfPlatformRepositoryUtils.createOwnerProperty(repoUri, ownerUri);
     }
 
     public static Triple createRepositoryNameProperty(String repoUri, String repositoryName) {
-        return RdfPlatformRepositoryUtils.createRepositoryNameProperty(repoUri, repositoryName);
+        return RdfPlatformRepositoryUtils.createNameProperty(repoUri, repositoryName);
     }
 
-    public static Triple createCommiterGitHubUserProperty(String commitUri, String commiterGitHubUser) {
-        return Triple.create(uri(commitUri), commitGitHubUserProperty(), uri(commiterGitHubUser));
+    // Commit-ticket relationships using platform ontology
+    public static Triple createCommitPartOfTicketProperty(String commitUri, String ticketUri) {
+        return Triple.create(uri(commitUri), partOfTicketProperty(), uri(ticketUri));
     }
 
-    public static Triple createCommitIssueProperty(String commitUri, String issueUri) {
-        return Triple.create(uri(commitUri), partOfIssueProperty(), uri(issueUri));
-    }
-
+    // Convenience methods for backward compatibility
     public static Triple createCommitPartOfIssueProperty(String commitUri, String issueUri) {
-        return Triple.create(uri(commitUri), partOfIssueProperty(), uri(issueUri));
+        return createCommitPartOfTicketProperty(commitUri, issueUri);
     }
 
     public static Triple createCommitPartOfPullRequestProperty(String commitUri, String prUri) {
-        return Triple.create(uri(commitUri), partOfPullRequestProperty(), uri(prUri));
+        return createCommitPartOfTicketProperty(commitUri, prUri);
     }
 
-    public static Triple createCommitIsMergedProperty(String commitUri, boolean merged) {
-        return Triple.create(uri(commitUri), isMergedProperty(), RdfUtils.booleanLiteral(merged));
+    // GitHub-specific commit properties
+    public static Node isMergedProperty() {
+        return uri("github:isMerged");
+    }
+
+    public static Node mergedAtProperty() {
+        return uri("github:mergedAt");
+    }
+
+    public static Node mergedIntoProperty() {
+        return uri("github:mergedInto");
+    }
+
+    public static Node committerProperty() {
+        return uri("github:committer");
+    }
+
+    public static Node issueReferencedByProperty() {
+        return uri("github:issueReferencedBy");
+    }
+
+    // Methods for the missing commit properties
+    public static Triple createCommitIsMergedProperty(String commitUri, boolean isMerged) {
+        return Triple.create(uri(commitUri), isMergedProperty(), RdfUtils.booleanLiteral(isMerged));
     }
 
     public static Triple createCommitMergedAtProperty(String commitUri, LocalDateTime mergedAt) {
@@ -92,6 +86,14 @@ public final class RdfGithubCommitUtils {
     }
 
     public static Triple createCommitMergedIntoIssueProperty(String commitUri, String issueUri) {
-        return Triple.create(uri(commitUri), mergedIntoIssueProperty(), uri(issueUri));
+        return Triple.create(uri(commitUri), mergedIntoProperty(), uri(issueUri));
+    }
+
+    public static Triple createCommiterGitHubUserProperty(String commitUri, String userUri) {
+        return Triple.create(uri(commitUri), committerProperty(), uri(userUri));
+    }
+
+    public static Triple createCommitIssueProperty(String commitUri, String issueUri) {
+        return Triple.create(uri(commitUri), issueReferencedByProperty(), uri(issueUri));
     }
 }

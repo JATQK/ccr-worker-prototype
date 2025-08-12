@@ -33,9 +33,12 @@ public class RdfGitCommitUserUtils {
             }
 
             String login = author.getLogin();
-            if (login == null || login.isEmpty() || isAutomatedAccount(login)) {
+            if (login == null || login.isEmpty()) {
                 return null;
             }
+            
+            // Note: Automated accounts (bots) should still get User entities created for SHACL validation
+            // The isAutomatedAccount check was removed to ensure all users have corresponding RDF entities
 
             String uri = GithubUriUtils.getUserUri(login);
             long id = author.getId();
@@ -54,11 +57,4 @@ public class RdfGitCommitUserUtils {
         return info == null ? null : info.uri;
     }
 
-    private static boolean isAutomatedAccount(String login) {
-        login = login.toLowerCase();
-        // Common patterns for automated accounts
-        return login.contains("[bot]") ||
-                // Add other known automation patterns
-                login.contains("copilot");
-    }
 }

@@ -1,5 +1,24 @@
 package de.leipzig.htwk.gitrdf.worker.scheduler;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.commons.lang3.time.StopWatch;
+import org.springframework.integration.jdbc.lock.JdbcLockRegistry;
+import org.springframework.integration.support.locks.LockRegistry;
+import org.springframework.integration.support.locks.RenewableLockRegistry;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.DisposableBean;
+
 import de.leipzig.htwk.gitrdf.database.common.entity.GitRepositoryOrderEntity;
 import de.leipzig.htwk.gitrdf.database.common.entity.GithubRepositoryOrderEntity;
 import de.leipzig.htwk.gitrdf.database.common.entity.enums.GitRepositoryOrderStatus;
@@ -12,26 +31,10 @@ import de.leipzig.htwk.gitrdf.worker.service.impl.GithubConversionServiceImpl;
 import de.leipzig.htwk.gitrdf.worker.service.impl.GithubHandlerService;
 import de.leipzig.htwk.gitrdf.worker.timemeasurement.TimeLog;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.time.StopWatch;
-import org.springframework.integration.jdbc.lock.JdbcLockRegistry;
-import org.springframework.integration.support.locks.LockRegistry;
-import org.springframework.integration.support.locks.RenewableLockRegistry;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
-
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
-import java.time.Clock;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.locks.Lock;
 
 @Component
 @Slf4j
-public class RdfScheduler {
+public class RdfScheduler implements DisposableBean {
 
     private static final int THREE_SECONDS = 3000;
 
@@ -57,6 +60,8 @@ public class RdfScheduler {
 
     private final SchedulerConfig schedulerConfig;
 
+    private final AtomicBoolean shutdownRequested = new AtomicBoolean(false);
+
     public RdfScheduler(
             Clock clock,
             JdbcLockRegistry jdbcLockRegistry,
@@ -80,7 +85,7 @@ public class RdfScheduler {
     @Scheduled(fixedDelay = THREE_SECONDS)
     public void rdfGitRepoTask() {
 
-        if (!schedulerConfig.isRdfGitRepoTaskEnabled()) return;
+        if (!schedulerConfig.isRdfGitRepoTaskEnabled() || shutdownRequested.get()) return;
 
         log.trace("Triggering git repository rdf task run at {}", LocalDateTime.now(clock));
 
@@ -136,7 +141,7 @@ public class RdfScheduler {
     @Scheduled(fixedDelay = THREE_SECONDS)
     public void rdfGithubRepoTask() throws NoSuchAlgorithmException, InvalidKeySpecException, URISyntaxException, IOException, InterruptedException {
 
-        if (!schedulerConfig.isRdfGithubRepoTaskEnabled()) return;
+        if (!schedulerConfig.isRdfGithubRepoTaskEnabled() || shutdownRequested.get()) return;
 
         log.trace("Triggering github repository rdf task run at {}", LocalDateTime.now(clock));
 
@@ -151,7 +156,7 @@ public class RdfScheduler {
 
         for (GithubRepositoryOrderEntity entity : entitiesInStatusReceived) {
 
-            if (runPerformed) break;
+            if (runPerformed || shutdownRequested.get()) break;
 
             lock = null;
             String lockId = getGithubToRdfLockId(entity.getId());
@@ -187,10 +192,10 @@ public class RdfScheduler {
                         continue;
                     }
 
-                    if (workEntity.getNumberOfTries() > 9) {
+                    if (workEntity.getNumberOfTries() > 1) {
 
                         log.warn("Processing of '{}' repository aborted. " +
-                                "There are already more than 9 conversion attempts. " +
+                                "There are already more than 1 conversion attempts. " +
                                 "Setting status to '{}'",
                                 workEntity.getRepositoryName(),
                                 GitRepositoryOrderStatus.FAILED);
@@ -245,6 +250,8 @@ public class RdfScheduler {
 
     @Scheduled(fixedDelay = ONE_SECOND)
     public void processingFailureCleanupForGitToRdf() {
+
+        if (shutdownRequested.get()) return;
 
         log.trace("Triggering failure cleanup run at {}", LocalDateTime.now(clock));
 
@@ -307,6 +314,8 @@ public class RdfScheduler {
 
     @Scheduled(fixedDelay = ONE_SECOND)
     public void processingFailureCleanupForGithubToRdf() {
+
+        if (shutdownRequested.get()) return;
 
         log.trace("Triggering failure cleanup run at {}", LocalDateTime.now(clock));
 
@@ -384,6 +393,12 @@ public class RdfScheduler {
         }
 
         return (RenewableLockRegistry) this.lockRegistry;
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        log.info("Shutdown requested, stopping all scheduled tasks");
+        shutdownRequested.set(true);
     }
 
 }

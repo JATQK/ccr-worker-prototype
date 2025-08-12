@@ -102,6 +102,8 @@ public class RdfCommitUtils {
 
     public static Node repositoryHasBranchProperty() { return uri(GIT_NS + "hasBranch"); }
 
+    public static Node branchOfProperty() { return uri(GIT_NS + "branchOf"); }
+
     public static Node branchHeadCommitProperty() { return uri(GIT_NS + "headCommit"); }
 
     public static Node tagPointsToProperty() { return uri(GIT_NS + "pointsTo"); }
@@ -412,6 +414,10 @@ public class RdfCommitUtils {
 
     public static Triple createBranchHeadCommitProperty(String branchUri, String commitUri) {
         return Triple.create(uri(branchUri), branchHeadCommitProperty(), uri(commitUri));
+    }
+
+    public static Triple createBranchOfProperty(String branchUri, String repositoryUri) {
+        return Triple.create(uri(branchUri), branchOfProperty(), uri(repositoryUri));
     }
 
     public static Triple createTagRdfTypeProperty(String tagUri) {

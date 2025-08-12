@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -106,7 +107,11 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.RdfGithubUserUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.RdfGithubWorkflowJobUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.RdfGithubWorkflowStepUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.github.RdfGithubWorkflowUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformCommentUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformLabelUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformMilestoneUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformTicketUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformWorkflowExecutionUtils;
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 
@@ -216,6 +221,9 @@ public class GithubRdfConversionTransactionService {
         commitCache.clear();
         seenReviewIds.clear();
         
+        // CRITICAL: Clear GitHub user cache to ensure users are created in each repository's RDF model
+        GithubUserValidator.clearProcessedUsersCache();
+        
         Git gitHandler = null;
 
         try {
@@ -304,11 +312,62 @@ public class GithubRdfConversionTransactionService {
                 String mergedByUserUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, pr.getMergedBy());
                 if (mergedByUserUri != null) {
                     writer.triple(RdfGithubPullRequestUtils.createIssueMergedByProperty(issueUri, mergedByUserUri));
+                } else {
+                    // CRITICAL FALLBACK: Create BOTH the user entity AND the mergedBy relationship to prevent RDF violations
+                    log.error("CRITICAL: User validation returned null for PR mergedBy user '{}'. Creating fallback user entity and relationship.", 
+                            pr.getMergedBy().getLogin());
+                    try {
+                        // Use the safe user entity creation method that handles bot encoding/decoding properly
+                        String fallbackMergedByUri = GithubUserValidator.createSafeUserEntity(writer, pr.getMergedBy().getLogin());
+                        if (fallbackMergedByUri != null) {
+                            // Now create the relationship
+                            writer.triple(RdfGithubPullRequestUtils.createIssueMergedByProperty(issueUri, fallbackMergedByUri));
+                            log.info("Created fallback mergedBy entity and relationship for PR with URI: {}", fallbackMergedByUri);
+                        } else {
+                            log.error("Failed to create safe user entity for PR mergedBy user '{}'", pr.getMergedBy().getLogin());
+                        }
+                    } catch (Exception fallbackException) {
+                        log.error("Even fallback user entity creation failed for PR mergedBy user '{}': {}", 
+                                pr.getMergedBy().getLogin(), fallbackException.getMessage());
+                    }
                 }
             }
 
             if (pr.getMergeCommitSha() != null) {
                 writer.triple(RdfGithubPullRequestUtils.createIssueMergeCommitShaProperty(issueUri, pr.getMergeCommitSha()));
+            }
+
+            // Add source and target branch information
+            if (pr.getHead() != null && pr.getHead().getRef() != null) {
+                String sourceBranchUri = createBranchUri(pr.getRepository().getOwner().getLogin(), 
+                                                       pr.getRepository().getName(), 
+                                                       pr.getHead().getRef());
+                String repositoryUri = GithubUriUtils.getRepositoryUri(pr.getRepository().getOwner().getLogin(), 
+                                                                      pr.getRepository().getName());
+                
+                // Create source branch entity
+                writer.triple(RdfCommitUtils.createBranchRdfTypeProperty(sourceBranchUri));
+                writer.triple(RdfCommitUtils.createBranchNameProperty(sourceBranchUri, pr.getHead().getRef()));
+                writer.triple(RdfCommitUtils.createBranchOfProperty(sourceBranchUri, repositoryUri));
+                writer.triple(RdfCommitUtils.createRepositoryHasBranchProperty(repositoryUri, sourceBranchUri));
+                
+                writer.triple(RdfGithubPullRequestUtils.createSourceBranchProperty(issueUri, sourceBranchUri));
+            }
+
+            if (pr.getBase() != null && pr.getBase().getRef() != null) {
+                String targetBranchUri = createBranchUri(pr.getRepository().getOwner().getLogin(), 
+                                                       pr.getRepository().getName(), 
+                                                       pr.getBase().getRef());
+                String repositoryUri = GithubUriUtils.getRepositoryUri(pr.getRepository().getOwner().getLogin(), 
+                                                                      pr.getRepository().getName());
+                
+                // Create target branch entity
+                writer.triple(RdfCommitUtils.createBranchRdfTypeProperty(targetBranchUri));
+                writer.triple(RdfCommitUtils.createBranchNameProperty(targetBranchUri, pr.getBase().getRef()));
+                writer.triple(RdfCommitUtils.createBranchOfProperty(targetBranchUri, repositoryUri));
+                writer.triple(RdfCommitUtils.createRepositoryHasBranchProperty(repositoryUri, targetBranchUri));
+                
+                writer.triple(RdfGithubPullRequestUtils.createTargetBranchProperty(issueUri, targetBranchUri));
             }
         } catch (IOException e) {
             log.warn("Error while writing merge info for issue {}: {}", issueUri, e.getMessage());
@@ -319,9 +378,8 @@ public class GithubRdfConversionTransactionService {
     private void writeWorkflowRunInfo(GHPullRequest pr, StreamRDF writer, String issueUri, String repositoryUri)
             throws IOException, InterruptedException {
 
-        // Skip workflow processing if we're not processing issues or if limits are very
-        // small
-        if (pr == null || PROCESS_ISSUE_LIMIT <= 0) {
+        // Skip workflow processing if no PR provided
+        if (pr == null) {
             return;
         }
 
@@ -331,12 +389,6 @@ public class GithubRdfConversionTransactionService {
                 return;
             }
 
-            // For small limits, skip expensive workflow processing entirely
-            if (PROCESS_ISSUE_LIMIT <= 5) {
-                log.debug("Issue limit is small ({}), skipping workflow processing for performance",
-                        PROCESS_ISSUE_LIMIT);
-                return;
-            }
 
             String headSha = pr.getHead().getSha();
             GHRepository repo = pr.getRepository();
@@ -467,16 +519,36 @@ public class GithubRdfConversionTransactionService {
 
             writer.start();
             writer.triple(RdfGithubCommitUtils.createRepositoryRdfTypeProperty(repositoryUri));
-            String ownerUri = GithubUriUtils.getUserUri(owner);
-            writer.triple(RdfGithubCommitUtils.createRepositoryOwnerProperty(repositoryUri, ownerUri));
+            
+            // Validate and ensure GitHub user exists in RDF first, then create repository owner property
             GHUser repoOwner = githubRepositoryHandle.getOwner();
             if (repoOwner != null && repoOwner.getLogin() != null) {
-                // Validate and ensure GitHub user exists in RDF
                 String ownerUserUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, repoOwner);
                 if (ownerUserUri != null) {
-                    // The user validation already creates the user, we just need to verify the ownerUri matches
-                    log.debug("Repository owner user created/validated: {}", ownerUserUri);
+                    // Only create repository owner property if user validation succeeded
+                    writer.triple(RdfGithubCommitUtils.createRepositoryOwnerProperty(repositoryUri, ownerUserUri));
+                    log.info("Repository owner user created/validated and linked: {}", ownerUserUri);
+                } else {
+                    // CRITICAL FALLBACK: Create BOTH the user entity AND the repository owner relationship to prevent RDF violations
+                    log.error("CRITICAL: User validation returned null for repository owner '{}'. Creating fallback user entity and relationship.", 
+                            repoOwner.getLogin());
+                    try {
+                        // Use the safe user entity creation method that handles bot encoding/decoding properly
+                        String fallbackOwnerUri = GithubUserValidator.createSafeUserEntity(writer, repoOwner.getLogin());
+                        if (fallbackOwnerUri != null) {
+                            // Now create the relationship
+                            writer.triple(RdfGithubCommitUtils.createRepositoryOwnerProperty(repositoryUri, fallbackOwnerUri));
+                            log.info("Created fallback repository owner entity and relationship with URI: {}", fallbackOwnerUri);
+                        } else {
+                            log.error("Failed to create safe user entity for repository owner '{}'", repoOwner.getLogin());
+                        }
+                    } catch (Exception fallbackException) {
+                        log.error("Even fallback user entity creation failed for repository owner '{}': {}", 
+                                repoOwner.getLogin(), fallbackException.getMessage());
+                    }
                 }
+            } else {
+                log.warn("Repository owner is null or has no login, skipping repository owner property");
             }
             writer.triple(RdfGithubCommitUtils.createRepositoryNameProperty(repositoryUri, repositoryName));
 
@@ -523,6 +595,7 @@ public class GithubRdfConversionTransactionService {
                 writer.triple(RdfCommitUtils.createBranchRdfTypeProperty(branchUri));
                 writer.triple(RdfCommitUtils.createBranchNameProperty(branchUri, cleanBranchName));
                 writer.triple(RdfCommitUtils.createBranchHeadCommitProperty(branchUri, headCommitUri));
+                writer.triple(RdfCommitUtils.createBranchOfProperty(branchUri, repositoryUri));
             }
             writer.finish();
 
@@ -575,16 +648,19 @@ public class GithubRdfConversionTransactionService {
 
                 int commitsProcessed = 0;
 
+                log.info("Building tags map for commits...");
                 Map<ObjectId, List<String>> commitToTags = getTagsForCommits(gitRepository);
+                log.info("Completed building tags map with {} entries", commitToTags.size());
 
+                log.info("Building pull request map for commits...");
                 Map<String, PullRequestInfo> commitPrMap = buildCommitPrMap(githubRepositoryHandle, gitRepository);
+                log.info("Completed building PR map with {} entries", commitPrMap.size());
 
                 for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
                     log.info("Start iterations of git commits. Current iteration count: {}", iteration);
 
-                    if (log.isDebugEnabled())
-                        log.debug("Check whether github installation token needs refresh");
+                    log.info("Checking whether github installation token needs refresh");
 
                     int skipCount = calculateSkipCountAndThrowExceptionIfIntegerOverflowIsImminent(iteration,
                             commitsPerIteration);
@@ -596,13 +672,11 @@ public class GithubRdfConversionTransactionService {
 
                     boolean finished = true;
 
-                    if (log.isDebugEnabled())
-                        log.debug("Starting commit writer rdf");
+                    log.info("Starting commit writer rdf");
 
                     writer.start();
 
-                    if (log.isDebugEnabled())
-                        log.debug("Starting commit loop");
+                    log.info("Starting commit loop");
 
                     for (RevCommit commit : commits) {
                         commitsProcessed++;
@@ -772,8 +846,7 @@ public class GithubRdfConversionTransactionService {
                         }
                     }
 
-                    if (log.isDebugEnabled())
-                        log.debug("Ending commit writer rdf - loop finished");
+                    log.info("Ending commit writer rdf - loop finished");
 
                     writer.finish();
 
@@ -866,7 +939,12 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         int issueNumber = ghIssue.getNumber();
-                        String issueUri = GithubUriUtils.getIssueUri(owner, repositoryName, String.valueOf(issueNumber));
+                        String issueUri;
+                        if (ghIssue.isPullRequest()) {
+                            issueUri = GithubUriUtils.getPullRequestUri(owner, repositoryName, String.valueOf(issueNumber));
+                        } else {
+                            issueUri = GithubUriUtils.getIssueUri(owner, repositoryName, String.valueOf(issueNumber));
+                        }
 
                         if (issueUri == null || issueUri.isEmpty()) {
                             log.warn(
@@ -875,7 +953,7 @@ public class GithubRdfConversionTransactionService {
                             issueUri = GithubUriUtils.getRepositoryUri(owner, repositoryName);
                         }
 
-                        if (!githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() == null) {
+                        if (githubIssueRepositoryFilter.isEnableIssueState() && ghIssue.getState() == null) {
                             continue;
                         }
 
@@ -937,50 +1015,175 @@ public class GithubRdfConversionTransactionService {
                                     issueUri, ghIssue.getState().toString()));
                         }
 
-                        if (githubIssueRepositoryFilter.isEnableIssueUser() && ghIssue.getUser() != null && ghIssue.getUser().getLogin() != null) {
-                            // Validate and ensure GitHub user exists in RDF
-                            String githubIssueUserUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, ghIssue.getUser());
-                            if (githubIssueUserUri != null) {
-                                writer.triple(
-                                        RdfPlatformTicketUtils.createSubmitterProperty(issueUri, githubIssueUserUri));
-                            }
-                        }
-
-                        if (githubIssueRepositoryFilter.isEnableIssueReviewers() && ghIssue.isPullRequest()) {
-                            GHPullRequest pr = getPullRequestCached(
-                                    ghIssue.getRepository(), issueNumber);
-                            List<GHUser> reviewers = pr.getRequestedReviewers();
-                            for (GHUser reviewer : reviewers) {
-                                if (reviewer != null && reviewer.getLogin() != null) {
-                                    // Validate and ensure GitHub user exists in RDF
-                                    String reviewerUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, reviewer);
-                                    if (reviewerUri != null) {
-                                        writer.triple(RdfGithubIssueUtils.createIssueRequestedReviewerProperty(issueUri,
-                                                reviewerUri));
+                        if (githubIssueRepositoryFilter.isEnableIssueUser()) {
+                            if (ghIssue.getUser() != null && ghIssue.getUser().getLogin() != null) {
+                                // Validate and ensure GitHub user exists in RDF
+                                String githubIssueUserUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, ghIssue.getUser());
+                                if (githubIssueUserUri != null) {
+                                    writer.triple(
+                                            RdfPlatformTicketUtils.createSubmitterProperty(issueUri, githubIssueUserUri));
+                                } else {
+                                    // CRITICAL FALLBACK: Create BOTH the user entity AND the submitter relationship to prevent RDF violations
+                                    log.error("CRITICAL: User validation returned null for issue submitter '{}' in issue #{}. Creating fallback user entity and relationship.", 
+                                            ghIssue.getUser().getLogin(), issueNumber);
+                                    try {
+                                        // Use the safe user entity creation method that handles bot encoding/decoding properly
+                                        String fallbackSubmitterUri = GithubUserValidator.createSafeUserEntity(writer, ghIssue.getUser().getLogin());
+                                        if (fallbackSubmitterUri != null) {
+                                            // Now create the relationship
+                                            writer.triple(RdfPlatformTicketUtils.createSubmitterProperty(issueUri, fallbackSubmitterUri));
+                                            log.info("Created fallback submitter entity and relationship for issue #{} with URI: {}", issueNumber, fallbackSubmitterUri);
+                                        } else {
+                                            log.error("Failed to create safe user entity for issue submitter '{}'", ghIssue.getUser().getLogin());
+                                        }
+                                    } catch (Exception fallbackException) {
+                                        log.error("Even fallback user entity creation failed for issue submitter '{}' in issue #{}: {}", 
+                                                ghIssue.getUser().getLogin(), issueNumber, fallbackException.getMessage());
+                                    }
+                                }
+                            } else {
+                                // Try to handle cases where user or login is null, including deleted users
+                                if (ghIssue.getUser() == null) {
+                                    log.warn("Cannot create submitter for issue #{}: GitHub user object is null (possibly deleted account)", issueNumber);
+                                } else if (ghIssue.getUser().getLogin() == null) {
+                                    log.warn("Cannot create submitter for issue #{}: GitHub user login is null (user ID: {})", 
+                                            issueNumber, ghIssue.getUser().getId());
+                                    // Attempt to create a fallback submitter if we have user ID but no login
+                                    try {
+                                        String fallbackLogin = "user-" + ghIssue.getUser().getId();
+                                        String githubIssueUserUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, fallbackLogin);
+                                        if (githubIssueUserUri != null) {
+                                            writer.triple(RdfPlatformTicketUtils.createSubmitterProperty(issueUri, githubIssueUserUri));
+                                            log.info("Created fallback submitter for issue #{} using ID-based login: {}", issueNumber, fallbackLogin);
+                                        }
+                                    } catch (Exception e) {
+                                        log.warn("Failed to create fallback submitter for issue #{}: {}", issueNumber, e.getMessage());
                                     }
                                 }
                             }
+                        } else {
+                            log.debug("Submitter creation skipped for issue #{}: issue user processing is disabled", issueNumber);
                         }
 
+                        if (githubIssueRepositoryFilter.isEnableIssueReviewers() && ghIssue.isPullRequest()) {
+                            try {
+                                GHPullRequest pr = getPullRequestCached(
+                                        ghIssue.getRepository(), issueNumber);
+                                if (pr != null) {
+                                    List<GHUser> reviewers = pr.getRequestedReviewers();
+                                    if (reviewers != null && !reviewers.isEmpty()) {
+                                        for (GHUser reviewer : reviewers) {
+                                            if (reviewer != null && reviewer.getLogin() != null) {
+                                                try {
+                                                    // Validate and ensure GitHub user exists in RDF
+                                                    String reviewerUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, reviewer);
+                                                    if (reviewerUri != null) {
+                                                        writer.triple(RdfGithubIssueUtils.createIssueRequestedReviewerProperty(issueUri,
+                                                                reviewerUri));
+                                                    } else {
+                                                        // CRITICAL FALLBACK: Create BOTH the user entity AND the requested reviewer relationship to prevent RDF violations
+                                                        log.error("CRITICAL: User validation returned null for requested reviewer '{}' in issue #{}. Creating fallback user entity and relationship.", 
+                                                                reviewer.getLogin(), issueNumber);
+                                                        try {
+                                                            // Use the safe user entity creation method that handles bot encoding/decoding properly
+                                                            String fallbackReviewerUri = GithubUserValidator.createSafeUserEntity(writer, reviewer.getLogin());
+                                                            if (fallbackReviewerUri != null) {
+                                                                // Now create the relationship
+                                                                writer.triple(RdfGithubIssueUtils.createIssueRequestedReviewerProperty(issueUri,
+                                                                        fallbackReviewerUri));
+                                                                log.info("Created fallback requested reviewer entity and relationship for issue #{} with URI: {}", issueNumber, fallbackReviewerUri);
+                                                            } else {
+                                                                log.error("Failed to create safe user entity for requested reviewer '{}'", reviewer.getLogin());
+                                                            }
+                                                        } catch (Exception fallbackException) {
+                                                            log.error("Even fallback user entity creation failed for requested reviewer '{}' in issue #{}: {}", 
+                                                                    reviewer.getLogin(), issueNumber, fallbackException.getMessage());
+                                                        }
+                                                    }
+                                                } catch (Exception e) {
+                                                    log.warn("Error processing requested reviewer {} for issue {}: {}", 
+                                                            reviewer.getLogin(), issueNumber, e.getMessage());
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                log.warn("Error processing reviewers for issue {}: {}", issueNumber, e.getMessage());
+                            }
+                        }
+
+                        // Milestone - process issue/PR milestone with proper milestone entity
                         if (githubIssueRepositoryFilter.isEnableIssueMilestone()) {
-                            GHMilestone issueMilestone = ghIssue.getMilestone();
-                            if (issueMilestone != null) {
-                                writer.triple(RdfGithubIssueUtils.createIssueMilestoneProperty(issueUri,
-                                        ghIssue.getMilestone().getHtmlUrl().toString()));
+                            try {
+                                GHMilestone milestone = ghIssue.getMilestone();
+                                if (milestone != null) {
+                                    String milestoneUri = GithubUriUtils.getMilestoneUri(owner, repositoryName, String.valueOf(milestone.getNumber()));
+                                    
+                                    // Create milestone entity
+                                    writer.triple(RdfPlatformMilestoneUtils.createRdfTypeProperty(milestoneUri));
+                                    writer.triple(RdfPlatformMilestoneUtils.createIdProperty(milestoneUri, String.valueOf(milestone.getId())));
+                                    
+                                    if (milestone.getTitle() != null) {
+                                        writer.triple(RdfPlatformMilestoneUtils.createTitleProperty(milestoneUri, milestone.getTitle()));
+                                    }
+                                    
+                                    if (milestone.getDescription() != null && !milestone.getDescription().isEmpty()) {
+                                        writer.triple(RdfPlatformMilestoneUtils.createDescriptionProperty(milestoneUri, milestone.getDescription()));
+                                    }
+                                    
+                                    if (milestone.getState() != null) {
+                                        writer.triple(RdfPlatformMilestoneUtils.createStateProperty(milestoneUri, milestone.getState().toString()));
+                                    }
+                                    
+                                    if (milestone.getHtmlUrl() != null) {
+                                        writer.triple(RdfPlatformMilestoneUtils.createUrlProperty(milestoneUri, milestone.getHtmlUrl().toString()));
+                                    }
+                                    
+                                    if (milestone.getCreatedAt() != null) {
+                                        writer.triple(RdfPlatformMilestoneUtils.createCreatedAtProperty(milestoneUri, localDateTimeFrom(milestone.getCreatedAt())));
+                                    }
+                                    
+                                    if (milestone.getUpdatedAt() != null) {
+                                        writer.triple(RdfPlatformMilestoneUtils.createUpdatedAtProperty(milestoneUri, localDateTimeFrom(milestone.getUpdatedAt())));
+                                    }
+                                    
+                                    if (milestone.getClosedAt() != null) {
+                                        writer.triple(RdfPlatformMilestoneUtils.createClosedAtProperty(milestoneUri, localDateTimeFrom(milestone.getClosedAt())));
+                                    }
+                                    
+                                    if (milestone.getDueOn() != null) {
+                                        writer.triple(RdfPlatformMilestoneUtils.createDueDateProperty(milestoneUri, localDateTimeFrom(milestone.getDueOn())));
+                                    }
+                                    
+                                    // Link milestone to issue/PR
+                                    writer.triple(RdfPlatformMilestoneUtils.createHasMilestoneProperty(issueUri, milestoneUri));
+                                    writer.triple(RdfPlatformMilestoneUtils.createMilestoneOfProperty(milestoneUri, issueUri));
+                                }
+                            } catch (Exception e) {
+                                log.warn("Error processing milestone for issue {}: {}", issueNumber, e.getMessage());
                             }
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueCreatedAt() && ghIssue.getCreatedAt() != null) {
-                            LocalDateTime createdAt = localDateTimeFrom(ghIssue.getCreatedAt());
-                            writer.triple(RdfPlatformTicketUtils.createCreatedAtProperty(issueUri, createdAt));
+                            try {
+                                LocalDateTime createdAt = localDateTimeFrom(ghIssue.getCreatedAt());
+                                writer.triple(RdfPlatformTicketUtils.createCreatedAtProperty(issueUri, createdAt));
+                            } catch (Exception e) {
+                                log.warn("Error processing created date for issue {}: {}", issueNumber, e.getMessage());
+                            }
                         }
 
                         if (githubIssueRepositoryFilter.isEnableIssueUpdatedAt()) {
-                            Date updatedAtUtilDate = ghIssue.getUpdatedAt();
-                            if (updatedAtUtilDate != null) {
-                                LocalDateTime updatedAt = localDateTimeFrom(updatedAtUtilDate);
-                                writer.triple(
-                                        RdfPlatformTicketUtils.createUpdatedAtProperty(issueUri, updatedAt));
+                            try {
+                                Date updatedAtUtilDate = ghIssue.getUpdatedAt();
+                                if (updatedAtUtilDate != null) {
+                                    LocalDateTime updatedAt = localDateTimeFrom(updatedAtUtilDate);
+                                    writer.triple(
+                                            RdfPlatformTicketUtils.createUpdatedAtProperty(issueUri, updatedAt));
+                                }
+                            } catch (Exception e) {
+                                log.warn("Error processing updated date for issue {}: {}", issueNumber, e.getMessage());
                             }
                         }
 
@@ -1011,8 +1214,62 @@ public class GithubRdfConversionTransactionService {
                                     String assigneeUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, assignee);
                                     if (assigneeUri != null) {
                                         writer.triple(RdfPlatformTicketUtils.createAssigneeProperty(issueUri, assigneeUri));
+                                    } else {
+                                        // CRITICAL FALLBACK: Create BOTH the user entity AND the assignee relationship to prevent RDF violations
+                                        log.error("CRITICAL: User validation returned null for assignee '{}' in issue #{}. Creating fallback user entity and relationship.", 
+                                                assignee.getLogin(), issueNumber);
+                                        try {
+                                            // Use the safe user entity creation method that handles bot encoding/decoding properly
+                                            String fallbackAssigneeUri = GithubUserValidator.createSafeUserEntity(writer, assignee.getLogin());
+                                            if (fallbackAssigneeUri != null) {
+                                                // Now create the relationship
+                                                writer.triple(RdfPlatformTicketUtils.createAssigneeProperty(issueUri, fallbackAssigneeUri));
+                                                log.info("Created fallback assignee entity and relationship for issue #{} with URI: {}", issueNumber, fallbackAssigneeUri);
+                                            } else {
+                                                log.error("Failed to create safe user entity for assignee '{}'", assignee.getLogin());
+                                            }
+                                        } catch (Exception fallbackException) {
+                                            log.error("Even fallback user entity creation failed for assignee '{}' in issue #{}: {}", 
+                                                    assignee.getLogin(), issueNumber, fallbackException.getMessage());
+                                        }
                                     }
                                 }
+                            }
+                        }
+
+                        // Labels - process issue/PR labels
+                        if (githubIssueRepositoryFilter.isEnableIssueLabels()) {
+                            try {
+                                Collection<org.kohsuke.github.GHLabel> labels = ghIssue.getLabels();
+                                if (labels != null && !labels.isEmpty()) {
+                                    for (org.kohsuke.github.GHLabel label : labels) {
+                                        if (label != null && label.getName() != null) {
+                                            String labelUri = GithubUriUtils.getLabelUri(owner, repositoryName, label.getName());
+                                            
+                                            // Create label entity
+                                            writer.triple(RdfPlatformLabelUtils.createRdfTypeProperty(labelUri));
+                                            writer.triple(RdfPlatformLabelUtils.createNameProperty(labelUri, label.getName()));
+                                            
+                                            if (label.getDescription() != null && !label.getDescription().isEmpty()) {
+                                                writer.triple(RdfPlatformLabelUtils.createDescriptionProperty(labelUri, label.getDescription()));
+                                            }
+                                            
+                                            if (label.getColor() != null) {
+                                                writer.triple(RdfPlatformLabelUtils.createColorProperty(labelUri, label.getColor()));
+                                            }
+                                            
+                                            if (label.getUrl() != null) {
+                                                writer.triple(RdfPlatformLabelUtils.createUrlProperty(labelUri, label.getUrl().toString()));
+                                            }
+                                            
+                                            // Link label to issue/PR
+                                            writer.triple(RdfPlatformLabelUtils.createHasLabelProperty(issueUri, labelUri));
+                                            writer.triple(RdfPlatformLabelUtils.createLabelOfProperty(labelUri, issueUri));
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                log.warn("Error processing labels for issue {}: {}", issueNumber, e.getMessage());
                             }
                         }
 
@@ -1027,9 +1284,15 @@ public class GithubRdfConversionTransactionService {
                                 if (!seenReviewIds.add(reviewId)) {
                                     continue;
                                 }
-                                String reviewURI = GithubUriUtils.getIssueReviewUri(issueUri,
-                                        String.valueOf(reviewId));
-                                String reviewUrl = GithubUriUtils.getIssueReviewUrl(issueUri, String.valueOf(reviewId));
+                                String reviewURI;
+                                String reviewUrl;
+                                if (ghIssue.isPullRequest()) {
+                                    reviewURI = GithubUriUtils.getPullRequestReviewUri(issueUri, String.valueOf(reviewId));
+                                    reviewUrl = GithubUriUtils.getIssueReviewUrl("https://github.com/" + owner + "/" + repositoryName, String.valueOf(issueNumber), String.valueOf(reviewId));
+                                } else {
+                                    reviewURI = GithubUriUtils.getIssueReviewUri(issueUri, String.valueOf(reviewId));
+                                    reviewUrl = GithubUriUtils.getIssueReviewUrl("https://github.com/" + owner + "/" + repositoryName, String.valueOf(issueNumber), String.valueOf(reviewId));
+                                }
                                 // String reviewURL = review.getUrl().toString();
                                 // String reviewUri = issueUri + "/reviews/" + reviewId;
 
@@ -1060,7 +1323,32 @@ public class GithubRdfConversionTransactionService {
                                     if (reviewUserUri != null) {
                                         writer.triple(RdfGithubIssueReviewUtils.createReviewUserProperty(
                                                 reviewURI, reviewUserUri));
+                                    } else {
+                                        // CRITICAL FALLBACK: If validator somehow returns null, create BOTH the user entity AND the relationship
+                                        // to prevent RDF violations
+                                        log.error("CRITICAL: User validation returned null for review user '{}' in review {} of issue #{}. Creating fallback user entity and relationship.", 
+                                                review.getUser().getLogin(), review.getId(), issueNumber);
+                                        try {
+                                            // Use the safe user entity creation method that handles bot encoding/decoding properly
+                                            String fallbackUserUri = GithubUserValidator.createSafeUserEntity(writer, review.getUser().getLogin());
+                                            if (fallbackUserUri != null) {
+                                                // Now create the relationship
+                                                writer.triple(RdfGithubIssueReviewUtils.createReviewUserProperty(
+                                                        reviewURI, fallbackUserUri));
+                                                log.info("Created fallback reviewer entity and relationship for review {} with URI: {}", review.getId(), fallbackUserUri);
+                                            } else {
+                                                log.error("Failed to create safe user entity for reviewer '{}'", review.getUser().getLogin());
+                                            }
+                                        } catch (Exception fallbackException) {
+                                            log.error("Even fallback user entity creation failed for reviewer '{}' in review {}: {}", 
+                                                    review.getUser().getLogin(), review.getId(), fallbackException.getMessage());
+                                        }
                                     }
+                                } else {
+                                    log.warn("Cannot create review user for review {} in issue #{}: user is {} or login is {}", 
+                                            review.getId(), issueNumber,
+                                            review.getUser() == null ? "null" : "valid",
+                                            review.getUser() == null ? "null" : (review.getUser().getLogin() == null ? "null" : "valid"));
                                 }
                                 if (review.getCommitId() != null) {
                                     writer.triple(RdfGithubIssueReviewUtils.createReviewCommitIdProperty(
@@ -1076,6 +1364,30 @@ public class GithubRdfConversionTransactionService {
                                     continue;
                                 }
 
+                                // Create a mutable copy and sort comments by creation time to identify the earliest (first) comment
+                                reviewComments = new ArrayList<>(reviewComments);
+                                reviewComments.sort((c1, c2) -> {
+                                    try {
+                                        if (c1.getCreatedAt() == null && c2.getCreatedAt() == null) return 0;
+                                        if (c1.getCreatedAt() == null) return 1;
+                                        if (c2.getCreatedAt() == null) return -1;
+                                        return c1.getCreatedAt().compareTo(c2.getCreatedAt());
+                                    } catch (IOException e) {
+                                        log.warn("IOException while comparing comment creation times: {}", e.getMessage());
+                                        return 0; // treat as equal if comparison fails
+                                    }
+                                });
+
+                                String firstCommentURI = null;
+                                if (!reviewComments.isEmpty()) {
+                                    long firstCommentId = reviewComments.get(0).getId();
+                                    firstCommentURI = GithubUriUtils.getIssueReviewCommentUri(
+                                            issueUri, String.valueOf(firstCommentId));
+                                    // Link review to first comment only using platform:hasComment
+                                    writer.triple(RdfGithubIssueReviewUtils.createReviewCommentProperty(
+                                            reviewURI, firstCommentURI));
+                                }
+
                                 // Process the comments of the review
                                 for (GHPullRequestReviewComment c : reviewComments) {
                                     long cid = c.getId();
@@ -1084,22 +1396,16 @@ public class GithubRdfConversionTransactionService {
                                     individualReviewCommentsCache.put(cid, c);
 
                                     // Setup the URI for a review comment of a pull request
-                                    String reviewCommentURI = GithubUriUtils.getIssueReviewCommentUri(
+                                    String reviewCommentURI = GithubUriUtils.getPullRequestReviewCommentUri(
                                             issueUri, String.valueOf(cid));
-
-                                    // Link into the Review the Comment
-                                    writer.triple(RdfGithubIssueReviewUtils.createReviewCommentProperty(
-                                            reviewURI,
-                                            reviewCommentURI));
 
                                     // Create the RDF triples for the review comment
                                     writer.triple(RdfGithubCommentUtils.createCommentRdfType(reviewCommentURI));
                                     writer.triple(RdfGithubCommentUtils.createCommentId(reviewCommentURI, cid));
-                                    writer.triple(RdfGithubCommentUtils.createHasCommentProperty(reviewURI, reviewCommentURI));
                                     
-                                    // Add comment API URL
+                                    // Add comment API URL (review comments use pulls/comments API)
                                     String repoString = "https://github.com/" + owner + "/" + repositoryName;
-                                    String commentApiUrl = GithubUriUtils.getIssueCommentUrl(repoString, String.valueOf(cid));
+                                    String commentApiUrl = GithubUriUtils.getIssueReviewCommentUrl(repoString, String.valueOf(cid));
                                     writer.triple(RdfGithubCommentUtils.createCommentApiUrl(reviewCommentURI, commentApiUrl));
 
                                     // Content and user
@@ -1113,6 +1419,25 @@ public class GithubRdfConversionTransactionService {
                                         if (commentUserUri != null) {
                                             writer.triple(RdfGithubCommentUtils.createCommentUser(
                                                     reviewCommentURI, commentUserUri));
+                                        } else {
+                                            // CRITICAL FALLBACK: Create BOTH the user entity AND the author relationship to prevent RDF violations
+                                            log.error("CRITICAL: User validation returned null for comment author '{}' in review comment {}. Creating fallback user entity and relationship.", 
+                                                    c.getUser().getLogin(), cid);
+                                            try {
+                                                // Use the safe user entity creation method that handles bot encoding/decoding properly
+                                                String fallbackCommentUserUri = GithubUserValidator.createSafeUserEntity(writer, c.getUser().getLogin());
+                                                if (fallbackCommentUserUri != null) {
+                                                    // Now create the relationship
+                                                    writer.triple(RdfGithubCommentUtils.createCommentUser(
+                                                            reviewCommentURI, fallbackCommentUserUri));
+                                                    log.info("Created fallback comment author entity and relationship for comment {} with URI: {}", cid, fallbackCommentUserUri);
+                                                } else {
+                                                    log.error("Failed to create safe user entity for comment author '{}'", c.getUser().getLogin());
+                                                }
+                                            } catch (Exception fallbackException) {
+                                                log.error("Even fallback user entity creation failed for comment author '{}' in comment {}: {}", 
+                                                        c.getUser().getLogin(), cid, fallbackException.getMessage());
+                                            }
                                         }
                                     }
                                     if (c.getCreatedAt() != null) {
@@ -1120,26 +1445,34 @@ public class GithubRdfConversionTransactionService {
                                                 reviewCommentURI, localDateTimeFrom(c.getCreatedAt())));
                                     }
 
-                                    // HIERARCHY HANDLING - This was missing!
+                                    // NEW COMMENT CHAIN STRUCTURE
                                     Long parentId = c.getInReplyToId();
+                                    boolean isFirstComment = reviewCommentURI.equals(firstCommentURI);
                                     boolean isRoot = (parentId == null || parentId.equals(cid) || parentId <= 0);
 
-
-                                    // If this is a reply, link to parent
-                                    if (!isRoot && parentId != null && parentId > 0) {
-                                        String parentCommentUri = GithubUriUtils.getIssueReviewCommentUri(
-                                                repositoryUri, String.valueOf(parentId));
+                                    if (isFirstComment) {
+                                        // First comment comments on the review itself
+                                        writer.triple(RdfPlatformCommentUtils.createCommentOnProperty(
+                                                reviewCommentURI, reviewURI));
+                                    } else if (!isRoot && parentId != null && parentId > 0) {
+                                        // This is a reply, it comments on the parent comment
+                                        String parentCommentUri = GithubUriUtils.getPullRequestReviewCommentUri(
+                                                issueUri, String.valueOf(parentId));
 
                                         // Validate and ensure parent comment exists before creating relationships
                                         if (validateAndEnsureParentReviewComment(writer, githubRepositoryHandle, 
                                                 parentId, repositoryUri, issueUri, gitHubHandle)) {
-                                            writer.triple(RdfGithubCommentUtils.createParentComment(
+                                            writer.triple(RdfPlatformCommentUtils.createCommentOnProperty(
                                                     reviewCommentURI, parentCommentUri));
-
-                                            // Also create the reverse relationship - parent has this as a reply
-                                            writer.triple(RdfGithubCommentUtils.createHasReply(
+                                            
+                                            // Create platform:hasComment link from parent to this comment
+                                            writer.triple(RdfGithubCommentUtils.createHasCommentProperty(
                                                     parentCommentUri, reviewCommentURI));
                                         }
+                                    } else {
+                                        // Root comment that's not the first - comments on the review
+                                        writer.triple(RdfPlatformCommentUtils.createCommentOnProperty(
+                                                reviewCommentURI, reviewURI));
                                     }
 
                                     // Reactions
@@ -1169,6 +1502,26 @@ public class GithubRdfConversionTransactionService {
                                                     writer.triple(
                                                             RdfGithubReactionUtils.createReactionByProperty(reactionURI,
                                                                     reactionByUri));
+                                                } else {
+                                                    // CRITICAL FALLBACK: Create BOTH the user entity AND the reaction relationship to prevent RDF violations
+                                                    log.error("CRITICAL: User validation returned null for reaction user '{}' in reaction {}. Creating fallback user entity and relationship.", 
+                                                            r.getUser().getLogin(), r.getId());
+                                                    try {
+                                                        // Use the safe user entity creation method that handles bot encoding/decoding properly
+                                                        String fallbackReactionUserUri = GithubUserValidator.createSafeUserEntity(writer, r.getUser().getLogin());
+                                                        if (fallbackReactionUserUri != null) {
+                                                            // Now create the relationship
+                                                            writer.triple(
+                                                                    RdfGithubReactionUtils.createReactionByProperty(reactionURI,
+                                                                            fallbackReactionUserUri));
+                                                            log.info("Created fallback reaction user entity and relationship for reaction {} with URI: {}", r.getId(), fallbackReactionUserUri);
+                                                        } else {
+                                                            log.error("Failed to create safe user entity for reaction user '{}'", r.getUser().getLogin());
+                                                        }
+                                                    } catch (Exception fallbackException) {
+                                                        log.error("Even fallback user entity creation failed for reaction user '{}' in reaction {}: {}", 
+                                                                r.getUser().getLogin(), r.getId(), fallbackException.getMessage());
+                                                    }
                                                 }
                                             }
                                             if (r.getCreatedAt() != null) {
@@ -1186,8 +1539,17 @@ public class GithubRdfConversionTransactionService {
                             List<GHIssueComment> issueComments = getIssueCommentsCached(ghIssue);
                             for (GHIssueComment c : issueComments) {
                                 long cid = c.getId();
-                                String issueCommentURI = GithubUriUtils.getIssueCommentUri(issueUri,
-                                        String.valueOf(cid));
+                                String issueCommentURI;
+                                String commentApiUrl;
+                                String repoString = "https://github.com/" + owner + "/" + repositoryName;
+                                
+                                if (ghIssue.isPullRequest()) {
+                                    issueCommentURI = GithubUriUtils.getPullRequestCommentUri(issueUri, String.valueOf(cid));
+                                    commentApiUrl = GithubUriUtils.getPullRequestCommentUrl(repoString, String.valueOf(cid));
+                                } else {
+                                    issueCommentURI = GithubUriUtils.getIssueCommentUri(issueUri, String.valueOf(cid));
+                                    commentApiUrl = GithubUriUtils.getIssueCommentUrl(repoString, String.valueOf(cid));
+                                }
 
                                 // Link in Issue to Comment
                                 writer.triple(RdfGithubIssueReviewUtils.createReviewCommentProperty(issueUri,
@@ -1196,9 +1558,10 @@ public class GithubRdfConversionTransactionService {
                                 writer.triple(RdfGithubCommentUtils.createCommentId(issueCommentURI, cid));
                                 writer.triple(RdfGithubCommentUtils.createHasCommentProperty(issueUri, issueCommentURI));
                                 
+                                // Add platform:commentOn to link comment back to the issue
+                                writer.triple(RdfPlatformCommentUtils.createCommentOnProperty(issueCommentURI, issueUri));
+                                
                                 // Add comment API URL
-                                String repoString = "https://github.com/" + owner + "/" + repositoryName;
-                                String commentApiUrl = GithubUriUtils.getIssueCommentUrl(repoString, String.valueOf(cid));
                                 writer.triple(RdfGithubCommentUtils.createCommentApiUrl(issueCommentURI, commentApiUrl));
 
                                 if (c.getBody() != null && !c.getBody().isEmpty()) {
@@ -1212,6 +1575,26 @@ public class GithubRdfConversionTransactionService {
                                         writer.triple(RdfGithubCommentUtils.createCommentUser(
                                                 issueCommentURI,
                                                 commentUserUri));
+                                    } else {
+                                        // CRITICAL FALLBACK: Create BOTH the user entity AND the author relationship to prevent RDF violations
+                                        log.error("CRITICAL: User validation returned null for comment author '{}' in issue comment {}. Creating fallback user entity and relationship.", 
+                                                c.getUser().getLogin(), cid);
+                                        try {
+                                            // Use the safe user entity creation method that handles bot encoding/decoding properly
+                                            String fallbackCommentUserUri = GithubUserValidator.createSafeUserEntity(writer, c.getUser().getLogin());
+                                            if (fallbackCommentUserUri != null) {
+                                                // Now create the relationship
+                                                writer.triple(RdfGithubCommentUtils.createCommentUser(
+                                                        issueCommentURI,
+                                                        fallbackCommentUserUri));
+                                                log.info("Created fallback comment author entity and relationship for issue comment {} with URI: {}", cid, fallbackCommentUserUri);
+                                            } else {
+                                                log.error("Failed to create safe user entity for comment author '{}'", c.getUser().getLogin());
+                                            }
+                                        } catch (Exception fallbackException) {
+                                            log.error("Even fallback user entity creation failed for comment author '{}' in comment {}: {}", 
+                                                    c.getUser().getLogin(), cid, fallbackException.getMessage());
+                                        }
                                     }
                                 }
                                 if (c.getCreatedAt() != null) {
@@ -1243,6 +1626,25 @@ public class GithubRdfConversionTransactionService {
                                         if (reactionByUri != null) {
                                             writer.triple(RdfGithubReactionUtils.createReactionByProperty(
                                                     reactionURI, reactionByUri));
+                                        } else {
+                                            // CRITICAL FALLBACK: Create BOTH the user entity AND the reaction relationship to prevent RDF violations
+                                            log.error("CRITICAL: User validation returned null for reaction user '{}' in reaction {}. Creating fallback user entity and relationship.", 
+                                                    r.getUser().getLogin(), r.getId());
+                                            try {
+                                                // Use the safe user entity creation method that handles bot encoding/decoding properly
+                                                String fallbackReactionUserUri = GithubUserValidator.createSafeUserEntity(writer, r.getUser().getLogin());
+                                                if (fallbackReactionUserUri != null) {
+                                                    // Now create the relationship
+                                                    writer.triple(RdfGithubReactionUtils.createReactionByProperty(
+                                                            reactionURI, fallbackReactionUserUri));
+                                                    log.info("Created fallback reaction user entity and relationship for reaction {} with URI: {}", r.getId(), fallbackReactionUserUri);
+                                                } else {
+                                                    log.error("Failed to create safe user entity for reaction user '{}'", r.getUser().getLogin());
+                                                }
+                                            } catch (Exception fallbackException) {
+                                                log.error("Even fallback user entity creation failed for reaction user '{}' in reaction {}: {}", 
+                                                        r.getUser().getLogin(), r.getId(), fallbackException.getMessage());
+                                            }
                                         }
                                     }
                                     if (r.getCreatedAt() != null) {
@@ -1265,6 +1667,13 @@ public class GithubRdfConversionTransactionService {
                             doesWriterContainNonWrittenRdfStreamElements = false;
                             issueCounter = 0;
                             lockHandler.renewLockOnRenewTimeFulfillment();
+                            
+                            // Restart writer for next batch if there are more issues to process
+                            if (issuesProcessed < PROCESS_ISSUE_LIMIT) {
+                                log.info("Start next issue rdf conversion batch");
+                                writer.start();
+                                doesWriterContainNonWrittenRdfStreamElements = true;
+                            }
                         } else {
                             log.info("Processed issue #{} with id {} and uri '{}'", issueCounter, issueUri);
                         }
@@ -1306,15 +1715,13 @@ public class GithubRdfConversionTransactionService {
         Map<String, PullRequestInfo> map = new HashMap<>();
 
         try {
-            if (PROCESS_ISSUE_LIMIT <= 0) {
-                log.info("Issue processing disabled, skipping commit-PR mapping");
-                return map;
-            }
 
             int maxPRsToFetch = PROCESS_ISSUE_LIMIT;
+            log.info("Fetching pull requests for commit mapping (limit: {})...", maxPRsToFetch);
             PagedIterable<GHPullRequest> prs = executeWithRetry(
                     () -> repo.queryPullRequests().state(GHIssueState.ALL).list(),
                     "queryPullRequests");
+            log.info("Successfully retrieved pull request list from GitHub API");
 
             int prsProcessed = 0;
 
@@ -1325,6 +1732,11 @@ public class GithubRdfConversionTransactionService {
                 }
 
                 try {
+                    prsProcessed++;
+                    if (prsProcessed % 100 == 0) {
+                        log.info("Processed {} PRs for commit mapping...", prsProcessed);
+                    }
+                    
                     if (!pr.isMerged()) {
                         continue;
                     }
@@ -1358,6 +1770,9 @@ public class GithubRdfConversionTransactionService {
                 // Process individual commits
                 if (PROCESS_COMMIT_LIMIT > 0) {
                     try {
+                        if (prsProcessed % 50 == 0) {
+                            log.info("Fetching commits for PR #{} (processed {} PRs so far)...", pr.getNumber(), prsProcessed);
+                        }
                         for (GHPullRequestCommitDetail c : getCommitsCached(pr)) {
                             try {
                                 ObjectId commitId = ObjectId.fromString(c.getSha());
@@ -1449,8 +1864,7 @@ public class GithubRdfConversionTransactionService {
 
         String email = authorIdent.getEmailAddress();
 
-        if (log.isDebugEnabled())
-            log.debug("Set rdf github user in commit");
+        log.info("Set rdf github user in commit");
 
         GithubUserInfo info = RdfGitCommitUserUtils.getGitHubUserInfoFromCommit(githubRepositoryHandle, gitHash);
 
@@ -1468,6 +1882,28 @@ public class GithubRdfConversionTransactionService {
                 // Add additional commit-specific properties that aren't handled by the validator
                 if (info.gitAuthorEmail != null && !info.gitAuthorEmail.isEmpty()) {
                     writer.triple(RdfGithubUserUtils.createGitAuthorEmailProperty(validatedUserUri, info.gitAuthorEmail));
+                }
+            } else {
+                // CRITICAL FALLBACK: Create BOTH the user entity AND the committer relationship to prevent RDF violations
+                log.error("CRITICAL: User validation returned null for commit author '{}' in commit {}. Creating fallback user entity and relationship.", 
+                        info.login, gitHash);
+                try {
+                    // Use the safe user entity creation method that handles bot encoding/decoding properly
+                    String fallbackCommitterUri = GithubUserValidator.createSafeUserEntity(writer, info.login);
+                    if (fallbackCommitterUri != null) {
+                        // Now create the relationship
+                        writer.triple(RdfGithubCommitUtils.createCommiterGitHubUserProperty(commitUri, fallbackCommitterUri));
+                        // Add additional commit-specific properties that aren't handled by the validator
+                        if (info.gitAuthorEmail != null && !info.gitAuthorEmail.isEmpty()) {
+                            writer.triple(RdfGithubUserUtils.createGitAuthorEmailProperty(fallbackCommitterUri, info.gitAuthorEmail));
+                        }
+                        log.info("Created fallback commit author entity and relationship for commit {} with URI: {}", gitHash, fallbackCommitterUri);
+                    } else {
+                        log.error("Failed to create safe user entity for commit author '{}'", info.login);
+                    }
+                } catch (Exception fallbackException) {
+                    log.error("Even fallback user entity creation failed for commit author '{}' in commit {}: {}", 
+                            info.login, gitHash, fallbackException.getMessage());
                 }
             }
         }
@@ -1538,6 +1974,13 @@ public class GithubRdfConversionTransactionService {
             return uri.substring(idx + 1);
         }
         return uri;
+    }
+
+    /**
+     * Creates a branch URI for GitHub branches following the git2RDF pattern
+     */
+    private String createBranchUri(String owner, String repository, String branchName) {
+        return String.format("https://github.com/%s/%s/tree/%s", owner, repository, branchName);
     }
 
     private void calculateCommitterEmail(StreamRDF writer, String commitUri, PersonIdent committerIdent) {
@@ -1760,7 +2203,12 @@ public class GithubRdfConversionTransactionService {
         // Write workflow run properties
         writer.triple(RdfGithubWorkflowUtils.createWorkflowRunProperty(issueUri, runUri));
         writer.triple(RdfGithubWorkflowUtils.createWorkflowRunRdfTypeProperty(runUri));
-        writer.triple(RdfGithubWorkflowUtils.createWorkflowRunIdProperty(runUri, run.getId()));
+        
+        // Use platform properties instead of GitHub-specific ones
+        writer.triple(RdfPlatformWorkflowExecutionUtils.createRunIdProperty(runUri, run.getId()));
+        
+        // Add executionOf property to link workflow run back to the pull request
+        writer.triple(RdfPlatformWorkflowExecutionUtils.createExecutionOfProperty(runUri, issueUri));
 
         // Batch property writes to reduce overhead
         writeWorkflowRunProperties(run, writer, runUri, mergeSha);
@@ -1783,13 +2231,19 @@ public class GithubRdfConversionTransactionService {
             writer.triple(RdfGithubWorkflowUtils.createWorkflowConclusionProperty(runUri, run.getConclusion()));
         }
         if (run.getEvent() != null) {
-            writer.triple(RdfGithubWorkflowUtils.createWorkflowEventProperty(runUri, run.getEvent().toString()));
+            // Use platform triggerEvent property instead of GitHub-specific workflowEvent
+            writer.triple(RdfPlatformWorkflowExecutionUtils.createTriggerEventProperty(runUri, run.getEvent().toString()));
         }
 
         writer.triple(RdfGithubWorkflowUtils.createWorkflowCommitShaProperty(runUri, mergeSha));
+        
+        // Add GitHub run attempt (natively supported by GitHub API)
+        writer.triple(RdfGithubWorkflowUtils.createRunAttemptProperty(runUri, run.getRunAttempt()));
+        
         try {
             if (run.getCreatedAt() != null) {
-                writer.triple(RdfGithubWorkflowUtils.createWorkflowCreatedAtProperty(runUri,
+                // Use platform createdAt property instead of GitHub-specific workflowCreatedAt
+                writer.triple(RdfPlatformWorkflowExecutionUtils.createCreatedAtProperty(runUri,
                         localDateTimeFrom(run.getCreatedAt())));
             }
             if (run.getUpdatedAt() != null) {
@@ -1816,7 +2270,7 @@ public class GithubRdfConversionTransactionService {
 
             for (GHWorkflowJob job : jobIterable) {
                 if (jobsProcessed >= maxJobsToProcess) {
-                    log.debug("Reached max jobs limit ({}) for workflow run {}", maxJobsToProcess, run.getId());
+                    log.info("Reached max jobs limit ({}) for workflow run {}", maxJobsToProcess, run.getId());
                     break;
                 }
 
@@ -1830,7 +2284,7 @@ public class GithubRdfConversionTransactionService {
                 }
             }
 
-            log.debug("Processed {} jobs for workflow run {}", jobsProcessed, run.getId());
+            log.info("Processed {} jobs for workflow run {}", jobsProcessed, run.getId());
         } catch (Exception e) {
             log.warn("Error fetching jobs for workflow run {}: {}", run.getId(), e.getMessage());
             // Don't rethrow - continue processing without jobs data
@@ -1922,37 +2376,96 @@ public class GithubRdfConversionTransactionService {
         return pr;
     }
 
-    private List<GHPullRequestReview> getReviewsCached(GHPullRequest pr)
-            throws IOException, InterruptedException {
+    private List<GHPullRequestReview> getReviewsCached(GHPullRequest pr) {
         int number = pr.getNumber();
         List<GHPullRequestReview> reviews = reviewCache.get(number);
         if (reviews == null) {
-            reviews = executeWithRetry(() -> pr.listReviews().toList(), "listReviews for PR " + number);
-            reviewCache.put(number, reviews);
+            try {
+                reviews = executeWithRetry(() -> pr.listReviews().toList(), "listReviews for PR " + number);
+                reviewCache.put(number, reviews);
+            } catch (org.kohsuke.github.HttpException e) {
+                // Handle GitHub API errors gracefully - don't crash the entire processing
+                if (e.getResponseCode() >= 500) {
+                    log.warn("GitHub server error (HTTP {}) fetching reviews for PR {}. Skipping reviews for this PR.", 
+                            e.getResponseCode(), number);
+                } else if (e.getResponseCode() == 403) {
+                    log.warn("GitHub API access denied (HTTP 403) fetching reviews for PR {}. This may be due to rate limits, permissions, or app restrictions. Skipping reviews for this PR.", number);
+                } else if (e.getResponseCode() == 404) {
+                    log.warn("GitHub API not found (HTTP 404) fetching reviews for PR {}. PR may have been deleted. Skipping reviews for this PR.", number);
+                } else {
+                    log.warn("GitHub API error (HTTP {}) fetching reviews for PR {}: {}. Skipping reviews for this PR.", 
+                            e.getResponseCode(), number, e.getMessage());
+                }
+                reviews = new ArrayList<>(); // Return empty list to continue processing
+                reviewCache.put(number, reviews); // Cache empty result to avoid retry
+            } catch (Exception e) {
+                log.warn("Unexpected error fetching reviews for PR {}: {}. Skipping reviews for this PR.", number, e.getMessage());
+                reviews = new ArrayList<>(); // Return empty list to continue processing
+                reviewCache.put(number, reviews); // Cache empty result to avoid retry
+            }
         }
         return reviews;
     }
 
-    private List<GHPullRequestReviewComment> getReviewCommentsCached(GHPullRequestReview review)
-            throws IOException, InterruptedException {
+    private List<GHPullRequestReviewComment> getReviewCommentsCached(GHPullRequestReview review) {
         long reviewId = review.getId();
         List<GHPullRequestReviewComment> comments = reviewCommentsCache.get(reviewId);
         if (comments == null) {
-            comments = executeWithRetry(() -> review.listReviewComments().toList(),
-                    "listReviewComments for review " + reviewId);
-            reviewCommentsCache.put(reviewId, comments);
+            try {
+                comments = executeWithRetry(() -> review.listReviewComments().toList(),
+                        "listReviewComments for review " + reviewId);
+                reviewCommentsCache.put(reviewId, comments);
+            } catch (org.kohsuke.github.HttpException e) {
+                // Handle GitHub API errors gracefully - don't crash the entire processing
+                if (e.getResponseCode() >= 500) {
+                    log.warn("GitHub server error (HTTP {}) fetching review comments for review {}. Skipping review comments for this review.", 
+                            e.getResponseCode(), reviewId);
+                } else if (e.getResponseCode() == 403) {
+                    log.warn("GitHub API access denied (HTTP 403) fetching review comments for review {}. This may be due to rate limits, permissions, or app restrictions. Skipping review comments for this review.", reviewId);
+                } else if (e.getResponseCode() == 404) {
+                    log.warn("GitHub API not found (HTTP 404) fetching review comments for review {}. Review may have been deleted. Skipping review comments for this review.", reviewId);
+                } else {
+                    log.warn("GitHub API error (HTTP {}) fetching review comments for review {}: {}. Skipping review comments for this review.", 
+                            e.getResponseCode(), reviewId, e.getMessage());
+                }
+                comments = new ArrayList<>(); // Return empty list to continue processing
+                reviewCommentsCache.put(reviewId, comments); // Cache empty result to avoid retry
+            } catch (Exception e) {
+                log.warn("Unexpected error fetching review comments for review {}: {}. Skipping review comments for this review.", reviewId, e.getMessage());
+                comments = new ArrayList<>(); // Return empty list to continue processing
+                reviewCommentsCache.put(reviewId, comments); // Cache empty result to avoid retry
+            }
         }
         return comments;
     }
 
-    private List<GHReaction> getReviewCommentReactionsCached(GHPullRequestReviewComment comment)
-            throws IOException, InterruptedException {
+    private List<GHReaction> getReviewCommentReactionsCached(GHPullRequestReviewComment comment) {
         long id = comment.getId();
         List<GHReaction> reactions = reviewCommentReactionsCache.get(id);
         if (reactions == null) {
-            reactions = executeWithRetry(() -> comment.listReactions().toList(),
-                    "listReactions for review comment " + id);
-            reviewCommentReactionsCache.put(id, reactions);
+            try {
+                reactions = executeWithRetry(() -> comment.listReactions().toList(),
+                        "listReactions for review comment " + id);
+                reviewCommentReactionsCache.put(id, reactions);
+            } catch (org.kohsuke.github.HttpException e) {
+                // Handle GitHub API errors gracefully - don't crash the entire processing
+                if (e.getResponseCode() >= 500) {
+                    log.warn("GitHub server error (HTTP {}) fetching reactions for review comment {}. Skipping reactions for this comment.", 
+                            e.getResponseCode(), id);
+                } else if (e.getResponseCode() == 403) {
+                    log.warn("GitHub API access denied (HTTP 403) fetching reactions for review comment {}. This may be due to rate limits, permissions, or app restrictions. Skipping reactions for this comment.", id);
+                } else if (e.getResponseCode() == 404) {
+                    log.warn("GitHub API not found (HTTP 404) fetching reactions for review comment {}. Comment may have been deleted. Skipping reactions for this comment.", id);
+                } else {
+                    log.warn("GitHub API error (HTTP {}) fetching reactions for review comment {}: {}. Skipping reactions for this comment.", 
+                            e.getResponseCode(), id, e.getMessage());
+                }
+                reactions = new ArrayList<>(); // Return empty list to continue processing
+                reviewCommentReactionsCache.put(id, reactions); // Cache empty result to avoid retry
+            } catch (Exception e) {
+                log.error("Unexpected error fetching reactions for review comment {}: {}", id, e.getMessage());
+                throw new RuntimeException("Failed to fetch reactions for review comment " + id, e);
+            }
         }
         return reactions;
     }
@@ -1991,8 +2504,8 @@ public class GithubRdfConversionTransactionService {
             }
 
             // Create the full RDF representation of the parent comment
-            String parentCommentUri = GithubUriUtils.getIssueReviewCommentUri(
-                    repositoryUri, String.valueOf(parentCommentId));
+            String parentCommentUri = GithubUriUtils.getPullRequestReviewCommentUri(
+                    issueUri, String.valueOf(parentCommentId));
 
             // Create basic comment triples
             writer.triple(RdfGithubCommentUtils.createCommentRdfType(parentCommentUri));
@@ -2008,6 +2521,24 @@ public class GithubRdfConversionTransactionService {
                 String commentUserUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, parentComment.getUser());
                 if (commentUserUri != null) {
                     writer.triple(RdfGithubCommentUtils.createCommentUser(parentCommentUri, commentUserUri));
+                } else {
+                    // CRITICAL FALLBACK: Create BOTH the user entity AND the author relationship to prevent RDF violations
+                    log.error("CRITICAL: User validation returned null for parent comment author '{}' in comment {}. Creating fallback user entity and relationship.", 
+                            parentComment.getUser().getLogin(), parentComment.getId());
+                    try {
+                        // Use the safe user entity creation method that handles bot encoding/decoding properly
+                        String fallbackCommentUserUri = GithubUserValidator.createSafeUserEntity(writer, parentComment.getUser().getLogin());
+                        if (fallbackCommentUserUri != null) {
+                            // Now create the relationship
+                            writer.triple(RdfGithubCommentUtils.createCommentUser(parentCommentUri, fallbackCommentUserUri));
+                            log.info("Created fallback parent comment author entity and relationship for comment {} with URI: {}", parentComment.getId(), fallbackCommentUserUri);
+                        } else {
+                            log.error("Failed to create safe user entity for parent comment author '{}'", parentComment.getUser().getLogin());
+                        }
+                    } catch (Exception fallbackException) {
+                        log.error("Even fallback user entity creation failed for parent comment author '{}' in comment {}: {}", 
+                                parentComment.getUser().getLogin(), parentComment.getId(), fallbackException.getMessage());
+                    }
                 }
             }
             
@@ -2016,16 +2547,21 @@ public class GithubRdfConversionTransactionService {
                         parentCommentUri, localDateTimeFrom(parentComment.getCreatedAt())));
             }
 
-            // Handle nested parent relationships recursively
+            // Handle nested parent relationships recursively using new comment chain structure
             Long grandParentId = parentComment.getInReplyToId();
             if (grandParentId != null && grandParentId > 0 && !grandParentId.equals(parentCommentId)) {
-                String grandParentCommentUri = GithubUriUtils.getIssueReviewCommentUri(
-                        repositoryUri, String.valueOf(grandParentId));
+                String grandParentCommentUri = GithubUriUtils.getPullRequestReviewCommentUri(
+                        issueUri, String.valueOf(grandParentId));
                 
                 // Recursively ensure grandparent exists
                 if (validateAndEnsureParentReviewComment(writer, repo, grandParentId, repositoryUri, issueUri, gitHubHandle)) {
-                    writer.triple(RdfGithubCommentUtils.createParentComment(parentCommentUri, grandParentCommentUri));
-                    writer.triple(RdfGithubCommentUtils.createHasReply(grandParentCommentUri, parentCommentUri));
+                    // Use new comment chain structure - parent comments on grandparent
+                    writer.triple(RdfPlatformCommentUtils.createCommentOnProperty(
+                            parentCommentUri, grandParentCommentUri));
+                    
+                    // Grandparent has this parent as a comment
+                    writer.triple(RdfGithubCommentUtils.createHasCommentProperty(
+                            grandParentCommentUri, parentCommentUri));
                 }
             }
 
@@ -2050,14 +2586,34 @@ public class GithubRdfConversionTransactionService {
         return comments;
     }
 
-    private List<GHReaction> getIssueCommentReactionsCached(GHIssueComment comment)
-            throws IOException, InterruptedException {
+    private List<GHReaction> getIssueCommentReactionsCached(GHIssueComment comment) {
         long id = comment.getId();
         List<GHReaction> reactions = issueCommentReactionsCache.get(id);
         if (reactions == null) {
-            reactions = executeWithRetry(() -> comment.listReactions().toList(),
-                    "listReactions for issue comment " + id);
-            issueCommentReactionsCache.put(id, reactions);
+            try {
+                reactions = executeWithRetry(() -> comment.listReactions().toList(),
+                        "listReactions for issue comment " + id);
+                issueCommentReactionsCache.put(id, reactions);
+            } catch (org.kohsuke.github.HttpException e) {
+                // Handle GitHub API errors gracefully - don't crash the entire processing
+                if (e.getResponseCode() >= 500) {
+                    log.warn("GitHub server error (HTTP {}) fetching reactions for issue comment {}. Skipping reactions for this comment.", 
+                            e.getResponseCode(), id);
+                } else if (e.getResponseCode() == 403) {
+                    log.warn("GitHub API access denied (HTTP 403) fetching reactions for issue comment {}. This may be due to rate limits, permissions, or app restrictions. Skipping reactions for this comment.", id);
+                } else if (e.getResponseCode() == 404) {
+                    log.warn("GitHub API not found (HTTP 404) fetching reactions for issue comment {}. Comment may have been deleted. Skipping reactions for this comment.", id);
+                } else {
+                    log.warn("GitHub API error (HTTP {}) fetching reactions for issue comment {}: {}. Skipping reactions for this comment.", 
+                            e.getResponseCode(), id, e.getMessage());
+                }
+                reactions = new ArrayList<>(); // Return empty list to continue processing
+                issueCommentReactionsCache.put(id, reactions); // Cache empty result to avoid retry
+            } catch (Exception e) {
+                log.warn("Unexpected error fetching reactions for issue comment {}: {}. Skipping reactions for this comment.", id, e.getMessage());
+                reactions = new ArrayList<>(); // Return empty list to continue processing
+                issueCommentReactionsCache.put(id, reactions); // Cache empty result to avoid retry
+            }
         }
         return reactions;
     }
@@ -2094,6 +2650,18 @@ public class GithubRdfConversionTransactionService {
         for (int attempt = 1; attempt <= 2; attempt++) {
             try {
                 return callable.call();
+            } catch (org.kohsuke.github.HttpException e) {
+                last = e;
+                if (attempt == 2) {
+                    throw e;
+                }
+                // Enhanced GitHub HttpException logging
+                String errorDetails = String.format("HTTP %d: %s", e.getResponseCode(), e.getMessage());
+                if (e.getResponseHeaderFields() != null && !e.getResponseHeaderFields().isEmpty()) {
+                    errorDetails += " Headers: " + e.getResponseHeaderFields();
+                }
+                log.warn("{} failed on attempt {}/2: {}. Retrying after delay...", description, attempt, errorDetails);
+                Thread.sleep(RETRY_DELAY_MS);
             } catch (IOException e) {
                 last = e;
                 if (attempt == 2) {

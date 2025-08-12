@@ -1,8 +1,7 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf.github;
 
-import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_GITHUB_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
 
-import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
@@ -13,48 +12,44 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfGithubUserUtils extends RdfPlatformPersonUtils {
 
-    private static final String GH_NS = PLATFORM_GITHUB_NAMESPACE + ":";
-
-    // GitHub-specific properties (extending platform base)
-    public static Node gitAuthorEmailProperty() {
-        return RdfUtils.uri(GH_NS + "gitAuthorEmail");
-    }
+    // GitHub-specific properties - most are now handled by platform ontology
+    // Keep only GitHub-specific extensions if needed
 
 
     // Override platform method to create GitHub User type
     public static Triple createGitHubUserType(String userUri) {
-        return Triple.create(RdfUtils.uri(userUri), rdfTypeProperty(), RdfUtils.uri("github:GithubUser"));
+        return Triple.create(uri(userUri), rdfTypeProperty(), uri("github:User"));
     }
 
-    // Use inherited platform methods (for backward compatibility, these delegate to parent)
-    public static Triple createLoginProperty(String userUri, String login) {
-        return createUsernameProperty(userUri, login);
+    // Create platform username property (authoritative identifier replacing github:login)
+    public static Triple createUsernamePropertyForGithub(String userUri, String username) {
+        return createUsernameProperty(userUri, username);
     }
 
     public static Triple createEmailProperty(String userUri, String email) {
         return RdfPlatformPersonUtils.createEmailProperty(userUri, email);
     }
 
-    // v2.1: Use inherited platform methods for common properties - updated for string user IDs
     public static Triple createUserIdProperty(String userUri, String userId) {
-        return RdfPlatformPersonUtils.createUserIdProperty(userUri, userId);
+        return createIdProperty(userUri, userId);
     }
 
-    // Legacy method for backward compatibility - converts long to string
     public static Triple createUserIdProperty(String userUri, long id) {
-        return RdfPlatformPersonUtils.createUserIdProperty(userUri, String.valueOf(id));
+        return createUserIdProperty(userUri, String.valueOf(id));
     }
 
     public static Triple createNameProperty(String userUri, String name) {
         return RdfPlatformPersonUtils.createNameProperty(userUri, name);
     }
 
-    public static Triple createUserTypeProperty(String userUri, String userType) {
-        return RdfPlatformPersonUtils.createUserTypeProperty(userUri, userType);
+    // Additional GitHub user methods
+    // Note: This applies git:authorEmail to user entities, which differs from the ontology
+    // domain definition (git:GitCommit). This is used to link commit author emails to user entities.
+    public static Triple createGitAuthorEmailProperty(String userUri, String email) {
+        return Triple.create(uri(userUri), uri("git:authorEmail"), RdfUtils.stringLiteral(email));
     }
 
-    // GitHub-specific property creation
-    public static Triple createGitAuthorEmailProperty(String userUri, String gitAuthorEmail) {
-        return Triple.create(RdfUtils.uri(userUri), gitAuthorEmailProperty(), RdfUtils.stringLiteral(gitAuthorEmail));
+    public static Triple createUserTypeProperty(String userUri, String userType) {
+        return Triple.create(uri(userUri), uri("github:userType"), RdfUtils.stringLiteral(userType));
     }
 }

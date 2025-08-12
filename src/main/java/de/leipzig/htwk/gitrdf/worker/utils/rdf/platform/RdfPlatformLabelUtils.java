@@ -1,12 +1,12 @@
 package de.leipzig.htwk.gitrdf.worker.utils.rdf.platform;
 
 import static de.leipzig.htwk.gitrdf.worker.service.impl.GithubRdfConversionTransactionService.PLATFORM_NAMESPACE;
+import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
-
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -22,36 +22,83 @@ public class RdfPlatformLabelUtils {
 
     // Core RDF properties
     public static Node rdfTypeProperty() {
-        return RdfUtils.uri("rdf:type");
+        return uri("rdf:type");
     }
 
-    // Platform Label Properties (from platform ontology)
-    public static Node labelNameProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "labelName");
+    // Platform Label Properties (from platform ontology v2)
+    public static Node idProperty() {
+        return uri(PLATFORM_NS + "id");
     }
 
-    public static Node labelColorProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "labelColor");
+    public static Node nameProperty() {
+        return uri(PLATFORM_NS + "name");
     }
 
-    public static Node labelDescriptionProperty() {
-        return RdfUtils.uri(PLATFORM_NS + "labelDescription");
+    public static Node descriptionProperty() {
+        return uri(PLATFORM_NS + "description");
+    }
+
+    public static Node colorProperty() {
+        return uri(PLATFORM_NS + "color");
+    }
+
+    public static Node urlProperty() {
+        return uri(PLATFORM_NS + "url");
+    }
+
+    // Relationship properties
+    public static Node hasLabelProperty() {
+        return uri(PLATFORM_NS + "hasLabel");
+    }
+
+    public static Node labelOfProperty() {
+        return uri(PLATFORM_NS + "labelOf");
     }
 
     // Triple creation methods for platform properties
     public static Triple createRdfTypeProperty(String labelUri) {
-        return Triple.create(RdfUtils.uri(labelUri), rdfTypeProperty(), RdfUtils.uri("platform:Label"));
+        return Triple.create(uri(labelUri), rdfTypeProperty(), uri("platform:Label"));
     }
 
+    public static Triple createIdProperty(String labelUri, String id) {
+        return Triple.create(uri(labelUri), idProperty(), RdfUtils.stringLiteral(id));
+    }
+
+    public static Triple createNameProperty(String labelUri, String name) {
+        return Triple.create(uri(labelUri), nameProperty(), RdfUtils.stringLiteral(name));
+    }
+
+    public static Triple createDescriptionProperty(String labelUri, String description) {
+        return Triple.create(uri(labelUri), descriptionProperty(), RdfUtils.stringLiteral(description));
+    }
+
+    public static Triple createColorProperty(String labelUri, String color) {
+        return Triple.create(uri(labelUri), colorProperty(), RdfUtils.stringLiteral(color));
+    }
+
+    public static Triple createUrlProperty(String labelUri, String url) {
+        return Triple.create(uri(labelUri), urlProperty(), RdfUtils.stringLiteral(url));
+    }
+
+    // Relationship methods
+    public static Triple createHasLabelProperty(String resourceUri, String labelUri) {
+        return Triple.create(uri(resourceUri), hasLabelProperty(), uri(labelUri));
+    }
+
+    public static Triple createLabelOfProperty(String labelUri, String resourceUri) {
+        return Triple.create(uri(labelUri), labelOfProperty(), uri(resourceUri));
+    }
+
+    // Legacy method compatibility
     public static Triple createLabelNameProperty(String labelUri, String name) {
-        return Triple.create(RdfUtils.uri(labelUri), labelNameProperty(), RdfUtils.stringLiteral(name));
+        return createNameProperty(labelUri, name);
     }
 
     public static Triple createLabelColorProperty(String labelUri, String color) {
-        return Triple.create(RdfUtils.uri(labelUri), labelColorProperty(), RdfUtils.stringLiteral(color));
+        return createColorProperty(labelUri, color);
     }
 
     public static Triple createLabelDescriptionProperty(String labelUri, String description) {
-        return Triple.create(RdfUtils.uri(labelUri), labelDescriptionProperty(), RdfUtils.stringLiteral(description));
+        return createDescriptionProperty(labelUri, description);
     }
 }

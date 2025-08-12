@@ -15,6 +15,7 @@ import org.kohsuke.github.authorization.AppInstallationAuthorizationProvider;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 @Slf4j
@@ -27,17 +28,21 @@ public class GithubHandlerService {
     private final GithubAppInstallationProvider githubAppInstallationProvider;
     
     private final GithubAccountRotationService githubAccountRotationService;
+    
+    private final int maxCommitPages;
 
     public GithubHandlerService(
             GithubConfig githubConfig,
             GithubJwtTokenProvider githubJwtTokenProvider,
             GithubAppInstallationProvider githubAppInstallationProvider,
-            GithubAccountRotationService githubAccountRotationService) {
+            GithubAccountRotationService githubAccountRotationService,
+            @Value("${worker.max-commit-pages:500}") int maxCommitPages) {
 
         this.githubConfig = githubConfig;
         this.githubJwtTokenProvider = githubJwtTokenProvider;
         this.githubAppInstallationProvider = githubAppInstallationProvider;
         this.githubAccountRotationService = githubAccountRotationService;
+        this.maxCommitPages = maxCommitPages;
     }
 
     private volatile GitHub currentGithubClient;
@@ -135,34 +140,87 @@ public class GithubHandlerService {
                 log.warn("Failed to get commit count via contributor stats for {}/{}: {}", owner, repoName, statsException.getMessage());
             }
             
-            // Fallback: estimate based on commit pagination
-            log.info("Falling back to pagination-based commit count estimation for {}/{}", owner, repoName);
-            PagedIterable<org.kohsuke.github.GHCommit> commits = repo.listCommits().withPageSize(1);
+            // Fallback: estimate based on commit pagination with configurable limits
+            log.info("Falling back to pagination-based commit count estimation for {}/{} (max {} pages)", owner, repoName, maxCommitPages);
+            PagedIterable<org.kohsuke.github.GHCommit> commits = repo.listCommits().withPageSize(100);
             
-            // Get the total count from the first page if available
-            // This is an approximation and may not be exact for large repositories
+            // Calculate maximum commits to check based on configuration
+            int maxCommitsToCount = maxCommitPages * 100; // 100 commits per page
             int estimatedCount = 0;
-            java.util.Iterator<org.kohsuke.github.GHCommit> iterator = commits.iterator();
+            int pagesChecked = 0;
             
-            // Count up to a reasonable limit to avoid expensive operations
-            int maxCount = 10000; // Limit to avoid excessive API calls
-            while (iterator.hasNext() && estimatedCount < maxCount) {
-                iterator.next();
-                estimatedCount++;
-            }
-            
-            if (estimatedCount >= maxCount) {
-                log.warn("Repository {}/{} has more than {} commits, returning estimated count", owner, repoName, maxCount);
+            try {
+                for (org.kohsuke.github.GHCommit ignored : commits) {
+                    estimatedCount++;
+                    
+                    // Check if we've hit the page limit
+                    if (estimatedCount % 100 == 0) {
+                        pagesChecked++;
+                        if (pagesChecked >= maxCommitPages) {
+                            log.warn("Repository {}/{} has more than {} commits ({} pages), stopping count at configured limit", 
+                                    owner, repoName, maxCommitsToCount, maxCommitPages);
+                            break;
+                        }
+                    }
+                    
+                    // Safety check to prevent runaway counting
+                    if (estimatedCount >= maxCommitsToCount) {
+                        break;
+                    }
+                }
+                
+                if (estimatedCount >= maxCommitsToCount) {
+                    log.warn("Repository {}/{} has {} or more commits, returning configured maximum", owner, repoName, maxCommitsToCount);
+                    return maxCommitsToCount;
+                }
+                
+            } catch (Exception paginationException) {
+                log.error("Error during commit pagination for {}/{}: {}", owner, repoName, paginationException.getMessage());
+                // Return what we counted so far
+                if (estimatedCount == 0) {
+                    estimatedCount = 1000; // Reasonable default
+                }
             }
             
             log.info("Repository {}/{} has {} commits (estimated via pagination)", owner, repoName, estimatedCount);
             return estimatedCount;
             
         } catch (Exception e) {
-            log.error("Failed to get commit count for {}/{}: {}", owner, repoName, e.getMessage());
-            // Return a reasonable default
+            log.error("Failed to get commit count for {}/{}: {}", owner, repoName, e.getMessage(), e);
+            
+            // Check if it's a rate limit or API error that should cause the service to pause
+            if (e.getMessage() != null && e.getMessage().contains("API rate limit exceeded")) {
+                log.warn("GitHub API rate limit exceeded, service should pause processing");
+                throw new IOException("GitHub API rate limit exceeded", e);
+            }
+            
+            // For other errors, return a reasonable default to allow processing to continue
+            log.warn("Returning default commit count of 1000 for {}/{} due to error", owner, repoName);
             return 1000; // Default estimate for repositories
         }
+    }
+    
+    /**
+     * Check if a repository should be skipped due to size constraints
+     */
+    public boolean shouldSkipRepository(String owner, String repoName, int commitCount, int issueCount) {
+        int maxCommitsToCount = maxCommitPages * 100;
+        
+        if (commitCount > maxCommitsToCount) {
+            log.warn("Skipping repository {}/{} - too many commits: {} (limit: {})", 
+                    owner, repoName, commitCount, maxCommitsToCount);
+            return true;
+        }
+        
+        // Also check for repositories with excessive issues (optional additional check)
+        int maxIssues = 50000; // Configurable limit for issues
+        if (issueCount > maxIssues) {
+            log.warn("Skipping repository {}/{} - too many issues: {} (limit: {})", 
+                    owner, repoName, issueCount, maxIssues);
+            return true;
+        }
+        
+        return false;
     }
 
 }

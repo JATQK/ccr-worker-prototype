@@ -1,13 +1,11 @@
 spring:
   jpa:
     hibernate:
-      ddl-auto: update  # Change from 'none' 
+      ddl-auto: none # Let Flyway handle schema management
     properties:
       hibernate:
         hbm2ddl:
-          auto: update
-    # hibernate:
-    #   ddl-auto: none # validate  Change from 'none'
+          auto: none
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/gitrdfdb}
     username: root
@@ -26,6 +24,7 @@ spring:
 
 worker:
   commits-per-iteration: 100
+  max-commit-pages: 300  # Limit to ~50k commits max
   issues:
     #pre-secondary-rate-limit-check: 800
     #seconds-to-sleep: 60
@@ -76,6 +75,10 @@ server:
 logging:
   level:
     org.hibernate.SQL: DEBUG 
+    org.kohsuke.github.GitHubClient: DEBUG
+    org.kohsuke.github: DEBUG
+    jdk.event.security: DEBUG
+    sun.net.www.protocol.http.HttpURLConnection: DEBUG
     root: info
     de:
       leipzig:

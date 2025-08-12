@@ -67,6 +67,10 @@ public final class RdfUtils {
         return NodeFactory.createLiteralByValue(value, XSDDatatype.XSDnonNegativeInteger);
     }
 
+    public static Node positiveIntegerLiteral(long value) {
+        return NodeFactory.createLiteralByValue(value, XSDDatatype.XSDpositiveInteger);
+    }
+
     public static Node booleanLiteral(boolean value) {
         return NodeFactory.createLiteralByValue(value, XSDDatatype.XSDboolean);
     }
