@@ -12,22 +12,15 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-/**
- * Platform-agnostic utility class for RDF operations on platform:Milestone entities.
- * This class implements the base properties defined in the git2RDFLab-platform ontology
- * for milestones that are common across all platform implementations.
- */
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RdfPlatformMilestoneUtils {
 
     protected static final String PLATFORM_NS = PLATFORM_NAMESPACE + ":";
 
-    // Core RDF properties
     public static Node rdfTypeProperty() {
         return uri("rdf:type");
     }
 
-    // Platform Milestone Properties (from platform ontology v2)
     public static Node idProperty() {
         return uri(PLATFORM_NS + "id");
     }
@@ -121,22 +114,5 @@ public class RdfPlatformMilestoneUtils {
 
     public static Triple createMilestoneOfProperty(String milestoneUri, String resourceUri) {
         return Triple.create(uri(milestoneUri), milestoneOfProperty(), uri(resourceUri));
-    }
-
-    // Legacy method compatibility
-    public static Triple createMilestoneTitleProperty(String milestoneUri, String title) {
-        return createTitleProperty(milestoneUri, title);
-    }
-
-    public static Triple createMilestoneDescriptionProperty(String milestoneUri, String description) {
-        return createDescriptionProperty(milestoneUri, description);
-    }
-
-    public static Triple createMilestoneDueDateProperty(String milestoneUri, LocalDateTime dueDate) {
-        return createDueDateProperty(milestoneUri, dueDate);
-    }
-
-    public static Triple createMilestoneStateProperty(String milestoneUri, String state) {
-        return createStateProperty(milestoneUri, state);
     }
 }

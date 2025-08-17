@@ -10,11 +10,7 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-/**
- * Platform-agnostic utility class for RDF operations on platform:Review entities.
- * This class implements the base properties defined in the git2RDFLab-platform ontology
- * for reviews that are common across all platform implementations.
- */
+
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfPlatformReviewUtils {
 
@@ -32,11 +28,6 @@ public final class RdfPlatformReviewUtils {
 
     public static Node reviewOfProperty() {
         return uri(PLATFORM_NS + "reviewOf");
-    }
-
-    // Triple creation methods for platform properties
-    public static Triple createRdfTypeProperty(String reviewUri) {
-        return Triple.create(uri(reviewUri), rdfTypeProperty(), uri("platform:Review"));
     }
 
     public static Triple createReviewIdProperty(String reviewUri, String reviewId) {

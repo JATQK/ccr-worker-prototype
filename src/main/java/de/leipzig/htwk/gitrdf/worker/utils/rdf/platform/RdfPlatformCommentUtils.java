@@ -60,12 +60,6 @@ public class RdfPlatformCommentUtils {
         return uri(PLATFORM_NS + "commentOn");
     }
 
-
-    // Triple creation methods for platform properties
-    public static Triple createRdfTypeProperty(String commentUri) {
-        return Triple.create(uri(commentUri), rdfTypeProperty(), uri("platform:Comment"));
-    }
-
     public static Triple createBodyProperty(String commentUri, String body) {
         return Triple.create(uri(commentUri), bodyProperty(), RdfUtils.stringLiteral(body));
     }
@@ -96,26 +90,5 @@ public class RdfPlatformCommentUtils {
 
     public static Triple createCommentOnProperty(String commentUri, String targetUri) {
         return Triple.create(uri(commentUri), commentOnProperty(), uri(targetUri));
-    }
-
-    // Legacy method compatibility
-    public static Triple createCommentBodyProperty(String commentUri, String body) {
-        return createBodyProperty(commentUri, body);
-    }
-
-    public static Triple createCommentAuthorProperty(String commentUri, String authorUri) {
-        return createAuthorProperty(commentUri, authorUri);
-    }
-
-    public static Triple createCommentIdProperty(String commentUri, String commentId) {
-        return createIdProperty(commentUri, commentId);
-    }
-
-    public static Triple createCommentIdProperty(String commentUri, long commentId) {
-        return createIdProperty(commentUri, String.valueOf(commentId));
-    }
-
-    public static Triple createCommentedAtProperty(String commentUri, LocalDateTime commentedAt) {
-        return createCreatedAtProperty(commentUri, commentedAt);
     }
 }

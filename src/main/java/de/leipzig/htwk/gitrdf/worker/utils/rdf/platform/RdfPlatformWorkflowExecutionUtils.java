@@ -12,22 +12,16 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-/**
- * Platform-agnostic utility class for RDF operations on platform:WorkflowExecution entities.
- * This class implements the base properties defined in the git2RDFLab-platform ontology
- * for workflow executions that are common across all platform implementations.
- */
+
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RdfPlatformWorkflowExecutionUtils {
 
     protected static final String PLATFORM_NS = PLATFORM_NAMESPACE + ":";
 
-    // Core RDF properties
     public static Node rdfTypeProperty() {
         return uri("rdf:type");
     }
 
-    // Platform WorkflowExecution Properties (from platform ontology lines 364-417)
     public static Node executionIdProperty() {
         return uri(PLATFORM_NS + "executionId");
     }
@@ -96,13 +90,11 @@ public class RdfPlatformWorkflowExecutionUtils {
     }
 
     public static Triple createExecutionStatusProperty(String executionUri, String status) {
-        // v2.1: Map to prefixed execution status instances for disambiguation
         String prefixedStatus = mapToExecutionStatus(status);
         return Triple.create(uri(executionUri), executionStatusProperty(), uri(PLATFORM_NS + prefixedStatus));
     }
 
     private static String mapToExecutionStatus(String status) {
-        // v2.1: Map execution status values to prefixed instances
         switch (status.toLowerCase()) {
             case "completed":
                 return "execution_completed";

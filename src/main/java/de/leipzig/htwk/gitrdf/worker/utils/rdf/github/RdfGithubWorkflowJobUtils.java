@@ -4,7 +4,6 @@ import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
 
 import java.time.LocalDateTime;
 
-import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.kohsuke.github.GHWorkflowRun;
 
@@ -52,41 +51,35 @@ public final class RdfGithubWorkflowJobUtils extends RdfPlatformWorkflowJobUtils
         return RdfPlatformWorkflowJobUtils.createJobConclusionProperty(jobUri, mappedConclusion);
     }
 
+    // TODO: Future catching of invalid states
     private static String mapGitHubStatusToPlatform(String status) {
-        // Map GitHub workflow status to platform execution status values
+        // Pass through known statuses, fallback to lower case
+        if (status == null) return "";
         switch (status.toLowerCase()) {
             case "completed":
-                return "completed";
             case "queued":
-                return "queued";
             case "in_progress":
-                return "in_progress";
             case "waiting":
-                return "waiting";
             case "requested":
-                return "requested"; // GitHub-specific, but inherits from platform:ExecutionStatus
+                return status.toLowerCase();
             default:
                 return status.toLowerCase();
         }
     }
 
+    // TODO: Future catching of invalid states
     private static String mapGitHubConclusionToPlatform(String conclusion) {
-        // Map GitHub workflow conclusion to platform execution conclusion values
+        // Pass through known conclusions, fallback to lower case
+        if (conclusion == null) return "";
         switch (conclusion.toLowerCase()) {
             case "success":
-                return "success";
             case "failure":
-                return "failure";
             case "cancelled":
-                return "cancelled";
             case "skipped":
-                return "skipped";
             case "timed_out":
-                return "timed_out";
             case "action_required":
-                return "action_required";
             case "neutral":
-                return "neutral";
+                return conclusion.toLowerCase();
             default:
                 return conclusion.toLowerCase();
         }

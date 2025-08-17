@@ -20,7 +20,6 @@ public final class RdfGithubIssueReviewUtils {
         return uri("rdf:type");
     }
     
-    // v2 platform ontology properties for reviews
     public static Node hasReviewProperty() { 
         return uri(PLATFORM_NS + "hasReview"); 
     }
@@ -121,10 +120,6 @@ public final class RdfGithubIssueReviewUtils {
 
     public static Triple createReviewUserProperty(String reviewUri, String reviewerUri) {
         return Triple.create(uri(reviewUri), reviewerProperty(), uri(reviewerUri));
-    }
-
-    public static Triple createReviewCreatedAtProperty(String reviewUri, LocalDateTime createdAt) {
-        return Triple.create(uri(reviewUri), createdAtProperty(), RdfUtils.dateTimeLiteral(createdAt));
     }
 
     public static Triple createReviewApiUrlProperty(String reviewUri, String apiUrl) {

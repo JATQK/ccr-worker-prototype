@@ -8,22 +8,17 @@ import java.time.LocalDateTime;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformCommentUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformCommentUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-/**
- * GitHub-specific utility class for RDF operations on github:Comment entities.
- * This class extends RdfPlatformCommentUtils and adds GitHub-specific properties
- * as defined in the git2RDFLab-platform-github ontology.
- */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
 
   private static final String PLATFORM_NS = PLATFORM_NAMESPACE + ":";
 
-  // Use platform properties from v2 ontology
+  // Use platform properties from v2 
   public static Node hasCommentProperty() {
     return uri(PLATFORM_NS + "hasComment");
   }
@@ -73,12 +68,6 @@ public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
     return Triple.create(uri(commentUri), uri(PLATFORM_NS + "apiUrl"), RdfUtils.stringLiteral(apiUrl));
   }
 
-  // Relationship creation methods
-
-  public static Triple createCommentOf(String commentUri, String parentEntityUri) {
-    return Triple.create(uri(commentUri), commentOfProperty(), uri(parentEntityUri));
-  }
-
   public static Triple createCommentReaction(String commentUri, String reactionUri) {
     return Triple.create(uri(commentUri), hasReactionProperty(), uri(reactionUri));
   }
@@ -98,10 +87,5 @@ public final class RdfGithubCommentUtils extends RdfPlatformCommentUtils {
         createCommentUser(commentUri, userUri),
         createCommentCreatedAt(commentUri, createdAt)
     };
-  }
-
-  public static Triple[] createBasicComment(String commentUri, long id, String body, String userUri,
-      LocalDateTime createdAt) {
-    return createBasicComment(commentUri, String.valueOf(id), body, userUri, createdAt);
   }
 }

@@ -117,7 +117,6 @@ public class RdfGithubIssueUtils extends RdfPlatformTicketUtils {
         return RdfPlatformTicketUtils.createClosedAtProperty(issueUri, closedAtDateTime);
     }
 
-
     public static Triple createIssueContainsCommitProperty(String issueUri, String commitUri) {
         return Triple.create(uri(issueUri), containsCommitProperty(), uri(commitUri));
     }

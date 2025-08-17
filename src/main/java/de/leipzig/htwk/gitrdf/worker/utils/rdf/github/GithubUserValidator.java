@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.jena.graph.Triple;
@@ -24,17 +23,7 @@ public class GithubUserValidator {
     
     // Cache GitHub API user data to prevent duplicate API calls (but always write RDF to each model)
     private static final Map<String, GHUser> apiUserCache = new ConcurrentHashMap<>();
-    
-    /**
-     * Validates that a GitHub user exists in RDF and creates the user if missing.
-     * This should be called whenever referencing a user in issues, comments, etc.
-     * IMPORTANT: Handles bot account encoding/decoding properly - API calls use decoded names, URIs use encoded names.
-     * 
-     * @param writer The RDF writer to output triples
-     * @param github The GitHub API client
-     * @param ghUser The GitHub user to validate/create
-     * @return The user URI if successful, null if user is invalid
-     */
+
     public static String validateAndEnsureUser(StreamRDF writer, GitHub github, GHUser ghUser) {
         // Enhanced null safety checks - allow null writer for validation-only mode
         if (writer == null) {
@@ -114,7 +103,6 @@ public class GithubUserValidator {
             
             // ALWAYS create a basic user entry as final fallback to ensure User entity exists
             if (writer != null) {
-                // This method can never throw exceptions now - it's designed to always succeed
                 createBasicGithubUserRdf(writer, login, userUri);
                 log.info("Created fallback basic user RDF for: {} (API failures occurred but User entity is required)", login);
                 return userUri;
@@ -220,14 +208,12 @@ public class GithubUserValidator {
      * Creates complete GitHub user RDF representation with rigorous validation
      */
     private static void createGithubUserRdf(StreamRDF writer, GHUser ghUser, String userUri) throws IOException {
-        // Null safety check for the user object itself
         if (ghUser == null) {
             log.warn("Attempted to create RDF for null GHUser, creating basic entry instead");
             createBasicGithubUserRdf(writer, "unknown", userUri);
             return;
         }
-        
-        // Use the atomic creation method to ensure all required properties are created
+        // ensure all required properties are created
         createGithubUserRdfAtomic(writer, ghUser, userUri);
     }
     
@@ -239,7 +225,7 @@ public class GithubUserValidator {
         List<Triple> requiredTriples = new ArrayList<>();
         List<Triple> optionalTriples = new ArrayList<>();
         
-        // REQUIRED: User type - this is absolutely mandatory
+        // REQUIRED: User type
         requiredTriples.add(RdfGithubUserUtils.createGitHubUserType(userUri));
         
         String login = null;
@@ -249,7 +235,7 @@ public class GithubUserValidator {
             log.debug("Failed to get login from GHUser: {}", e.getMessage());
         }
         
-        // REQUIRED: At minimum we need login/username
+        // REQUIRED: At minimum login/username to proceed
         if (login != null && !login.trim().isEmpty()) {
             // github:login removed; only write platform:username
             requiredTriples.add(RdfGithubUserUtils.createUsernamePropertyForGithub(userUri, login));
@@ -298,12 +284,12 @@ public class GithubUserValidator {
             }
         }
         
-        // Write all required triples first - if any fails, the whole operation fails
+        // Write all required triples first
         for (Triple triple : requiredTriples) {
             writer.triple(triple);
         }
         
-        // Write optional triples - failures here are logged but don't cause overall failure
+        // Write optional triples
         for (Triple triple : optionalTriples) {
             try {
                 writer.triple(triple);
@@ -313,40 +299,32 @@ public class GithubUserValidator {
         }
         
         log.info("Created complete GitHub user RDF with {} required + {} optional properties for: {}", 
-                 requiredTriples.size(), optionalTriples.size(), login);
+            requiredTriples.size(), optionalTriples.size(), login);
     }
     
-    /**
-     * Creates basic GitHub user RDF representation when full API data is not available, with rigorous validation
-     * This method MUST NEVER throw exceptions - it should always succeed in creating at least a minimal user entity
-     */
     private static void createBasicGithubUserRdf(StreamRDF writer, String login, String userUri) {
-        // Enhanced null safety checks
         if (writer == null) {
             log.error("Cannot create basic user RDF: writer is null");
             return;
         }
-        
         if (login == null || login.trim().isEmpty()) {
             log.warn("Cannot create basic user RDF: login is null or empty");
             return;
         }
-        
         if (userUri == null || userUri.trim().isEmpty()) {
             log.warn("Cannot create basic user RDF: userUri is null or empty");
             return;
         }
-        
-        // Create required triples atomically with maximum error resilience
+
+
         List<Triple> requiredTriples = new ArrayList<>();
         List<Triple> optionalTriples = new ArrayList<>();
         
         try {
-            // REQUIRED: User type - absolutely mandatory
+            // REQUIRED: User type
             requiredTriples.add(RdfGithubUserUtils.createGitHubUserType(userUri));
             
             // REQUIRED: Login and username properties
-            // github:login removed; only write platform:username
             requiredTriples.add(RdfGithubUserUtils.createUsernamePropertyForGithub(userUri, login.trim()));
             requiredTriples.add(RdfGithubUserUtils.createUsernamePropertyForGithub(userUri, login.trim()));
             
@@ -356,7 +334,7 @@ public class GithubUserValidator {
                 optionalTriples.add(RdfGithubUserUtils.createUserTypeProperty(userUri, "Bot"));
             }
             
-            // Write all required triples with maximum error resilience
+            // Write required triples
             int successfulTriples = 0;
             for (Triple triple : requiredTriples) {
                 try {
@@ -364,17 +342,15 @@ public class GithubUserValidator {
                     successfulTriples++;
                 } catch (Exception e) {
                     log.error("CRITICAL: Failed to write required user triple for {}: {}", userUri, e.getMessage());
-                    // Continue trying other triples - don't fail completely
+                    // Continue trying other triples
                 }
             }
             
-            // If we couldn't write ANY required triples, this is a critical failure
-            // but we still don't throw - we log the error and continue
             if (successfulTriples == 0) {
-                log.error("CRITICAL: Could not write ANY required triples for user '{}' with URI '{}'. User entity may be incomplete!", login, userUri);
+                log.error("CRITICAL: Could not write ANY required triples user '{}' with URI '{}'. User entity may be incomplete!", login, userUri);
             }
             
-            // Write optional triples - failures are logged but don't cause overall failure
+            // Write optional triples
             for (Triple triple : optionalTriples) {
                 try {
                     writer.triple(triple);
@@ -393,9 +369,7 @@ public class GithubUserValidator {
             }
             
         } catch (Exception e) {
-            // Even if everything fails, we NEVER throw - we log and continue
             log.error("CRITICAL: Unexpected error creating basic user RDF for '{}': {}. Continuing anyway to prevent RDF violations.", login, e.getMessage());
-            // Do NOT re-throw - this method must NEVER fail completely
         }
     }
     
@@ -417,30 +391,13 @@ public class GithubUserValidator {
     }
 
     /**
-     * Clears the GitHub API user cache - useful for testing or when starting fresh repository processing
+     * Clears the GitHub API user cache
      */
     public static void clearProcessedUsersCache() {
         apiUserCache.clear();
     }
     
-    /**
-     * Gets the count of cached GitHub API users in current session
-     */
-    public static int getProcessedUsersCount() {
-        return apiUserCache.size();
-    }
-    
-    /**
-     * Creates a safe user entity with proper encoding/decoding for bot accounts.
-     * This method ensures that:
-     * 1. API calls use decoded usernames (e.g., "netlify[bot]")
-     * 2. URI creation uses encoded usernames (e.g., "https://github.com/netlify%5Bbot%5D")
-     * 3. RDF properties use decoded usernames
-     * 
-     * @param writer The RDF writer
-     * @param decodedLogin The decoded username (as returned by GitHub API)
-     * @return The encoded user URI
-     */
+
     public static String createSafeUserEntity(StreamRDF writer, String decodedLogin) {
         if (decodedLogin == null || decodedLogin.trim().isEmpty()) {
             log.warn("Cannot create safe user entity: decodedLogin is null or empty");
@@ -454,15 +411,15 @@ public class GithubUserValidator {
             // Create properly encoded URI from decoded login
             userUri = GithubUriUtils.getUserUri(cleanLogin);
             
-            // No need to check cache - always create RDF triples for current model
+            // always create RDF triples for current model
             
             // Log for bot accounts to aid debugging
             if (isBotAccount(cleanLogin.toLowerCase())) {
                 log.info("Creating safe bot user entity: decodedLogin='{}' -> encodedURI='{}' (encoding: {})", 
-                         cleanLogin, userUri, cleanLogin.equals(GithubUriUtils.getUsernameFromUri(userUri)) ? "VALID" : "INVALID");
+                        cleanLogin, userUri, cleanLogin.equals(GithubUriUtils.getUsernameFromUri(userUri)) ? "VALID" : "INVALID");
             }
             
-            // Create essential user entity triples with decoded username for properties
+            // Create essential user entity triples with decoded username
             writer.triple(RdfGithubUserUtils.createGitHubUserType(userUri));
             // github:login removed; only write platform:username
             writer.triple(RdfGithubUserUtils.createUsernamePropertyForGithub(userUri, cleanLogin));  // Use decoded for RDF property
@@ -472,8 +429,6 @@ public class GithubUserValidator {
             if (isBotAccount(cleanLogin.toLowerCase())) {
                 writer.triple(RdfGithubUserUtils.createUserTypeProperty(userUri, "Bot"));
             }
-            
-            // No longer need to track in cache - each model gets its own user entities
             
             log.debug("Successfully created safe user entity for login '{}' with URI '{}'", cleanLogin, userUri);
             return userUri;

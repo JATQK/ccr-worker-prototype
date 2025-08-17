@@ -221,7 +221,7 @@ public class GithubRdfConversionTransactionService {
         commitCache.clear();
         seenReviewIds.clear();
         
-        // CRITICAL: Clear GitHub user cache to ensure users are created in each repository's RDF model
+        // Clear GitHub user cache to ensure users are created in each repository's RDF model
         GithubUserValidator.clearProcessedUsersCache();
         
         Git gitHandler = null;
@@ -313,22 +313,14 @@ public class GithubRdfConversionTransactionService {
                 if (mergedByUserUri != null) {
                     writer.triple(RdfGithubPullRequestUtils.createIssueMergedByProperty(issueUri, mergedByUserUri));
                 } else {
-                    // CRITICAL FALLBACK: Create BOTH the user entity AND the mergedBy relationship to prevent RDF violations
-                    log.error("CRITICAL: User validation returned null for PR mergedBy user '{}'. Creating fallback user entity and relationship.", 
-                            pr.getMergedBy().getLogin());
+                    log.warn("User validation failed for PR mergedBy user '{}', creating fallback", pr.getMergedBy().getLogin());
                     try {
-                        // Use the safe user entity creation method that handles bot encoding/decoding properly
-                        String fallbackMergedByUri = GithubUserValidator.createSafeUserEntity(writer, pr.getMergedBy().getLogin());
-                        if (fallbackMergedByUri != null) {
-                            // Now create the relationship
-                            writer.triple(RdfGithubPullRequestUtils.createIssueMergedByProperty(issueUri, fallbackMergedByUri));
-                            log.info("Created fallback mergedBy entity and relationship for PR with URI: {}", fallbackMergedByUri);
-                        } else {
-                            log.error("Failed to create safe user entity for PR mergedBy user '{}'", pr.getMergedBy().getLogin());
+                        String fallbackUserUri = GithubUserValidator.createSafeUserEntity(writer, pr.getMergedBy().getLogin());
+                        if (fallbackUserUri != null) {
+                            writer.triple(RdfGithubPullRequestUtils.createIssueMergedByProperty(issueUri, fallbackUserUri));
                         }
-                    } catch (Exception fallbackException) {
-                        log.error("Even fallback user entity creation failed for PR mergedBy user '{}': {}", 
-                                pr.getMergedBy().getLogin(), fallbackException.getMessage());
+                    } catch (Exception e) {
+                        log.warn("Fallback user creation failed for PR mergedBy: {}", e.getMessage());
                     }
                 }
             }
@@ -477,20 +469,16 @@ public class GithubRdfConversionTransactionService {
 
             GHRepository githubRepositoryHandle = gitHubHandle.getRepository(githubRepositoryName);
             // See: https://jena.apache.org/documentation/io/rdf-output.html#streamed-block-formats
-            // Apache Jena 5.5.0+: Use model-based approach similar to RdfTurtleTidier
-            // Create a model to collect triples, then write it out using RDFDataMgr
             Model model = ModelFactory.createDefaultModel();
             StreamRDF writer = StreamRDFLib.graph(model.getGraph());
 
             writer.prefix(XSD_SCHEMA_NAMESPACE, XSD_SCHEMA_URI);
             writer.prefix(RDF_SCHEMA_NAMESPACE, RDF_SCHEMA_URI);
             writer.prefix(OWL_SCHEMA_NAMESPACE, OWL_SCHEMA_URI);
-            // REMOVED: SPDX prefix no longer needed in v2.1
+
             writer.prefix(GIT_NAMESPACE, GIT_URI);
             writer.prefix(PLATFORM_NAMESPACE, PLATFORM_URI);
             writer.prefix(PLATFORM_GITHUB_NAMESPACE, PLATFORM_GITHUB_URI);
-            //writer.prefix(GITHUB_COMMIT_NAMESPACE, githubCommitPrefixValue);
-            //writer.prefix(GITHUB_ISSUE_NAMESPACE, githubIssuePrefixValue);
 
             DiffFormatter diffFormatter = new DiffFormatter(DisabledOutputStream.INSTANCE);
             diffFormatter.setRepository(gitRepository);
@@ -529,22 +517,14 @@ public class GithubRdfConversionTransactionService {
                     writer.triple(RdfGithubCommitUtils.createRepositoryOwnerProperty(repositoryUri, ownerUserUri));
                     log.info("Repository owner user created/validated and linked: {}", ownerUserUri);
                 } else {
-                    // CRITICAL FALLBACK: Create BOTH the user entity AND the repository owner relationship to prevent RDF violations
-                    log.error("CRITICAL: User validation returned null for repository owner '{}'. Creating fallback user entity and relationship.", 
-                            repoOwner.getLogin());
+                    log.warn("User validation failed for repository owner '{}', creating fallback", repoOwner.getLogin());
                     try {
-                        // Use the safe user entity creation method that handles bot encoding/decoding properly
-                        String fallbackOwnerUri = GithubUserValidator.createSafeUserEntity(writer, repoOwner.getLogin());
-                        if (fallbackOwnerUri != null) {
-                            // Now create the relationship
-                            writer.triple(RdfGithubCommitUtils.createRepositoryOwnerProperty(repositoryUri, fallbackOwnerUri));
-                            log.info("Created fallback repository owner entity and relationship with URI: {}", fallbackOwnerUri);
-                        } else {
-                            log.error("Failed to create safe user entity for repository owner '{}'", repoOwner.getLogin());
+                        String fallbackUserUri = GithubUserValidator.createSafeUserEntity(writer, repoOwner.getLogin());
+                        if (fallbackUserUri != null) {
+                            writer.triple(RdfGithubCommitUtils.createRepositoryOwnerProperty(repositoryUri, fallbackUserUri));
                         }
-                    } catch (Exception fallbackException) {
-                        log.error("Even fallback user entity creation failed for repository owner '{}': {}", 
-                                repoOwner.getLogin(), fallbackException.getMessage());
+                    } catch (Exception e) {
+                        log.warn("Fallback user creation failed for repository owner: {}", e.getMessage());
                     }
                 }
             } else {
@@ -1023,22 +1003,15 @@ public class GithubRdfConversionTransactionService {
                                     writer.triple(
                                             RdfPlatformTicketUtils.createSubmitterProperty(issueUri, githubIssueUserUri));
                                 } else {
-                                    // CRITICAL FALLBACK: Create BOTH the user entity AND the submitter relationship to prevent RDF violations
-                                    log.error("CRITICAL: User validation returned null for issue submitter '{}' in issue #{}. Creating fallback user entity and relationship.", 
+                                    log.warn("User validation failed for issue submitter '{}' in issue #{}, creating fallback", 
                                             ghIssue.getUser().getLogin(), issueNumber);
                                     try {
-                                        // Use the safe user entity creation method that handles bot encoding/decoding properly
-                                        String fallbackSubmitterUri = GithubUserValidator.createSafeUserEntity(writer, ghIssue.getUser().getLogin());
-                                        if (fallbackSubmitterUri != null) {
-                                            // Now create the relationship
-                                            writer.triple(RdfPlatformTicketUtils.createSubmitterProperty(issueUri, fallbackSubmitterUri));
-                                            log.info("Created fallback submitter entity and relationship for issue #{} with URI: {}", issueNumber, fallbackSubmitterUri);
-                                        } else {
-                                            log.error("Failed to create safe user entity for issue submitter '{}'", ghIssue.getUser().getLogin());
+                                        String fallbackUserUri = GithubUserValidator.createSafeUserEntity(writer, ghIssue.getUser().getLogin());
+                                        if (fallbackUserUri != null) {
+                                            writer.triple(RdfPlatformTicketUtils.createSubmitterProperty(issueUri, fallbackUserUri));
                                         }
-                                    } catch (Exception fallbackException) {
-                                        log.error("Even fallback user entity creation failed for issue submitter '{}' in issue #{}: {}", 
-                                                ghIssue.getUser().getLogin(), issueNumber, fallbackException.getMessage());
+                                    } catch (Exception e) {
+                                        log.warn("Fallback user creation failed for issue submitter: {}", e.getMessage());
                                     }
                                 }
                             } else {
@@ -1081,23 +1054,15 @@ public class GithubRdfConversionTransactionService {
                                                         writer.triple(RdfGithubIssueUtils.createIssueRequestedReviewerProperty(issueUri,
                                                                 reviewerUri));
                                                     } else {
-                                                        // CRITICAL FALLBACK: Create BOTH the user entity AND the requested reviewer relationship to prevent RDF violations
-                                                        log.error("CRITICAL: User validation returned null for requested reviewer '{}' in issue #{}. Creating fallback user entity and relationship.", 
+                                                        log.warn("User validation failed for requested reviewer '{}' in issue #{}, creating fallback", 
                                                                 reviewer.getLogin(), issueNumber);
                                                         try {
-                                                            // Use the safe user entity creation method that handles bot encoding/decoding properly
-                                                            String fallbackReviewerUri = GithubUserValidator.createSafeUserEntity(writer, reviewer.getLogin());
-                                                            if (fallbackReviewerUri != null) {
-                                                                // Now create the relationship
-                                                                writer.triple(RdfGithubIssueUtils.createIssueRequestedReviewerProperty(issueUri,
-                                                                        fallbackReviewerUri));
-                                                                log.info("Created fallback requested reviewer entity and relationship for issue #{} with URI: {}", issueNumber, fallbackReviewerUri);
-                                                            } else {
-                                                                log.error("Failed to create safe user entity for requested reviewer '{}'", reviewer.getLogin());
+                                                            String fallbackUserUri = GithubUserValidator.createSafeUserEntity(writer, reviewer.getLogin());
+                                                            if (fallbackUserUri != null) {
+                                                                writer.triple(RdfGithubIssueUtils.createIssueRequestedReviewerProperty(issueUri, fallbackUserUri));
                                                             }
-                                                        } catch (Exception fallbackException) {
-                                                            log.error("Even fallback user entity creation failed for requested reviewer '{}' in issue #{}: {}", 
-                                                                    reviewer.getLogin(), issueNumber, fallbackException.getMessage());
+                                                        } catch (Exception e) {
+                                                            log.warn("Fallback user creation failed for requested reviewer: {}", e.getMessage());
                                                         }
                                                     }
                                                 } catch (Exception e) {
@@ -1215,22 +1180,15 @@ public class GithubRdfConversionTransactionService {
                                     if (assigneeUri != null) {
                                         writer.triple(RdfPlatformTicketUtils.createAssigneeProperty(issueUri, assigneeUri));
                                     } else {
-                                        // CRITICAL FALLBACK: Create BOTH the user entity AND the assignee relationship to prevent RDF violations
-                                        log.error("CRITICAL: User validation returned null for assignee '{}' in issue #{}. Creating fallback user entity and relationship.", 
+                                        log.warn("User validation failed for assignee '{}' in issue #{}, creating fallback", 
                                                 assignee.getLogin(), issueNumber);
                                         try {
-                                            // Use the safe user entity creation method that handles bot encoding/decoding properly
-                                            String fallbackAssigneeUri = GithubUserValidator.createSafeUserEntity(writer, assignee.getLogin());
-                                            if (fallbackAssigneeUri != null) {
-                                                // Now create the relationship
-                                                writer.triple(RdfPlatformTicketUtils.createAssigneeProperty(issueUri, fallbackAssigneeUri));
-                                                log.info("Created fallback assignee entity and relationship for issue #{} with URI: {}", issueNumber, fallbackAssigneeUri);
-                                            } else {
-                                                log.error("Failed to create safe user entity for assignee '{}'", assignee.getLogin());
+                                            String fallbackUserUri = GithubUserValidator.createSafeUserEntity(writer, assignee.getLogin());
+                                            if (fallbackUserUri != null) {
+                                                writer.triple(RdfPlatformTicketUtils.createAssigneeProperty(issueUri, fallbackUserUri));
                                             }
-                                        } catch (Exception fallbackException) {
-                                            log.error("Even fallback user entity creation failed for assignee '{}' in issue #{}: {}", 
-                                                    assignee.getLogin(), issueNumber, fallbackException.getMessage());
+                                        } catch (Exception e) {
+                                            log.warn("Fallback user creation failed for assignee: {}", e.getMessage());
                                         }
                                     }
                                 }
@@ -1324,24 +1282,15 @@ public class GithubRdfConversionTransactionService {
                                         writer.triple(RdfGithubIssueReviewUtils.createReviewUserProperty(
                                                 reviewURI, reviewUserUri));
                                     } else {
-                                        // CRITICAL FALLBACK: If validator somehow returns null, create BOTH the user entity AND the relationship
-                                        // to prevent RDF violations
-                                        log.error("CRITICAL: User validation returned null for review user '{}' in review {} of issue #{}. Creating fallback user entity and relationship.", 
-                                                review.getUser().getLogin(), review.getId(), issueNumber);
+                                        log.warn("User validation failed for review user '{}' in review {}, creating fallback", 
+                                                review.getUser().getLogin(), review.getId());
                                         try {
-                                            // Use the safe user entity creation method that handles bot encoding/decoding properly
                                             String fallbackUserUri = GithubUserValidator.createSafeUserEntity(writer, review.getUser().getLogin());
                                             if (fallbackUserUri != null) {
-                                                // Now create the relationship
-                                                writer.triple(RdfGithubIssueReviewUtils.createReviewUserProperty(
-                                                        reviewURI, fallbackUserUri));
-                                                log.info("Created fallback reviewer entity and relationship for review {} with URI: {}", review.getId(), fallbackUserUri);
-                                            } else {
-                                                log.error("Failed to create safe user entity for reviewer '{}'", review.getUser().getLogin());
+                                                writer.triple(RdfGithubIssueReviewUtils.createReviewUserProperty(reviewURI, fallbackUserUri));
                                             }
-                                        } catch (Exception fallbackException) {
-                                            log.error("Even fallback user entity creation failed for reviewer '{}' in review {}: {}", 
-                                                    review.getUser().getLogin(), review.getId(), fallbackException.getMessage());
+                                        } catch (Exception e) {
+                                            log.warn("Fallback user creation failed for review user: {}", e.getMessage());
                                         }
                                     }
                                 } else {
@@ -1420,23 +1369,14 @@ public class GithubRdfConversionTransactionService {
                                             writer.triple(RdfGithubCommentUtils.createCommentUser(
                                                     reviewCommentURI, commentUserUri));
                                         } else {
-                                            // CRITICAL FALLBACK: Create BOTH the user entity AND the author relationship to prevent RDF violations
-                                            log.error("CRITICAL: User validation returned null for comment author '{}' in review comment {}. Creating fallback user entity and relationship.", 
-                                                    c.getUser().getLogin(), cid);
+                                            log.warn("User validation failed for review comment author '{}', creating fallback", c.getUser().getLogin());
                                             try {
-                                                // Use the safe user entity creation method that handles bot encoding/decoding properly
-                                                String fallbackCommentUserUri = GithubUserValidator.createSafeUserEntity(writer, c.getUser().getLogin());
-                                                if (fallbackCommentUserUri != null) {
-                                                    // Now create the relationship
-                                                    writer.triple(RdfGithubCommentUtils.createCommentUser(
-                                                            reviewCommentURI, fallbackCommentUserUri));
-                                                    log.info("Created fallback comment author entity and relationship for comment {} with URI: {}", cid, fallbackCommentUserUri);
-                                                } else {
-                                                    log.error("Failed to create safe user entity for comment author '{}'", c.getUser().getLogin());
+                                                String fallbackUserUri = GithubUserValidator.createSafeUserEntity(writer, c.getUser().getLogin());
+                                                if (fallbackUserUri != null) {
+                                                    writer.triple(RdfGithubCommentUtils.createCommentUser(reviewCommentURI, fallbackUserUri));
                                                 }
-                                            } catch (Exception fallbackException) {
-                                                log.error("Even fallback user entity creation failed for comment author '{}' in comment {}: {}", 
-                                                        c.getUser().getLogin(), cid, fallbackException.getMessage());
+                                            } catch (Exception e) {
+                                                log.warn("Fallback user creation failed for review comment author: {}", e.getMessage());
                                             }
                                         }
                                     }
@@ -1503,24 +1443,14 @@ public class GithubRdfConversionTransactionService {
                                                             RdfGithubReactionUtils.createReactionByProperty(reactionURI,
                                                                     reactionByUri));
                                                 } else {
-                                                    // CRITICAL FALLBACK: Create BOTH the user entity AND the reaction relationship to prevent RDF violations
-                                                    log.error("CRITICAL: User validation returned null for reaction user '{}' in reaction {}. Creating fallback user entity and relationship.", 
-                                                            r.getUser().getLogin(), r.getId());
+                                                    log.warn("User validation failed for reaction user '{}', creating fallback", r.getUser().getLogin());
                                                     try {
-                                                        // Use the safe user entity creation method that handles bot encoding/decoding properly
-                                                        String fallbackReactionUserUri = GithubUserValidator.createSafeUserEntity(writer, r.getUser().getLogin());
-                                                        if (fallbackReactionUserUri != null) {
-                                                            // Now create the relationship
-                                                            writer.triple(
-                                                                    RdfGithubReactionUtils.createReactionByProperty(reactionURI,
-                                                                            fallbackReactionUserUri));
-                                                            log.info("Created fallback reaction user entity and relationship for reaction {} with URI: {}", r.getId(), fallbackReactionUserUri);
-                                                        } else {
-                                                            log.error("Failed to create safe user entity for reaction user '{}'", r.getUser().getLogin());
+                                                        String fallbackUserUri = GithubUserValidator.createSafeUserEntity(writer, r.getUser().getLogin());
+                                                        if (fallbackUserUri != null) {
+                                                            writer.triple(RdfGithubReactionUtils.createReactionByProperty(reactionURI, fallbackUserUri));
                                                         }
-                                                    } catch (Exception fallbackException) {
-                                                        log.error("Even fallback user entity creation failed for reaction user '{}' in reaction {}: {}", 
-                                                                r.getUser().getLogin(), r.getId(), fallbackException.getMessage());
+                                                    } catch (Exception e) {
+                                                        log.warn("Fallback user creation failed for reaction user: {}", e.getMessage());
                                                     }
                                                 }
                                             }
@@ -1568,33 +1498,33 @@ public class GithubRdfConversionTransactionService {
                                     writer.triple(RdfGithubCommentUtils.createCommentBody(
                                             issueCommentURI, c.getBody()));
                                 }
-                                if (c.getUser() != null && c.getUser().getLogin() != null) {
-                                    // Validate and ensure GitHub user exists in RDF
-                                    String commentUserUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, c.getUser());
-                                    if (commentUserUri != null) {
-                                        writer.triple(RdfGithubCommentUtils.createCommentUser(
-                                                issueCommentURI,
-                                                commentUserUri));
-                                    } else {
-                                        // CRITICAL FALLBACK: Create BOTH the user entity AND the author relationship to prevent RDF violations
-                                        log.error("CRITICAL: User validation returned null for comment author '{}' in issue comment {}. Creating fallback user entity and relationship.", 
-                                                c.getUser().getLogin(), cid);
-                                        try {
-                                            // Use the safe user entity creation method that handles bot encoding/decoding properly
-                                            String fallbackCommentUserUri = GithubUserValidator.createSafeUserEntity(writer, c.getUser().getLogin());
-                                            if (fallbackCommentUserUri != null) {
-                                                // Now create the relationship
-                                                writer.triple(RdfGithubCommentUtils.createCommentUser(
-                                                        issueCommentURI,
-                                                        fallbackCommentUserUri));
-                                                log.info("Created fallback comment author entity and relationship for issue comment {} with URI: {}", cid, fallbackCommentUserUri);
-                                            } else {
-                                                log.error("Failed to create safe user entity for comment author '{}'", c.getUser().getLogin());
+                                try {
+                                    if (c.getUser() != null && c.getUser().getLogin() != null) {
+                                        // Validate and ensure GitHub user exists in RDF
+                                        String commentUserUri = GithubUserValidator.validateAndEnsureUser(writer, gitHubHandle, c.getUser());
+                                        if (commentUserUri != null) {
+                                            writer.triple(RdfGithubCommentUtils.createCommentUser(
+                                                    issueCommentURI,
+                                                    commentUserUri));
+                                        } else {
+                                            log.warn("User validation failed for comment author '{}', creating fallback", c.getUser().getLogin());
+                                            String fallbackUserUri = GithubUserValidator.createSafeUserEntity(writer, c.getUser().getLogin());
+                                            if (fallbackUserUri != null) {
+                                                writer.triple(RdfGithubCommentUtils.createCommentUser(issueCommentURI, fallbackUserUri));
                                             }
-                                        } catch (Exception fallbackException) {
-                                            log.error("Even fallback user entity creation failed for comment author '{}' in comment {}: {}", 
-                                                    c.getUser().getLogin(), cid, fallbackException.getMessage());
                                         }
+                                    }
+                                } catch (org.kohsuke.github.HttpException e) {
+                                    log.warn("GitHub API error (HTTP {}) fetching user for issue comment {}. Creating fallback user.", 
+                                            e.getResponseCode(), cid);
+                                    try {
+                                        String fallbackLogin = "unknown-user-comment-" + cid;
+                                        String fallbackUserUri = GithubUserValidator.createSafeUserEntity(writer, fallbackLogin);
+                                        if (fallbackUserUri != null) {
+                                            writer.triple(RdfGithubCommentUtils.createCommentUser(issueCommentURI, fallbackUserUri));
+                                        }
+                                    } catch (Exception fallbackException) {
+                                        log.error("Failed to create fallback user for comment {}: {}", cid, fallbackException.getMessage());
                                     }
                                 }
                                 if (c.getCreatedAt() != null) {
@@ -1627,23 +1557,14 @@ public class GithubRdfConversionTransactionService {
                                             writer.triple(RdfGithubReactionUtils.createReactionByProperty(
                                                     reactionURI, reactionByUri));
                                         } else {
-                                            // CRITICAL FALLBACK: Create BOTH the user entity AND the reaction relationship to prevent RDF violations
-                                            log.error("CRITICAL: User validation returned null for reaction user '{}' in reaction {}. Creating fallback user entity and relationship.", 
-                                                    r.getUser().getLogin(), r.getId());
+                                            log.warn("User validation failed for reaction user '{}', creating fallback", r.getUser().getLogin());
                                             try {
-                                                // Use the safe user entity creation method that handles bot encoding/decoding properly
-                                                String fallbackReactionUserUri = GithubUserValidator.createSafeUserEntity(writer, r.getUser().getLogin());
-                                                if (fallbackReactionUserUri != null) {
-                                                    // Now create the relationship
-                                                    writer.triple(RdfGithubReactionUtils.createReactionByProperty(
-                                                            reactionURI, fallbackReactionUserUri));
-                                                    log.info("Created fallback reaction user entity and relationship for reaction {} with URI: {}", r.getId(), fallbackReactionUserUri);
-                                                } else {
-                                                    log.error("Failed to create safe user entity for reaction user '{}'", r.getUser().getLogin());
+                                                String fallbackUserUri = GithubUserValidator.createSafeUserEntity(writer, r.getUser().getLogin());
+                                                if (fallbackUserUri != null) {
+                                                    writer.triple(RdfGithubReactionUtils.createReactionByProperty(reactionURI, fallbackUserUri));
                                                 }
-                                            } catch (Exception fallbackException) {
-                                                log.error("Even fallback user entity creation failed for reaction user '{}' in reaction {}: {}", 
-                                                        r.getUser().getLogin(), r.getId(), fallbackException.getMessage());
+                                            } catch (Exception e) {
+                                                log.warn("Fallback user creation failed for reaction user: {}", e.getMessage());
                                             }
                                         }
                                     }
@@ -1884,26 +1805,17 @@ public class GithubRdfConversionTransactionService {
                     writer.triple(RdfGithubUserUtils.createGitAuthorEmailProperty(validatedUserUri, info.gitAuthorEmail));
                 }
             } else {
-                // CRITICAL FALLBACK: Create BOTH the user entity AND the committer relationship to prevent RDF violations
-                log.error("CRITICAL: User validation returned null for commit author '{}' in commit {}. Creating fallback user entity and relationship.", 
-                        info.login, gitHash);
+                log.warn("User validation failed for commit author '{}', creating fallback", info.login);
                 try {
-                    // Use the safe user entity creation method that handles bot encoding/decoding properly
-                    String fallbackCommitterUri = GithubUserValidator.createSafeUserEntity(writer, info.login);
-                    if (fallbackCommitterUri != null) {
-                        // Now create the relationship
-                        writer.triple(RdfGithubCommitUtils.createCommiterGitHubUserProperty(commitUri, fallbackCommitterUri));
-                        // Add additional commit-specific properties that aren't handled by the validator
+                    String fallbackUserUri = GithubUserValidator.createSafeUserEntity(writer, info.login);
+                    if (fallbackUserUri != null) {
+                        writer.triple(RdfGithubCommitUtils.createCommiterGitHubUserProperty(commitUri, fallbackUserUri));
                         if (info.gitAuthorEmail != null && !info.gitAuthorEmail.isEmpty()) {
-                            writer.triple(RdfGithubUserUtils.createGitAuthorEmailProperty(fallbackCommitterUri, info.gitAuthorEmail));
+                            writer.triple(RdfGithubUserUtils.createGitAuthorEmailProperty(fallbackUserUri, info.gitAuthorEmail));
                         }
-                        log.info("Created fallback commit author entity and relationship for commit {} with URI: {}", gitHash, fallbackCommitterUri);
-                    } else {
-                        log.error("Failed to create safe user entity for commit author '{}'", info.login);
                     }
-                } catch (Exception fallbackException) {
-                    log.error("Even fallback user entity creation failed for commit author '{}' in commit {}: {}", 
-                            info.login, gitHash, fallbackException.getMessage());
+                } catch (Exception e) {
+                    log.warn("Fallback user creation failed for commit author: {}", e.getMessage());
                 }
             }
         }
@@ -2522,22 +2434,14 @@ public class GithubRdfConversionTransactionService {
                 if (commentUserUri != null) {
                     writer.triple(RdfGithubCommentUtils.createCommentUser(parentCommentUri, commentUserUri));
                 } else {
-                    // CRITICAL FALLBACK: Create BOTH the user entity AND the author relationship to prevent RDF violations
-                    log.error("CRITICAL: User validation returned null for parent comment author '{}' in comment {}. Creating fallback user entity and relationship.", 
-                            parentComment.getUser().getLogin(), parentComment.getId());
+                    log.warn("User validation failed for parent comment author '{}', creating fallback", parentComment.getUser().getLogin());
                     try {
-                        // Use the safe user entity creation method that handles bot encoding/decoding properly
-                        String fallbackCommentUserUri = GithubUserValidator.createSafeUserEntity(writer, parentComment.getUser().getLogin());
-                        if (fallbackCommentUserUri != null) {
-                            // Now create the relationship
-                            writer.triple(RdfGithubCommentUtils.createCommentUser(parentCommentUri, fallbackCommentUserUri));
-                            log.info("Created fallback parent comment author entity and relationship for comment {} with URI: {}", parentComment.getId(), fallbackCommentUserUri);
-                        } else {
-                            log.error("Failed to create safe user entity for parent comment author '{}'", parentComment.getUser().getLogin());
+                        String fallbackUserUri = GithubUserValidator.createSafeUserEntity(writer, parentComment.getUser().getLogin());
+                        if (fallbackUserUri != null) {
+                            writer.triple(RdfGithubCommentUtils.createCommentUser(parentCommentUri, fallbackUserUri));
                         }
-                    } catch (Exception fallbackException) {
-                        log.error("Even fallback user entity creation failed for parent comment author '{}' in comment {}: {}", 
-                                parentComment.getUser().getLogin(), parentComment.getId(), fallbackException.getMessage());
+                    } catch (Exception e) {
+                        log.warn("Fallback user creation failed for parent comment author: {}", e.getMessage());
                     }
                 }
             }

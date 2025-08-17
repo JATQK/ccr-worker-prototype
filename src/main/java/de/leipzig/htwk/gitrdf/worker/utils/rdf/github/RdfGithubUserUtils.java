@@ -43,8 +43,6 @@ public final class RdfGithubUserUtils extends RdfPlatformPersonUtils {
     }
 
     // Additional GitHub user methods
-    // Note: This applies git:authorEmail to user entities, which differs from the ontology
-    // domain definition (git:GitCommit). This is used to link commit author emails to user entities.
     public static Triple createGitAuthorEmailProperty(String userUri, String email) {
         return Triple.create(uri(userUri), uri("git:authorEmail"), RdfUtils.stringLiteral(email));
     }

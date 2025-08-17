@@ -10,11 +10,6 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-/**
- * Platform-agnostic utility class for RDF operations on platform:Person entities.
- * This class implements the base properties defined in the git2RDFLab-platform ontology
- * for persons/users that are common across all platform implementations.
- */
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RdfPlatformPersonUtils {
 
@@ -40,14 +35,6 @@ public class RdfPlatformPersonUtils {
         return uri(PLATFORM_NS + "username");
     }
 
-    // Legacy property - use idProperty instead
-    public static Node userIdProperty() {
-        return idProperty();
-    }
-
-    public static Triple createRdfTypeProperty(String personUri) {
-        return Triple.create(uri(personUri), rdfTypeProperty(), uri("platform:Person"));
-    }
 
     public static Triple createNameProperty(String personUri, String name) {
         return Triple.create(uri(personUri), nameProperty(), RdfUtils.stringLiteral(name));
@@ -65,8 +52,4 @@ public class RdfPlatformPersonUtils {
         return Triple.create(uri(personUri), idProperty(), RdfUtils.stringLiteral(id));
     }
 
-    // Legacy method for backward compatibility
-    public static Triple createUserIdProperty(String personUri, String userId) {
-        return createIdProperty(personUri, userId);
-    }
 }

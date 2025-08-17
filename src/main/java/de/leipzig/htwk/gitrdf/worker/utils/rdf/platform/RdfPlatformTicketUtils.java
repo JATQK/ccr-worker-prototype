@@ -12,11 +12,6 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-/**
- * Platform-agnostic utility class for RDF operations on platform:Ticket entities.
- * This class implements the base properties defined in the git2RDFLab-platform ontology
- * for tickets/issues that are common across all platform implementations.
- */
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RdfPlatformTicketUtils {
 
@@ -27,7 +22,6 @@ public class RdfPlatformTicketUtils {
         return uri("rdf:type");
     }
 
-    // Platform Ticket Properties (from platform ontology)
     public static Node idProperty() {
         return uri(PLATFORM_NS + "id");
     }
@@ -76,7 +70,6 @@ public class RdfPlatformTicketUtils {
         return uri(PLATFORM_NS + "hasMilestone");
     }
 
-    // Add missing platform properties for ticket-commit relationships
     public static Node partOfTicketProperty() {
         return uri(PLATFORM_NS + "partOfTicket");
     }
@@ -89,7 +82,6 @@ public class RdfPlatformTicketUtils {
         return uri(PLATFORM_NS + "hasComment");
     }
 
-    // Merge properties (pull request foundation - lines 158-181 in ontology)
     public static Node mergedProperty() {
         return uri(PLATFORM_NS + "merged");
     }
@@ -123,7 +115,6 @@ public class RdfPlatformTicketUtils {
         return uri(PLATFORM_NS + "commitSha");
     }
 
-    // Pull Request branch properties (lines 176-184 in ontology)
     public static Node sourceBranchProperty() {
         return uri(PLATFORM_NS + "sourceBranch");
     }
@@ -132,10 +123,6 @@ public class RdfPlatformTicketUtils {
         return uri(PLATFORM_NS + "targetBranch");
     }
 
-    // Triple creation methods for platform properties
-    public static Triple createRdfTypeProperty(String ticketUri) {
-        return Triple.create(uri(ticketUri), rdfTypeProperty(), uri("platform:Ticket"));
-    }
 
     public static Triple createIdProperty(String ticketUri, String id) {
         return Triple.create(uri(ticketUri), idProperty(), RdfUtils.stringLiteral(id));

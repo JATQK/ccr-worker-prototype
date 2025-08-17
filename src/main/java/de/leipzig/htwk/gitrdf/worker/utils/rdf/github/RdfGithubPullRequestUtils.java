@@ -25,24 +25,6 @@ public final class RdfGithubPullRequestUtils extends RdfGithubIssueUtils {
         return Triple.create(uri(pullRequestUri), rdfTypeProperty(), uri("github:PullRequest"));
     }
 
-
-    // Pull Request specific property creation methods (delegate to platform base class)
-    public static Triple createPullRequestMergedProperty(String pullRequestUri, boolean merged) {
-        return RdfPlatformTicketUtils.createMergedProperty(pullRequestUri, merged);
-    }
-
-    public static Triple createPullRequestMergeCommitShaProperty(String pullRequestUri, String sha) {
-        return RdfPlatformTicketUtils.createMergeCommitShaProperty(pullRequestUri, sha);
-    }
-
-    public static Triple createPullRequestMergedAtProperty(String pullRequestUri, LocalDateTime mergedAt) {
-        return RdfPlatformTicketUtils.createMergedAtProperty(pullRequestUri, mergedAt);
-    }
-
-    public static Triple createPullRequestMergedByProperty(String pullRequestUri, String userUri) {
-        return RdfPlatformTicketUtils.createMergedByProperty(pullRequestUri, userUri);
-    }
-
     // Convenience methods for backward compatibility with existing transaction service
     public static Triple createIssueMergedProperty(String issueUri, boolean merged) {
         return RdfPlatformTicketUtils.createMergedProperty(issueUri, merged);
@@ -69,12 +51,4 @@ public final class RdfGithubPullRequestUtils extends RdfGithubIssueUtils {
         return RdfPlatformTicketUtils.createTargetBranchProperty(pullRequestUri, branchUri);
     }
 
-    // GitHub-specific branch property aliases for backward compatibility
-    public static Triple createHeadBranchProperty(String pullRequestUri, String branchUri) {
-        return createSourceBranchProperty(pullRequestUri, branchUri);
-    }
-
-    public static Triple createBaseBranchProperty(String pullRequestUri, String branchUri) {
-        return createTargetBranchProperty(pullRequestUri, branchUri);
-    }
 }

@@ -10,22 +10,16 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-/**
- * Platform-agnostic utility class for RDF operations on platform:Label entities.
- * This class implements the base properties defined in the git2RDFLab-platform ontology
- * for labels that are common across all platform implementations.
- */
+
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RdfPlatformLabelUtils {
 
     protected static final String PLATFORM_NS = PLATFORM_NAMESPACE + ":";
 
-    // Core RDF properties
     public static Node rdfTypeProperty() {
         return uri("rdf:type");
     }
 
-    // Platform Label Properties (from platform ontology v2)
     public static Node idProperty() {
         return uri(PLATFORM_NS + "id");
     }
@@ -87,18 +81,5 @@ public class RdfPlatformLabelUtils {
 
     public static Triple createLabelOfProperty(String labelUri, String resourceUri) {
         return Triple.create(uri(labelUri), labelOfProperty(), uri(resourceUri));
-    }
-
-    // Legacy method compatibility
-    public static Triple createLabelNameProperty(String labelUri, String name) {
-        return createNameProperty(labelUri, name);
-    }
-
-    public static Triple createLabelColorProperty(String labelUri, String color) {
-        return createColorProperty(labelUri, color);
-    }
-
-    public static Triple createLabelDescriptionProperty(String labelUri, String description) {
-        return createDescriptionProperty(labelUri, description);
     }
 }

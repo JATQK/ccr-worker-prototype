@@ -31,14 +31,7 @@ public final class RdfGithubWorkflowUtils extends RdfPlatformWorkflowUtils {
     public static Node runAttemptProperty() { return uri(GH_NS + "runAttempt"); }
     public static Node statusProperty() { return uri("platform:executionStatus"); }
     public static Node conclusionProperty() { return uri("platform:executionConclusion"); }
-    public static Node eventProperty() { return uri(GH_NS + "workflowEvent"); }
     public static Node commitShaProperty() { return uri(GH_NS + "workflowCommitSha"); }
-    public static Node createdAtProperty() { return uri(GH_NS + "workflowCreatedAt"); }
-    
-    // New generalized properties (subproperties of platform equivalents)
-    public static Node triggerEventProperty() { return uri(GH_NS + "triggerEvent"); }
-    public static Node triggerCommitProperty() { return uri(GH_NS + "triggerCommit"); }
-    public static Node executionCreatedAtProperty() { return uri(GH_NS + "executionCreatedAt"); }
     public static Node updatedAtProperty() { return uri("platform:updatedAt"); }
 
     // Triple creation
@@ -65,14 +58,6 @@ public final class RdfGithubWorkflowUtils extends RdfPlatformWorkflowUtils {
         return RdfPlatformWorkflowUtils.createWorkflowNameProperty(runUri, name);
     }
 
-    public static Triple createWorkflowDescriptionProperty(String runUri, String description) {
-        return RdfPlatformWorkflowUtils.createWorkflowDescriptionProperty(runUri, description);
-    }
-
-    public static Triple createWorkflowTriggerProperty(String runUri, String trigger) {
-        return RdfPlatformWorkflowUtils.createWorkflowTriggerProperty(runUri, trigger);
-    }
-
     public static Triple createWorkflowStatusProperty(String runUri, GHWorkflowRun.Status status) {
         // Use platform execution status values directly
         String mappedStatus = mapGitHubStatusToPlatform(status.toString());
@@ -84,58 +69,41 @@ public final class RdfGithubWorkflowUtils extends RdfPlatformWorkflowUtils {
         String mappedConclusion = mapGitHubConclusionToPlatform(conclusion.toString());
         return Triple.create(uri(runUri), conclusionProperty(), uri("platform:" + mappedConclusion));
     }
-
+    
+    // TODO: Future catching of invalid states
     private static String mapGitHubStatusToPlatform(String status) {
         // Map GitHub workflow status to platform execution status values
         switch (status.toLowerCase()) {
             case "completed":
-                return "completed"; // Use platform:completed
             case "queued":
-                return "queued"; // Use platform:queued
             case "in_progress":
-                return "in_progress"; // Use platform:in_progress
             case "waiting":
-                return "waiting"; // Use platform:waiting
             case "requested":
-                return "requested"; // GitHub-specific, but inherits from platform:ExecutionStatus
+                return status.toLowerCase();
             default:
                 return status.toLowerCase();
         }
     }
 
+    // TODO: Future catching of invalid states
     private static String mapGitHubConclusionToPlatform(String conclusion) {
         // Map GitHub workflow conclusion to platform execution conclusion values
         switch (conclusion.toLowerCase()) {
             case "success":
-                return "success"; // Use platform:success
             case "failure":
-                return "failure"; // Use platform:failure
             case "cancelled":
-                return "cancelled"; // Use platform:cancelled
             case "skipped":
-                return "skipped"; // Use platform:skipped
             case "timed_out":
-                return "timed_out"; // Use platform:timed_out
             case "action_required":
-                return "action_required"; // Use platform:action_required
             case "neutral":
-                return "neutral"; // Map to platform value (no longer GitHub-specific)
+                return conclusion.toLowerCase(); // Use platform value directly
             default:
                 return conclusion.toLowerCase();
         }
     }
 
-    public static Triple createWorkflowEventProperty(String runUri, String event) {
-        return Triple.create(uri(runUri), eventProperty(), RdfUtils.stringLiteral(event));
-    }
-
-
     public static Triple createWorkflowCommitShaProperty(String runUri, String sha) {
         return Triple.create(uri(runUri), commitShaProperty(), RdfUtils.stringLiteral(sha));
-    }
-
-    public static Triple createWorkflowCreatedAtProperty(String runUri, LocalDateTime created) {
-        return Triple.create(uri(runUri), createdAtProperty(), RdfUtils.dateTimeLiteral(created));
     }
 
     public static Triple createWorkflowUpdatedAtProperty(String runUri, LocalDateTime updated) {
@@ -145,17 +113,5 @@ public final class RdfGithubWorkflowUtils extends RdfPlatformWorkflowUtils {
     public static Triple createWorkflowJobProperty(String runUri, String jobUri) {
         return RdfPlatformWorkflowUtils.createHasJobProperty(runUri, jobUri);
     }
-    
-    // New generalized property creation methods
-    public static Triple createTriggerEventProperty(String runUri, String triggerEvent) {
-        return Triple.create(uri(runUri), triggerEventProperty(), RdfUtils.stringLiteral(triggerEvent));
-    }
-    
-    public static Triple createTriggerCommitProperty(String runUri, String triggerCommit) {
-        return Triple.create(uri(runUri), triggerCommitProperty(), RdfUtils.stringLiteral(triggerCommit));
-    }
-    
-    public static Triple createExecutionCreatedAtProperty(String runUri, LocalDateTime executionCreatedAt) {
-        return Triple.create(uri(runUri), executionCreatedAtProperty(), RdfUtils.dateTimeLiteral(executionCreatedAt));
-    }
+
 }

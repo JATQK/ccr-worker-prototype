@@ -6,20 +6,16 @@ import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
+
+import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.git.RdfCommitUtils;
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformRepositoryUtils;
-import de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RdfGithubCommitUtils {
 
-
-    // Use git ontology properties for commits
-    public static Node commitOfProperty() {
-        return uri("git:commitOf");
-    }
 
     // Use platform properties for repository relationships
     public static Node partOfTicketProperty() {

@@ -5,6 +5,7 @@ import static de.leipzig.htwk.gitrdf.worker.utils.rdf.core.RdfUtils.uri;
 import java.time.LocalDateTime;
 
 import org.apache.jena.graph.Triple;
+
 import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformReactionUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -16,11 +17,6 @@ public final class RdfGithubReactionUtils extends RdfPlatformReactionUtils {
 
     public static Triple createReactionRdfTypeProperty(String reactionUri) {
         return Triple.create(uri(reactionUri), rdfTypeProperty(), uri("github:Reaction"));
-    }
-
-    // Use inherited platform methods for common properties
-    public static Triple createReactionIdProperty(String reactionUri, String id) {
-        return createIdProperty(reactionUri, id);
     }
 
     public static Triple createReactionIdProperty(String reactionUri, long id) {
