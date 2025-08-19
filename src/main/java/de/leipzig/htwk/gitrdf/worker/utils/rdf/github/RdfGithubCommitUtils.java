@@ -65,7 +65,7 @@ public final class RdfGithubCommitUtils {
     }
 
     public static Node committerProperty() {
-        return uri("github:committer");
+        return uri("git:committer");
     }
 
     public static Node issueReferencedByProperty() {

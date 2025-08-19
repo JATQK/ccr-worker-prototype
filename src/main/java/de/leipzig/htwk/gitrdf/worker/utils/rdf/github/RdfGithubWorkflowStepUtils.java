@@ -22,15 +22,15 @@ public final class RdfGithubWorkflowStepUtils {
         return uri("rdf:type");
     }
 
-    public static Node createWorkflowStepUrl(String repoString, Long jobNumber, Integer stepNumber) {
+    public static Node createWorkflowStepUrl(String repoString, Long jobNumber, Integer runAttempt) {
         // https://api.github.com/repos/dotnet/core/actions/jobs/42157363512#step-2
         String baseUri = repoString.replace(GITHUB_BASE, GITHUB_API_BASE + "repos/");
-        return uri(baseUri + "actions/jobs/" + jobNumber + "#step-" + stepNumber);
+        return uri(baseUri + "actions/jobs/" + jobNumber + "#step-" + runAttempt);
     }
     
-    public static Node createWorkflowStepUri(String jobUri, Integer stepNumber) {
+    public static Node createWorkflowStepUri(String jobUri, Integer runAttempt) {
         // https://github.com/dotnet/core/actions/runs/15620640086/job/44004361815#step:1:1
-        return uri(jobUri + "#step:" + stepNumber + ":1");
+        return uri(jobUri + "#step:" + runAttempt + ":1");
     }
     // Use platform properties from v2 ontology
     public static Node idProperty() { return uri("platform:id"); }
@@ -68,8 +68,8 @@ public final class RdfGithubWorkflowStepUtils {
         return Triple.create(uri(stepUri), uri("platform:jobUrl"), RdfUtils.stringLiteral(jobUrl));
     }
 
-    public static Triple createWorkflowStepNumberProperty(String stepUri, int stepNumber) {
-        return Triple.create(uri(stepUri), uri("platform:stepNumber"), RdfUtils.integerLiteral(stepNumber));
+    public static Triple createWorkflowStepNumberProperty(String stepUri, int runAttempt) {
+        return Triple.create(uri(stepUri), uri("platform:runAttempt"), RdfUtils.positiveIntegerLiteral(runAttempt));
     }
 
 }

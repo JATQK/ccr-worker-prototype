@@ -33,7 +33,7 @@ public class RdfPlatformWorkflowStepUtils {
     }
 
     public static Node stepNumberProperty() {
-        return uri(PLATFORM_NS + "stepNumber");
+        return uri(PLATFORM_NS + "runAttempt");
     }
 
     public static Node stepStartedAtProperty() {
@@ -62,7 +62,7 @@ public class RdfPlatformWorkflowStepUtils {
     }
 
     public static Triple createStepNumberProperty(String stepUri, int number) {
-        return Triple.create(uri(stepUri), stepNumberProperty(), RdfUtils.integerLiteral(number));
+        return Triple.create(uri(stepUri), stepNumberProperty(), RdfUtils.positiveIntegerLiteral(number));
     }
 
     public static Triple createStepStartedAtProperty(String stepUri, LocalDateTime startedAt) {
