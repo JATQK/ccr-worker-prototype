@@ -7,10 +7,8 @@ import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueState;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
-import org.kohsuke.github.function.InputStreamFunction;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -33,17 +31,12 @@ public class GithubServiceImpl {
         GHRepository targetRepo = gitHub.getRepository(targetRepoName);
         List<GHIssue> issues = targetRepo.getIssues(GHIssueState.ALL);
 
-
-
-
         File extractedZipFileDirectory = targetRepo.readZip(
                 input -> ZipUtils.extractZip(input, TWENTY_FIVE_MEGABYTE),
                 null);
 
-        File gitFile
-                = GitUtils.getDotGitFileFromParentDirectoryFileAndThrowExceptionIfNoOrMoreThanOneExists(extractedZipFileDirectory);
-
-
+        File gitFile = GitUtils.getDotGitFileFromParentDirectoryFileAndThrowExceptionIfNoOrMoreThanOneExists(
+                extractedZipFileDirectory);
 
     }
 

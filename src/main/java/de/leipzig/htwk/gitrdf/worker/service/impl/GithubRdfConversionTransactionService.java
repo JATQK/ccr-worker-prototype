@@ -1,5 +1,6 @@
 package de.leipzig.htwk.gitrdf.worker.service.impl;
 
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -33,6 +34,7 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.StreamRDF;
+
 import org.apache.jena.riot.system.StreamRDFLib;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand;
@@ -80,6 +82,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import de.leipzig.htwk.gitrdf.database.common.entity.GitCommitRepositoryFilter;
 import de.leipzig.htwk.gitrdf.database.common.entity.GithubIssueRepositoryFilter;
 import de.leipzig.htwk.gitrdf.database.common.entity.GithubRepositoryOrderEntity;
@@ -115,6 +118,7 @@ import de.leipzig.htwk.gitrdf.worker.utils.rdf.platform.RdfPlatformWorkflowExecu
 import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 
+
 @Service
 @Slf4j
 public class GithubRdfConversionTransactionService {
@@ -125,14 +129,19 @@ public class GithubRdfConversionTransactionService {
 
     private static final boolean PROCESS_COMMENT_REACTIONS = true;
 
+
     public static final String GIT_NAMESPACE = "git";
     public static final String GIT_URI = "https://purl.archive.org/git2rdf/v2/git2RDFLab-git#";
+
 
     public static final String PLATFORM_NAMESPACE = "platform";
     public static final String PLATFORM_URI = "https://purl.archive.org/git2rdf/v2/git2RDFLab-platform#";
 
+
+
     public static final String PLATFORM_GITHUB_NAMESPACE = "github";
     public static final String PLATFORM_GITHUB_URI = "https://purl.archive.org/git2rdf/v2/git2RDFLab-platform-github#";
+
 
     public static final String XSD_SCHEMA_NAMESPACE = "xsd";
     public static final String XSD_SCHEMA_URI = "http://www.w3.org/2001/XMLSchema#";
@@ -143,7 +152,7 @@ public class GithubRdfConversionTransactionService {
     public static final String OWL_SCHEMA_NAMESPACE = "owl";
     public static final String OWL_SCHEMA_URI = "http://www.w3.org/2002/07/owl#";
 
-    // REMOVED: SPDX constants no longer needed in v2.1
+
 
     private final GithubHandlerService githubHandlerService;
 
@@ -266,7 +275,8 @@ public class GithubRdfConversionTransactionService {
 
             lockHandler.renewLockOnRenewTimeFulfillment();
 
-            //log.info("TIME MEASUREMENT DONE: Download time in milliseconds is: '{}'", downloadWatch.getTime());
+            // log.info("TIME MEASUREMENT DONE: Download time in milliseconds is: '{}'",
+            // downloadWatch.getTime());
             timeLog.setDownloadTime(downloadWatch.getTime());
 
             StopWatch conversionWatch = new StopWatch();
@@ -278,7 +288,8 @@ public class GithubRdfConversionTransactionService {
 
             conversionWatch.stop();
 
-            //log.info("TIME MEASUREMENT DONE: Conversion time in milliseconds is: '{}'", conversionWatch.getTime());
+            // log.info("TIME MEASUREMENT DONE: Conversion time in milliseconds is: '{}'",
+            // conversionWatch.getTime());
             timeLog.setConversionTime(conversionWatch.getTime());
 
             githubRepositoryOrderEntity.setStatus(GitRepositoryOrderStatus.DONE);
@@ -294,12 +305,14 @@ public class GithubRdfConversionTransactionService {
 
     }
 
+
     private void writeMergeInfo(GHIssue issue, GHPullRequest pr, StreamRDF writer, String issueUri, GitHub gitHubHandle) {
         if (issue == null || !issue.isPullRequest() || pr == null) {
             return;
         }
         try {
             writer.triple(RdfGithubPullRequestUtils.createIssueMergedProperty(issueUri, pr.isMerged()));
+
 
             Date mergedAt = pr.getMergedAt();
 
@@ -346,6 +359,7 @@ public class GithubRdfConversionTransactionService {
                 writer.triple(RdfGithubPullRequestUtils.createSourceBranchProperty(issueUri, sourceBranchUri));
             }
 
+
             if (pr.getBase() != null && pr.getBase().getRef() != null) {
                 String targetBranchUri = createBranchUri(pr.getRepository().getOwner().getLogin(), 
                                                        pr.getRepository().getName(), 
@@ -382,8 +396,10 @@ public class GithubRdfConversionTransactionService {
             }
 
 
+
             String headSha = pr.getHead().getSha();
             GHRepository repo = pr.getRepository();
+
 
             // Limit check runs processing
             List<GHCheckRun> checkRuns = executeWithRetry(
@@ -398,6 +414,7 @@ public class GithubRdfConversionTransactionService {
 
                 if (checkRun.getDetailsUrl() != null &&
                         checkRun.getDetailsUrl().toString().contains("/actions/runs/")) {
+
 
                     String runId = extractRunIdFromUrl(checkRun.getDetailsUrl().toString());
                     if (runId != null) {
@@ -460,6 +477,7 @@ public class GithubRdfConversionTransactionService {
         Map<String, RdfGitCommitUserUtils> uniqueGitCommiterWithHash = new HashMap<>();
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(rdfTempFile))) {
 
+
             GitHub gitHubHandle = githubHandlerService.getGithub();
 
             lockHandler.renewLockOnRenewTimeFulfillment();
@@ -471,6 +489,7 @@ public class GithubRdfConversionTransactionService {
             // See: https://jena.apache.org/documentation/io/rdf-output.html#streamed-block-formats
             Model model = ModelFactory.createDefaultModel();
             StreamRDF writer = StreamRDFLib.graph(model.getGraph());
+
 
             writer.prefix(XSD_SCHEMA_NAMESPACE, XSD_SCHEMA_URI);
             writer.prefix(RDF_SCHEMA_NAMESPACE, RDF_SCHEMA_URI);
@@ -500,6 +519,7 @@ public class GithubRdfConversionTransactionService {
             StopWatch commitConversionWatch = new StopWatch();
 
             commitConversionWatch.start();
+
 
             lockHandler.renewLockOnRenewTimeFulfillment();
 
@@ -593,6 +613,7 @@ public class GithubRdfConversionTransactionService {
                     String submodulePath = submoduleWalk.getPath();
                     String submoduleUrl = submoduleWalk.getModulesUrl();
                     String submoduleCommitHash = submoduleWalk.getObjectId().getName();
+
                     String submoduleCommitHashUri = GithubUriUtils.getCommitUri(owner, repositoryName,
                             submoduleCommitHash);
 
@@ -628,6 +649,7 @@ public class GithubRdfConversionTransactionService {
 
                 int commitsProcessed = 0;
 
+
                 log.info("Building tags map for commits...");
                 Map<ObjectId, List<String>> commitToTags = getTagsForCommits(gitRepository);
                 log.info("Completed building tags map with {} entries", commitToTags.size());
@@ -638,14 +660,17 @@ public class GithubRdfConversionTransactionService {
 
                 for (int iteration = 0; iteration < Integer.MAX_VALUE; iteration++) {
 
+
                     log.info("Start iterations of git commits. Current iteration count: {}", iteration);
 
                     log.info("Checking whether github installation token needs refresh");
+
 
                     int skipCount = calculateSkipCountAndThrowExceptionIfIntegerOverflowIsImminent(iteration,
                             commitsPerIteration);
 
                     log.info("Calculated skip count for this iteration is: {}", skipCount);
+
 
                     Iterable<RevCommit> commits = gitHandler.log().setSkip(skipCount).setMaxCount(commitsPerIteration)
                             .call();
@@ -693,6 +718,7 @@ public class GithubRdfConversionTransactionService {
                         String commitUri = GithubUriUtils.getCommitUri(owner, repositoryName, gitHash);
                         //String commitUri = GIT_NAMESPACE + ":GitCommit";
 
+
                         if (log.isDebugEnabled())
                             log.debug("Set rdf type property commitUri");
 
@@ -702,12 +728,14 @@ public class GithubRdfConversionTransactionService {
                         if (log.isDebugEnabled())
                             log.debug("Set rdf commit hash");
 
+
                         if (gitCommitRepositoryFilter.isEnableCommitHash()) {
                             writer.triple(RdfCommitUtils.createCommitHashProperty(commitUri, gitHash));
                         }
 
                         if (log.isDebugEnabled())
                             log.debug("Set rdf author email");
+
 
                         if (gitCommitRepositoryFilter.isEnableAuthorEmail()) {
                             calculateAuthorEmail( // Also brings github identifier into rdf
@@ -725,6 +753,7 @@ public class GithubRdfConversionTransactionService {
                         boolean isAuthorDateEnabled = gitCommitRepositoryFilter.isEnableAuthorDate();
                         boolean isCommitDateEnabled = gitCommitRepositoryFilter.isEnableCommitDate();
 
+
                         if (isAuthorDateEnabled || isCommitDateEnabled) {
 
                             LocalDateTime commitDateTime = localDateTimeFrom(commit.getCommitTime());
@@ -736,6 +765,7 @@ public class GithubRdfConversionTransactionService {
                                 writer.triple(RdfCommitUtils.createAuthorDateProperty(commitUri, commitDateTime));
                             }
 
+
                             if (log.isDebugEnabled())
                                 log.debug("Set RDF commit date");
 
@@ -745,11 +775,13 @@ public class GithubRdfConversionTransactionService {
                         }
 
                         if (log.isDebugEnabled())
+
                             log.debug("Set RDF committer name");
 
                         if (gitCommitRepositoryFilter.isEnableCommitterName()) {
                             calculateCommitterName(writer, commitUri, committerIdent);
                         }
+
 
                         if (log.isDebugEnabled())
                             log.debug("Set RDF committer email");
@@ -758,12 +790,14 @@ public class GithubRdfConversionTransactionService {
                             calculateCommitterEmail(writer, commitUri, committerIdent);
                         }
 
+
                         if (log.isDebugEnabled())
                             log.debug("Set RDF commit message for commit with hash '{}'", gitHash);
 
                         if (gitCommitRepositoryFilter.isEnableCommitMessage()) {
                             calculateCommitMessage(writer, commitUri, commit);
                         }
+
 
                         if (commit.getParentCount() > 1) {
                             writer.triple(RdfCommitUtils.createCommitIsMergeCommitProperty(commitUri, true));
@@ -799,6 +833,7 @@ public class GithubRdfConversionTransactionService {
                                     repositoryName);
                         }
 
+
                         List<String> tagNames = commitToTags.get(commitId);
 
                         if (tagNames != null && !tagNames.isEmpty()) {
@@ -826,6 +861,7 @@ public class GithubRdfConversionTransactionService {
                         }
                     }
 
+
                     log.info("Ending commit writer rdf - loop finished");
 
                     writer.finish();
@@ -835,6 +871,7 @@ public class GithubRdfConversionTransactionService {
                     if (finished) {
                         break;
                     }
+
 
                     if (iteration + 1 == Integer.MAX_VALUE) {
                         throw new RuntimeException(
@@ -868,6 +905,7 @@ public class GithubRdfConversionTransactionService {
                 BranchSnapshotCalculator branchSnapshotCalculator = new BranchSnapshotCalculator(
                         writer,
                         gitRepository,
+
                         GithubUriUtils.getCommitUri(owner, repositoryName, headCommitId.getName()),
                         lockHandler);
 
@@ -890,11 +928,13 @@ public class GithubRdfConversionTransactionService {
 
             if (githubIssueRepositoryFilter.doesContainAtLeastOneEnabledFilterOption()) {
 
+
                 if (githubRepositoryHandle.hasIssues() && PROCESS_ISSUE_LIMIT > 0) {
 
                     log.info("Start issue processing with limit of {} issues", PROCESS_ISSUE_LIMIT);
                     int issueCounter = 0;
                     boolean doesWriterContainNonWrittenRdfStreamElements = false;
+
 
                     // Use smaller page size when processing few items
                     int pageSize = Math.min(PROCESS_ISSUE_LIMIT * 2, 100);
@@ -907,7 +947,7 @@ public class GithubRdfConversionTransactionService {
                     for (GHIssue ghIssue : issues) {
 
                         if (issueCounter < 1) {
-                            log.info("Start issue rdf conversion batch");
+                            log.info("Start issue rdf conversion batch for issueId '{}'", ghIssue.getId());
                             writer.start();
                             doesWriterContainNonWrittenRdfStreamElements = true;
                         }
@@ -1229,6 +1269,7 @@ public class GithubRdfConversionTransactionService {
                             } catch (Exception e) {
                                 log.warn("Error processing labels for issue {}: {}", issueNumber, e.getMessage());
                             }
+
                         }
 
                         // Reviews
@@ -1609,6 +1650,7 @@ public class GithubRdfConversionTransactionService {
 
             issueWatch.stop();
             lockHandler.renewLockOnRenewTimeFulfillment();
+
             timeLog.setGithubIssueConversionTime(issueWatch.getTime());
 
             log.info("Finished overall processing. Start to load rdf file into postgres blob storage");
@@ -1785,9 +1827,12 @@ public class GithubRdfConversionTransactionService {
 
         String email = authorIdent.getEmailAddress();
 
+
         log.info("Set rdf github user in commit");
 
+
         GithubUserInfo info = RdfGitCommitUserUtils.getGitHubUserInfoFromCommit(githubRepositoryHandle, gitHash);
+
 
         if (!uniqueGitCommiterWithHash.containsKey(email)) {
             String uri = info == null ? null : info.uri;
@@ -1954,9 +1999,10 @@ public class GithubRdfConversionTransactionService {
                     log.debug("Reset tree parsers - continuing with current tree parser");
                 currentTreeParser.reset(currentRepositoryObjectReader, commit.getTree());
 
-                //Resource commitResource = ResourceFactory.createResource(gitHash); // TODO: use proper uri?
-                //Node commitNode = commitResource.asNode();
-                //writer.triple(RdfCommitUtils.createCommitResource(commitUri, commitNode));
+                // Resource commitResource = ResourceFactory.createResource(gitHash); // TODO:
+                // use proper uri?
+                // Node commitNode = commitResource.asNode();
+                // writer.triple(RdfCommitUtils.createCommitResource(commitUri, commitNode));
 
                 if (log.isDebugEnabled())
                     log.debug("Scan diff entries");
@@ -1967,9 +2013,10 @@ public class GithubRdfConversionTransactionService {
                     log.debug("Loop through diff entries. Diff entry list size is '{}'", diffEntries.size());
 
                 for (DiffEntry diffEntry : diffEntries) {
-                    Resource diffEntryResource = ResourceFactory.createResource(/*GIT_NAMESPACE + ":entry"*/);
+                    Resource diffEntryResource = ResourceFactory.createResource(/* GIT_NAMESPACE + ":entry" */);
                     Node diffEntryNode = diffEntryResource.asNode();
-                    //writer.triple(RdfCommitUtils.createCommitDiffEntryResource(commitNode, diffEntryNode));
+                    // writer.triple(RdfCommitUtils.createCommitDiffEntryResource(commitNode,
+                    // diffEntryNode));
 
                     if (log.isDebugEnabled())
                         log.debug("Set RDF commit diff entry property");
@@ -2028,7 +2075,7 @@ public class GithubRdfConversionTransactionService {
                         log.debug("Loop trough edit list. There are '{}' edit list entries", editList.size());
 
                     for (Edit edit : editList) {
-                        Resource editResource = ResourceFactory.createResource(/*GIT_NAMESPACE + ":edit"*/);
+                        Resource editResource = ResourceFactory.createResource(/* GIT_NAMESPACE + ":edit" */);
                         Node editNode = editResource.asNode();
 
                         if (log.isDebugEnabled())
@@ -2177,6 +2224,7 @@ public class GithubRdfConversionTransactionService {
             PagedIterable<GHWorkflowJob> jobIterable = executeWithRetry(
                     () -> run.listJobs().withPageSize(10), // Smaller page size
                     "listJobs for run " + run.getId());
+
 
             int jobsProcessed = 0;
 
@@ -2476,6 +2524,7 @@ public class GithubRdfConversionTransactionService {
             log.error("Error validating/ensuring parent review comment {}: {}", parentCommentId, e.getMessage(), e);
             return false;
         }
+
     }
 
     private List<GHIssueComment> getIssueCommentsCached(GHIssue issue)

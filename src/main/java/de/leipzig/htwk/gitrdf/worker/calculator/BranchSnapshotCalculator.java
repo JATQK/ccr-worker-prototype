@@ -1,10 +1,10 @@
 package de.leipzig.htwk.gitrdf.worker.calculator;
 
+
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.jena.graph.Node;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
@@ -46,12 +46,13 @@ public class BranchSnapshotCalculator {
 
         writer.start();
 
-        //ObjectId headCommitId = gitRepository.resolve("HEAD");
-        //String commitUri = getGithubCommitUri(owner, repositoryName, headCommitId.getName());
+        // ObjectId headCommitId = gitRepository.resolve("HEAD");
+        // String commitUri = getGithubCommitUri(owner, repositoryName,
+        // headCommitId.getName());
 
-        //String branchSnapshotUri = targetCommitUri;
-        //String branchSnapshotUri = GIT_NS + ":blame";
-        //String branchSnapshotUri = "";
+        // String branchSnapshotUri = targetCommitUri;
+        // String branchSnapshotUri = GIT_NS + ":blame";
+        // String branchSnapshotUri = "";
 
         Resource branchSnapshotResource = ResourceFactory.createResource(branchSnapshotUri);
         Node branchSnapshotNode = branchSnapshotResource.asNode();
@@ -92,7 +93,8 @@ public class BranchSnapshotCalculator {
             Resource branchSnapshotFileResource = ResourceFactory.createResource();
             Node branchSnapshotFileNode = branchSnapshotFileResource.asNode();
 
-            writer.triple(RdfCommitUtils.createBranchSnapshotFileEntryProperty(branchSnapshotNode, branchSnapshotFileNode));
+            writer.triple(
+                    RdfCommitUtils.createBranchSnapshotFileEntryProperty(branchSnapshotNode, branchSnapshotFileNode));
             writer.triple(RdfCommitUtils.createBranchSnapshotFilenameProperty(branchSnapshotFileNode, fileName));
 
             BlameResult blameResult;
@@ -143,6 +145,7 @@ public class BranchSnapshotCalculator {
 
                         lineNumberEnd += 1;
 
+
                         writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
                         writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, prevCommitHash));
                         // v2.1: No longer need SPDX CheckSum triples - hash is now a plain string
@@ -160,6 +163,7 @@ public class BranchSnapshotCalculator {
                     }
 
                     if (isNewCommit) {
+
 
                         writer.triple(RdfCommitUtils.createBranchSnapshotLineEntryProperty(branchSnapshotFileNode, branchSnapshotLineEntryNode));
                         writer.triple(RdfCommitUtils.createBranchSnapshotCommitHashProperty(branchSnapshotLineEntryNode, prevCommitHash));
